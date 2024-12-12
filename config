@@ -1,0 +1,17 @@
+ngx_module_type=HTTP_AUX_FILTER
+
+ngx_module_name=ngx_http_new_sign_module
+
+ngx_module_incs="$ngx_addon_dir/src/"
+
+ngx_module_deps="$ngx_addon_dir/src/new_sign.h \
+                 $ngx_addon_dir/src/new_sign_pub.h \
+                 $ngx_addon_dir/src/rbtree.h"
+
+ngx_module_srcs="$ngx_addon_dir/src/new_sign_module.c \
+                 $ngx_addon_dir/src/new_sign_check.c \
+                 $ngx_addon_dir/src/rbtree.c"
+
+ngx_module_libs="-lhs"
+
+. auto/module

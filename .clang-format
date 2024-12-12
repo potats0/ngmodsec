@@ -1,0 +1,24 @@
+---
+Language: C
+# 强制#include顺序
+IncludeCategories:
+  - Regex: '^<(ngx_config|ngx_core)\.h>'
+    Priority: 1
+  - Regex: '^<hs/.*\.h>'
+    Priority: 2
+  - Regex: '^<.*\.h>'
+    Priority: 3
+  - Regex: '^".*"'
+    Priority: 4
+IncludeBlocks: Regroup
+SortIncludes: true
+
+# C语言特定配置
+IndentWidth: 4
+UseTab: Never
+BreakBeforeBraces: Linux
+AllowShortFunctionsOnASingleLine: None
+AlignTrailingComments: true
+SpaceAfterCStyleCast: false
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: false
