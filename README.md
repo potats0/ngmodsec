@@ -1,12 +1,12 @@
 # 7090 Fields 与nginx内置变量对应关系
 
    
-| 7090 | Nginx | 说明 |
+| 7090 | Nginx | 序号 | 说明 |
 |------|-------|------|
 | http_url | request_uri | 带有query参数且未经url解码的原始url |
-| row2 | cell2 | description2 |
+| method_name | method_name | description2 |description2 |
 | row3 | cell3 | description3 |
-
+NGX_VAR_METHOD
 # depencises
 sudo apt install libhyperscan5 libhyperscan-dev
 
@@ -20,4 +20,4 @@ export NGINX_PATH=/home/liangzhibang/CTM/nginx
 # FAQ
 https://blog.csdn.net/zzhongcy/article/details/133175929
 
-clangd 代码跳转
+1. 请首先使用`make clangd`命令生成依赖文件，然后再使用`make`命令进行编译，不然会报错
