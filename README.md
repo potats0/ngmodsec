@@ -23,7 +23,7 @@ export NGINX_PATH=你的nginx源码路径
 
 # Unit Test
 1. 安装`Test::Nginx::Socket`，自行搜索安装方式
-2. 执行`make test`即可
+2. 执行`make test`即可，在执行的过程中如果源码变动则自动执行重新编译。否则不会重新编译
 
 # FAQ
 https://blog.csdn.net/zzhongcy/article/details/133175929

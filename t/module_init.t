@@ -19,3 +19,33 @@ GET /test
 enter ngx_new_sign_module_init
 --- no_error_log
 [error]
+
+=== TEST 2: user data context creation
+--- config
+    location /test_ctx {
+        return 200 "test context";
+    }
+--- request
+GET /test_ctx
+--- error_log
+Attempting to get user data from request context
+User data not found in context, creating new one
+Successfully created and set new user data in context
+--- no_error_log
+Failed to allocate memory for user data
+[error]
+
+=== TEST 3: user data context reuse
+--- config
+    location /test_ctx_reuse {
+        return 200 "test context reuse";
+    }
+--- request eval
+["GET /test_ctx_reuse", "GET /test_ctx_reuse"]
+--- error_log
+Attempting to get user data from request context
+User data not found in context, creating new one
+Successfully created and set new user data in context
+--- no_error_log
+Failed to allocate memory for user data
+[error]

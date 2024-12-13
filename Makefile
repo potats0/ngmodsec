@@ -3,7 +3,7 @@ MODULE_PATH = $(shell pwd)
 MODULE_NAME = ngx_http_new_sign_module
 
 # 源文件和目标文件
-SRCS = $(wildcard *.c)
+SRCS = $(wildcard src/*.c)
 OBJS = $(SRCS:.c=.o)
 
 # 编译标志
@@ -29,6 +29,13 @@ prepare:
 		auto/configure --add-module=$(MODULE_PATH); \
 	fi
 
+# 检查源文件是否有更新
+check-source:
+	@if [ -n "$$(find src -name '*.c' -newer $(NGINX_PATH)/objs/nginx 2>/dev/null)" ]; then \
+		echo "Source files have changed, rebuilding..."; \
+		$(MAKE) build; \
+	fi
+
 build:
 	cd $(NGINX_PATH) && make
 
@@ -37,7 +44,7 @@ verify: build
 	-$(NGINX_PATH)/objs/nginx -t
 	@echo "Test completed."
 
-test:
+test: check-source
 	@if [ ! -f $(NGINX_PATH)/objs/nginx ]; then \
 		echo "Nginx binary not found, building first..."; \
 		$(MAKE) build; \
@@ -49,10 +56,10 @@ test:
 
 clean:
 	cd $(NGINX_PATH) && make clean
-	rm -f *.o
+	rm -f $(OBJS)
 
 clangd: prepare
 	cd $(NGINX_PATH) && bear -- make 
 	cp -f $(NGINX_PATH)/compile_commands.json $(MODULE_PATH)
 
-.PHONY: all prepare build verify clean clangd test
+.PHONY: all prepare build verify test clean clangd check-source

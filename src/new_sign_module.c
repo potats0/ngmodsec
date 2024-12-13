@@ -97,17 +97,37 @@ ngx_new_sign_exit_master(ngx_cycle_t *cycle) {
   LOGN(cycle->log, "enter ngx_new_sign_exit_master");
 }
 
+/**
+ * @brief 获取或创建请求上下文中的用户数据
+ * @details
+ * 该函数负责从请求上下文中获取用户数据，如果不存在则创建新的用户数据结构。
+ *          用户数据结构用于存储hyperscan搜索过程中的相关信息。
+ *
+ * @param r nginx请求结构体指针
+ * @return hs_search_userdata_t* 成功返回用户数据指针，失败返回NULL
+ */
 static inline hs_search_userdata_t *
 ngx_http_new_sign_get_usrdata(ngx_http_request_t *r) {
+  ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
+                "Attempting to get user data from request context");
 
   hs_search_userdata_t *usrdata =
       ngx_http_get_module_ctx(r, ngx_http_new_sign_module);
+
   if (usrdata == NULL) {
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
+                  "User data not found in context, creating new one");
+
     usrdata = ngx_pcalloc(r->pool, sizeof(hs_search_userdata_t));
     if (usrdata == NULL) {
+      ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                    "Failed to allocate memory for user data");
       return NULL;
     }
+
     ngx_http_set_ctx(r, usrdata, ngx_http_new_sign_module);
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
+                  "Successfully created and set new user data in context");
   }
 
   return usrdata;
@@ -157,9 +177,10 @@ static ngx_int_t predef_sign_chekcer(ngx_http_request_t *r) {
   }
   usrdata->r = r;
 
+  // 1. http method不过hyperscan
   // NGINX_CHECK_HEAD_STR(r->method_name, NGX_VAR_METHOD);
-  //    NGINX_CHECK_HEAD_VALUE(r->http_version, NGX_VAR_HTTP_VERSION);
-  // NGINX_CHECK_HEAD_STR(r->request_line, NGX_VAR_REQUEST_LINE);
+  // 2. 原始raw 包含参数部分
+  //
 
   // NGINX_CHECK_HEAD_STR(r->unparsed_uri, NGX_VAR_UNPARSED_URI);
 
