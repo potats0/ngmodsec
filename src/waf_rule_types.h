@@ -31,8 +31,6 @@
 
 #define MAX_STRING_LEN 1024
 
-#define MAX_VALUE_CHECK_NUM 1024
-
 /** NGINX协议变量ID和字符串映射 **/
 typedef struct proto_var_desc_s {
   char name[MAX_PROTOVAR_NAME_LEN]; // 对应字符串
@@ -82,10 +80,10 @@ typedef struct sign_rule_mg_s {
   string_match_context_t **string_match_context_array;
 } sign_rule_mg_t;
 
-typedef void *(*MALLOC_FUNC)(uint64_t size);
-typedef void (*FREE_FUNC)(void *memp);
+typedef void *(*waf_rule_malloc_fn)(uint64_t size);
+typedef void (*waf_rule_free_fn)(void *memp);
 
-extern void sign_rule_set_alloc(MALLOC_FUNC f_malloc, FREE_FUNC f_free);
+extern void sign_rule_set_alloc(waf_rule_malloc_fn f_malloc, waf_rule_free_fn f_free);
 
 #ifdef WAF
 extern proto_var_desc g_pvar_desc[];

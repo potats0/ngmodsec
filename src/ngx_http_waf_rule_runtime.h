@@ -1,12 +1,11 @@
-
 #include <ngx_config.h>
 #include <ngx_core.h>
 
 #ifndef __NEW_SIGN_H__
 #define __NEW_SIGN_H__
-#include "new_sign_pub.h"
 #include "ngx_http.h"
 #include "rbtree.h"
+#include "waf_rule_types.h"
 #include <hs/hs_runtime.h>
 #include <stdbool.h>
 #include <sys/types.h>
@@ -72,10 +71,6 @@ typedef struct hs_search_userdata_s {
   uint32_t rsp_detect_len;
   ngx_http_request_t *r; // for hit_ctx alloc & log
 } hs_search_userdata_t;
-
-extern void sign_rule_set_alloc(MALLOC_FUNC f_malloc, FREE_FUNC f_free);
-
-extern sign_rule_mg_t *new_sign_egine_init();
 
 extern void new_sign_engin_scan(void *inputData, unsigned int inputLen,
                                 hs_search_userdata_t *usrdata);

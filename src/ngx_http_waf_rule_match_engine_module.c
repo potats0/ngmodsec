@@ -4,7 +4,7 @@
  * Copyright (c) 2023 , All rights reserved.
  *
  */
-#include "new_sign.h"
+#include "ngx_http_waf_rule_runtime.h"
 #include <hs/hs_runtime.h>
 #ifdef WAF
 #include "ngx_http_anti_crawler_module.h"
