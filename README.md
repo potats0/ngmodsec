@@ -1,17 +1,19 @@
 # 7090 Fields 与nginx内置变量对应关系
 
    
-| 7090 | Nginx | 序号 | 说明 |
-|------|-------|------|
-| http_url | request_uri | 带有query参数且未经url解码的原始url |
-| method_name | method_name | description2 |description2 |
-| row3 | cell3 | description3 |
-NGX_VAR_METHOD
+| 7090        | Nginx        | 序号                | 说明                                    |
+|-------------|-------------|--------------------|-----------------------------------------|
+| method_name | method_name | NGX_VAR_METHOD    | http请求方法                             |
+| http_url （建议改名）   | unparsed_uri| NGX_VAR_UNPARSED_URI | 带有query参数且未经url解码的原始url，很像7085中的http_url，在某些自定义规则场景中很有用          |
+| http_uri    | uri|  |      暂定     | 经过解码和规范化的路径部分，经常在自定义规则中做访问控制中使用          |
+| http_args   | args| 暂定 | query string原始部分          |
+                                      |
+
 # depencises
 sudo apt install libhyperscan5 libhyperscan-dev
 
 设置nginx 源代码的路径，你可以去git上下载。并执行
-export NGINX_PATH=/home/liangzhibang/CTM/nginx
+export NGINX_PATH=你的nginx源码路径
 
 在本项目的根路径中直接执行make即可构建模块
 
@@ -21,3 +23,8 @@ export NGINX_PATH=/home/liangzhibang/CTM/nginx
 https://blog.csdn.net/zzhongcy/article/details/133175929
 
 1. 请首先使用`make clangd`命令生成依赖文件，然后再使用`make`命令进行编译，不然会报错
+
+
+
+# Nginx 参考
+https://blog.csdn.net/weixin_42905245/article/details/106424144 Nginx $request_uri和$uri详解
