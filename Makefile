@@ -1,6 +1,6 @@
 NGINX_PATH ?= $(shell pwd)/../nginx
 MODULE_PATH = $(shell pwd)
-MODULE_NAME = ngx_http_new_sign_module
+MODULE_NAME = ngx_http_waf_rule_match_engine_module
 
 # 源文件和目标文件
 SRCS = $(wildcard src/*.c)

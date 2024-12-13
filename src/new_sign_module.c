@@ -18,8 +18,9 @@ hs_scratch_t *scratch[NGX_VAR_MAX];
 
 static ngx_http_output_body_filter_pt ngx_http_next_body_filter;
 static ngx_http_output_header_filter_pt ngx_http_next_header_filter;
-
+#ifdef WAF
 extern ngx_int_t custom_sign_checker(ngx_http_request_t *r);
+#endif
 
 void new_sign_alloc_scratch(sign_rule_mg_t *mg) {
   for (ngx_uint_t i = 0; i < NGX_VAR_MAX; i++) {
@@ -58,7 +59,7 @@ void new_sign_rule_reload() {
 }
 
 static ngx_int_t __attribute__((unused))
-ngx_new_sign_process_init(ngx_cycle_t *cycle) {
+ngx_http_waf_rule_match_engine_process_init(ngx_cycle_t *cycle) {
   // 查找共享内存 给 sign_rule_mg赋值
   // 创建每个进程的scratch空间
 #ifdef WAF
@@ -80,23 +81,16 @@ ngx_new_sign_process_init(ngx_cycle_t *cycle) {
 }
 
 static void __attribute__((unused))
-ngx_new_sign_process_exit(ngx_cycle_t *cycle) {
-  // 释放sign_rule_mg 内存
-  // 释放每个进程的scarach空间
-  LOGN(cycle->log, "new_sign process exit");
+ngx_http_waf_rule_match_engine_process_exit(ngx_cycle_t *cycle) {
+  LOGN(cycle->log, "waf rule match engine process exit");
 }
 
-static ngx_int_t ngx_new_sign_module_init(ngx_cycle_t *cycle) {
-  LOGN(cycle->log, "enter ngx_new_sign_module_init");
-
+static ngx_int_t
+ngx_http_waf_rule_match_engine_module_init(ngx_cycle_t *cycle) {
+  new_sign_rule_reload();
+  LOGN(cycle->log, "enter ngx_http_waf_rule_match_engine_module_init");
   return NGX_OK;
 }
-
-static void __attribute__((unused))
-ngx_new_sign_exit_master(ngx_cycle_t *cycle) {
-  LOGN(cycle->log, "enter ngx_new_sign_exit_master");
-}
-
 /**
  * @brief 获取或创建请求上下文中的用户数据
  * @details
@@ -107,12 +101,12 @@ ngx_new_sign_exit_master(ngx_cycle_t *cycle) {
  * @return hs_search_userdata_t* 成功返回用户数据指针，失败返回NULL
  */
 static inline hs_search_userdata_t *
-ngx_http_new_sign_get_usrdata(ngx_http_request_t *r) {
+ngx_http_waf_rule_match_get_userdata(ngx_http_request_t *r) {
   ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
                 "Attempting to get user data from request context");
 
   hs_search_userdata_t *usrdata =
-      ngx_http_get_module_ctx(r, ngx_http_new_sign_module);
+      ngx_http_get_module_ctx(r, ngx_http_waf_rule_match_engine_module);
 
   if (usrdata == NULL) {
     ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
@@ -125,7 +119,7 @@ ngx_http_new_sign_get_usrdata(ngx_http_request_t *r) {
       return NULL;
     }
 
-    ngx_http_set_ctx(r, usrdata, ngx_http_new_sign_module);
+    ngx_http_set_ctx(r, usrdata, ngx_http_waf_rule_match_engine_module);
     ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
                   "Successfully created and set new user data in context");
   }
@@ -146,7 +140,7 @@ new_sign_check_request_body(ngx_http_request_t *r,
   return NGX_OK;
 }
 
-static ngx_int_t predef_sign_chekcer(ngx_http_request_t *r) {
+static ngx_int_t ngx_http_waf_rule_checker(ngx_http_request_t *r) {
 #ifdef WAF
   if (is_bypass(r, CONF1_NEW_SIGN_ENGINE) == WAF_ENABLE &&
       is_bypass(r, CONF3_ACL_SUB_ANT_CRAWLER) == WAF_ENABLE) {
@@ -171,7 +165,7 @@ static ngx_int_t predef_sign_chekcer(ngx_http_request_t *r) {
     return NGX_DECLINED;
   }
 #endif
-  hs_search_userdata_t *usrdata = ngx_http_new_sign_get_usrdata(r);
+  hs_search_userdata_t *usrdata = ngx_http_waf_rule_match_get_userdata(r);
   if (usrdata == NULL) {
     return NGX_DECLINED;
   }
@@ -217,7 +211,7 @@ static ngx_int_t predef_sign_chekcer(ngx_http_request_t *r) {
 }
 
 static ngx_int_t new_sign_precontent_phase_handler(ngx_http_request_t *r) {
-  predef_sign_chekcer(r);
+  ngx_http_waf_rule_checker(r);
 #ifdef WAF
   custom_sign_checker(r);
 #endif
@@ -247,7 +241,7 @@ static ngx_int_t predef_sign_response_header_checker(ngx_http_request_t *r) {
     return;
   }
 
-  hs_search_userdata_t *usrdata = ngx_http_new_sign_get_usrdata(r);
+  hs_search_userdata_t *usrdata = ngx_http_waf_rule_match_get_userdata(r);
   if (usrdata == NULL) {
     return;
   }
@@ -303,7 +297,7 @@ static ngx_int_t new_sign_response_body_filter(ngx_http_request_t *r,
   }
 
 #endif
-  hs_search_userdata_t *usrdata = ngx_http_new_sign_get_usrdata(r);
+  hs_search_userdata_t *usrdata = ngx_http_waf_rule_match_get_userdata(r);
   if (usrdata == NULL) {
     return ngx_http_next_body_filter(r, in);
   }
@@ -329,10 +323,11 @@ static ngx_int_t new_sign_response_body_filter(ngx_http_request_t *r,
   return ngx_http_next_body_filter(r, in);
 }
 
-static ngx_int_t ngx_http_new_sign_init(ngx_conf_t *cf) {
+static ngx_int_t ngx_http_waf_rule_engine_init(ngx_conf_t *cf) {
   ngx_http_handler_pt *h;
   ngx_http_core_main_conf_t *cmcf;
 
+  /* 保存并设置 filter chain */
   ngx_http_next_body_filter = ngx_http_top_body_filter;
   ngx_http_top_body_filter = new_sign_response_body_filter;
   ngx_http_next_header_filter = ngx_http_top_header_filter;
@@ -340,8 +335,9 @@ static ngx_int_t ngx_http_new_sign_init(ngx_conf_t *cf) {
 
   cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
 
+  /* 注册 precontent phase handler */
   h = ngx_array_push(&cmcf->phases[NGX_HTTP_PRECONTENT_PHASE].handlers);
-  if (!h) {
+  if (h == NULL) {
     return NGX_ERROR;
   }
   *h = new_sign_precontent_phase_handler;
@@ -349,29 +345,30 @@ static ngx_int_t ngx_http_new_sign_init(ngx_conf_t *cf) {
   return NGX_OK;
 }
 
-static ngx_command_t new_sign_commands[] = {ngx_null_command};
+static ngx_command_t ngx_http_waf_rule_match_engine_commands[] = {
+    ngx_null_command};
 
-static ngx_http_module_t new_sign_module_ctx = {
-    NULL,                   /* preconfiguration */
-    ngx_http_new_sign_init, /* postconfiguration */
-    NULL,                   /* create main configuration */
-    NULL,                   /* init main configuration */
-    NULL,                   /* create server configuration */
-    NULL,                   /* merge server configuration */
-    NULL,                   /* create location configuration */
-    NULL                    /* merge location configuration */
+static ngx_http_module_t ngx_http_waf_rule_match_engine_module_ctx = {
+    NULL,                          /* preconfiguration */
+    ngx_http_waf_rule_engine_init, /* postconfiguration */
+    NULL,                          /* create main configuration */
+    NULL,                          /* init main configuration */
+    NULL,                          /* create server configuration */
+    NULL,                          /* merge server configuration */
+    NULL,                          /* create location configuration */
+    NULL                           /* merge location configuration */
 };
 
-ngx_module_t ngx_http_new_sign_module = {
+ngx_module_t ngx_http_waf_rule_match_engine_module = {
     NGX_MODULE_V1,
-    &new_sign_module_ctx,      /* module context */
-    new_sign_commands,         /* module directives */
-    NGX_HTTP_MODULE,           /* module type */
-    NULL,                      /* init master */
-    ngx_new_sign_module_init,  /* init module */
-    ngx_new_sign_process_init, /* init process */
-    NULL,                      /* init thread */
-    NULL,                      /* exit thread */
-    NULL,                      /* exit process */
-    NULL,                      /* exit master */
+    &ngx_http_waf_rule_match_engine_module_ctx,  /* module context */
+    ngx_http_waf_rule_match_engine_commands,     /* module directives */
+    NGX_HTTP_MODULE,                             /* module type */
+    NULL,                                        /* init master */
+    ngx_http_waf_rule_match_engine_module_init,  /* init module */
+    ngx_http_waf_rule_match_engine_process_init, /* init process */
+    NULL,                                        /* init thread */
+    NULL,                                        /* exit thread */
+    ngx_http_waf_rule_match_engine_process_exit, /* exit process */
+    NULL,                                        /* exit master */
     NGX_MODULE_V1_PADDING};

@@ -118,7 +118,7 @@ extern sign_rule_mg_t *sign_rule_mg;
 extern hs_scratch_t *scratch[NGX_VAR_MAX];
 
 /** new sign 模块结构 **/
-extern ngx_module_t ngx_http_new_sign_module;
+extern ngx_module_t ngx_http_waf_rule_match_engine_module;
 
 extern int log_2_content(ngx_http_request_t *r, uint32_t threat_id,
                          rule_log_unit_t *log_unit, ngx_array_t *log_array,

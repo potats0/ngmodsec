@@ -16,7 +16,7 @@ __DATA__
 --- request
 GET /test
 --- error_log
-enter ngx_new_sign_module_init
+enter ngx_http_waf_rule_match_engine_module_init
 --- no_error_log
 [error]
 
