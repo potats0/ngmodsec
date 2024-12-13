@@ -13,7 +13,7 @@ CORE_INCS = -I$(NGINX_PATH)/src/core \
             -I$(NGINX_PATH)/src/http \
             -I$(NGINX_PATH)/src/os/unix
 			
-all: prepare build test
+all: prepare build verify
 
 # 增量编译规则
 %.o: %.c
@@ -32,10 +32,20 @@ prepare:
 build:
 	cd $(NGINX_PATH) && make
 
-test: build
+verify: build
 	@echo "Starting nginx for testing..."
 	-$(NGINX_PATH)/objs/nginx -t
 	@echo "Test completed."
+
+test:
+	@if [ ! -f $(NGINX_PATH)/objs/nginx ]; then \
+		echo "Nginx binary not found, building first..."; \
+		$(MAKE) build; \
+	fi
+	@echo "Running Test::Nginx tests..."
+	TEST_NGINX_BINARY=$(NGINX_PATH)/objs/nginx \
+	TEST_NGINX_VERBOSE=1 \
+	prove -r t/
 
 clean:
 	cd $(NGINX_PATH) && make clean
@@ -45,4 +55,4 @@ clangd: prepare
 	cd $(NGINX_PATH) && bear -- make 
 	cp -f $(NGINX_PATH)/compile_commands.json $(MODULE_PATH)
 
-.PHONY: all prepare build test clean clangd
+.PHONY: all prepare build verify clean clangd test
