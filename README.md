@@ -10,16 +10,17 @@
                                       |
 
 # depencises
-```
-sudo apt install libhyperscan5 libhyperscan-dev
-```
+1. 执行`./depencises.sh` 自动在ubuntu上安装依赖
+2. 去github上拉Nginx的源码，并执行`git clone https://github.com/nginx/nginx.git`
 
 设置nginx 源代码的路径，你可以去git上下载。并执行
 export NGINX_PATH=你的nginx源码路径
 
 在本项目的根路径中直接执行make即可构建模块
 
-请使用clangd + vscode支持代码跳转。1. 安装bear 2. 在该项目执行make clangd即可生成依赖文件
+请使用clangd + vscode支持代码跳转。
+
+在该项目执行make clangd即可生成依赖文件
 
 # Unit Test
 1. 安装`Test::Nginx::Socket`，自行搜索安装方式
