@@ -190,13 +190,150 @@ http.uri contains "pattern"/i
 http.uri matches "pattern"/m/s
 ```
 
-### 逻辑运算符
+### 操作符使用说明
 
-规则支持以下逻辑运算符：
+WAF 规则支持三种逻辑操作符：`and`、`or` 和 `not`。下面详细说明每种操作符的使用方法。
 
-- AND：要求两个条件都匹配
-- OR：要求至少一个条件匹配
-- 括号：用于分组条件
+#### AND 操作符的使用
+
+AND 操作符用于表示所有条件都必须满足。
+
+1. 基本语法：
+   ```
+   <expression1> and <expression2>
+   (<expression1> and <expression2>) and <expression3>
+   ```
+
+2. 支持的用法：
+   - 简单组合：`http.uri contains "login" and http.uri contains "admin"`
+   - 多重组合：`http.uri contains "api" and http.uri contains "v1" and http.uri contains "user"`
+   - 与括号组合：`(http.uri contains "login" and http.uri contains "admin") and http.header contains "json"`
+   - 与其他操作符组合：`http.uri contains "admin" and not http.uri contains "test"`
+
+3. 示例：
+   ```
+   # 有效的用法
+   rule 1000 http.uri contains "login" and http.uri contains "admin";
+   rule 1001 (http.uri contains "api" and http.uri contains "v1") and http.header contains "json";
+   rule 1002 http.uri contains "user" and http.uri contains "profile" and http.uri contains "edit";
+   rule 1003 http.uri contains "admin" and not http.uri contains "test";
+   ```
+
+#### OR 操作符的使用
+
+OR 操作符用于表示满足任一条件即可。
+
+1. 基本语法：
+   ```
+   <expression1> or <expression2>
+   (<expression1> and <expression2>) or <expression3>
+   ```
+
+2. 支持的用法：
+   - 简单组合：`http.uri contains "admin" or http.uri contains "manager"`
+   - 多重组合：`http.uri contains "login" or http.uri contains "signin" or http.uri contains "signup"`
+   - 与括号组合：`(http.uri contains "admin" and http.uri contains "login") or http.uri contains "superuser"`
+   - 与其他操作符组合：`http.uri contains "admin" or not http.uri contains "public"`
+
+3. 示例：
+   ```
+   # 有效的用法
+   rule 1000 http.uri contains "admin" or http.uri contains "manager";
+   rule 1001 (http.uri contains "login" and http.header contains "mobile") or http.uri contains "app";
+   rule 1002 http.uri contains "delete" or http.uri contains "remove" or http.uri contains "drop";
+   rule 1003 (http.uri contains "api" and http.uri contains "v1") or (http.uri contains "api" and http.uri contains "v2");
+   ```
+
+#### NOT 操作符的使用
+
+NOT 操作符用于表示否定条件。
+
+1. 基本语法：
+   ```
+   not <match_expression>
+   not (<expression>)
+   ```
+
+2. 支持的用法：
+   - 简单否定：`not http.uri contains "admin"`
+   - 与 AND 组合：`http.uri contains "login" and not http.uri contains "logout"`
+   - 与 OR 组合：`http.uri contains "admin" or not http.uri contains "public"`
+   - 对括号内的表达式使用 NOT：`not (http.uri contains "admin" and http.uri contains "login")`
+
+3. 限制条件：
+   - 不支持嵌套的 NOT 操作，例如：`not (a and not b)` 是不允许的
+   - 一个 NOT 操作符只能作用于一个表达式或一个括号内的表达式组
+
+4. 示例：
+   ```
+   # 有效的用法
+   rule 1000 http.uri contains "login" and not http.uri contains "public";
+   rule 1001 not http.uri contains "admin" and http.uri contains "index";
+   rule 1002 http.uri contains "api" or not http.uri contains "test";
+   rule 1003 not (http.uri contains "admin" and http.uri contains "login");
+
+   # 无效的用法
+   rule 1004 not (http.uri contains "a" and not http.uri contains "b");  # 不支持嵌套的 NOT
+   rule 1005 not (not http.uri contains "admin");                        # 不支持嵌套的 NOT
+   ```
+
+#### 括号表达式的使用
+
+括号用于分组和改变表达式的优先级。
+
+1. 基本语法：
+   ```
+   (<expression>)
+   (<expression1> and <expression2>)
+   (<expression1> or <expression2>)
+   not (<expression>)
+   ```
+
+2. 支持的用法：
+   - 简单分组：`(http.uri contains "admin")`
+   - 逻辑组合：`(http.uri contains "admin" and http.uri contains "login")`
+   - 多重嵌套：`(http.uri contains "api" and (http.uri contains "v1" or http.uri contains "v2"))`
+   - 与 NOT 组合：`not (http.uri contains "admin" and http.uri contains "login")`
+   - 与 OR 组合：`(http.uri contains "admin" and http.header contains "json") or http.uri contains "api"`
+
+3. 使用场景：
+   - 改变操作符优先级：
+     ```
+     # 不使用括号：a and b or c 等价于 (a and b) or c
+     rule 1000 http.uri contains "admin" and http.uri contains "login" or http.uri contains "root";
+
+     # 使用括号：a and (b or c)
+     rule 1001 http.uri contains "admin" and (http.uri contains "login" or http.uri contains "root");
+     ```
+
+   - 分组复杂条件：
+     ```
+     # 对多个条件进行分组
+     rule 1002 (http.uri contains "api" and http.uri contains "v1") or (http.uri contains "api" and http.uri contains "v2");
+
+     # 嵌套使用括号
+     rule 1003 (http.uri contains "admin" and (http.header contains "json" or http.header contains "xml")) and not http.uri contains "test";
+     ```
+
+4. 注意事项：
+   - 括号可以嵌套使用，嵌套层数不限
+   - 括号内的表达式会被优先计算
+   - 括号可以与所有操作符（and、or、not）组合使用
+   - 使用括号可以提高规则的可读性
+
+#### 操作符优先级
+
+WAF 规则中的操作符优先级从高到低为：
+1. `not`（最高优先级）
+2. `and`
+3. `or`（最低优先级）
+
+使用括号可以改变操作符的优先级。例如：
+```
+# 以下两个规则的效果不同：
+rule 1000 http.uri contains "a" and http.uri contains "b" or http.uri contains "c";  # (a and b) or c
+rule 1001 http.uri contains "a" and (http.uri contains "b" or http.uri contains "c");  # a and (b or c)
+```
 
 ### 规则示例
 
