@@ -55,6 +55,8 @@ typedef struct string_pattern_s {
   char *string_pattern;       // 匹配的字符串模式
   rule_relation_t *relations; // 引用这个模式的规则关系数组
   int relation_count;         // 引用这个模式的规则关系数量
+  uint32_t hs_flags;         // Hyperscan标志位
+  uint8_t is_pcre;           // 是否为PCRE模式
 } string_pattern_t;
 
 /** 模式字符串规则匹配上下文，以每协议变量分配 **/

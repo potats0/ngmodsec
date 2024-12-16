@@ -22,3 +22,27 @@ rule 1004 (http.uri content "include" and http.uri content ".php" and not http.u
 # 规则5：测试复合NOT操作
 # 不允许在任何静态资源目录中
 rule 1005 http.uri content "admin" and not (http.uri content "/static/" or http.uri content "/public/" or http.uri content "/assets/") ;
+
+# 基本规则
+rule 1006 http.uri content "admin" ;
+
+# 忽略大小写的规则
+rule 1007 http.uri content "Admin" /i ;
+
+# 多个选项组合
+rule 1008 http.uri content ".*\\.php$" /i /m ;
+
+# 复杂的NOT规则与选项组合
+rule 1009 http.uri content "admin" /i and not (http.uri content "/static/" or http.uri content "/public/" or http.uri content "/assets/") ;
+
+# PCRE规则与选项
+rule 1010 http.uri pcre "(?:admin|manager)" /i /s ;
+
+# 多个条件组合的复杂规则
+rule 1011 (http.uri content "upload" /i and http.body content "file" /i) or (http.header content "content-type" /i and http.body pcre ".*exec.*" /i /s) ;
+
+# 单次匹配规则
+rule 1012 http.uri content "download" /i /f ;
+
+# 多行模式与点号匹配换行
+rule 1013 http.body pcre "begin.*end" /m /s ;

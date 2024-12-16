@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <hs/hs.h>
 
 // 函数声明
 void print_binary16(uint16_t num);
@@ -47,6 +48,20 @@ void print_rule_info(sign_rule_mg_t *rule_mg) {
         if (pattern && pattern->string_pattern) {
           printf("  Pattern %d:\n", j);
           printf("    Pattern: %s\n", pattern->string_pattern);
+          printf("    Is PCRE: %s\n", pattern->is_pcre ? "Yes" : "No");
+          printf("    Hyperscan Flags: ");
+          
+          // 打印 Hyperscan 标志位
+          if (pattern->hs_flags == 0) {
+            printf("None");
+          } else {
+            if (pattern->hs_flags & HS_FLAG_CASELESS) printf("i");
+            if (pattern->hs_flags & HS_FLAG_MULTILINE) printf("m");
+            if (pattern->hs_flags & HS_FLAG_DOTALL) printf("s");
+            if (pattern->hs_flags & HS_FLAG_SINGLEMATCH) printf("f");
+          }
+          printf("\n");
+
           printf("    Relations count: %d\n", pattern->relation_count);
           printf("    Relations:\n");
           for (int k = 0; k < pattern->relation_count; k++) {

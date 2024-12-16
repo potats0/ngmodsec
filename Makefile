@@ -8,7 +8,7 @@ CORE_INCS = -I$(NGINX_PATH)/src/core \
             -I$(NGINX_PATH)/src/os/unix
 
 CC = cc
-CFLAGS = -g -O0 -Wall $(CORE_INCS)
+CFLAGS = -g -O0 -Wall $(CORE_INCS) -D_GNU_SOURCE
 
 # 源文件和目标文件
 PARSER_SRCS = src/rule_parser.tab.c src/lex.yy.c
@@ -21,11 +21,11 @@ all: prepare build verify
 
 # 解析器目标
 rule_parser: $(PARSER_OBJS) src/main.o
-	$(CC) $(CFLAGS) $(CORE_INCS) $^ -o $@
+	$(CC) $(CFLAGS) $(CORE_INCS) $^ -o $@ -lhs -lfl
 
 # 测试程序目标
 test_parser: $(PARSER_OBJS) src/main_test.o tests/test_parser.o
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ -lhs -lfl
 
 # 编译规则
 src/rule_parser.tab.c src/rule_parser.tab.h: src/rule_parser.y
@@ -101,12 +101,7 @@ clean-parser:
 		src/rule_parser.tab.c src/rule_parser.tab.h src/lex.yy.c
 
 clean-module:
-	rm -f $(MODULE_OBJS)
-	-cd $(NGINX_PATH) && make clean 2>/dev/null || true
+	cd $(NGINX_PATH) && make clean 2>/dev/null || true
 
-clangd: prepare
-	cd $(NGINX_PATH) && bear -- make 
-	cp -f $(NGINX_PATH)/compile_commands.json $(MODULE_PATH)
-
-.PHONY: all prepare build verify test clean clangd check-source \
+.PHONY: all prepare build verify test clean \
         test-parser test-nginx clean-parser clean-module run

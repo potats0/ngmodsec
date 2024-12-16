@@ -135,14 +135,96 @@ make
 make test
 ```
 
-## 7090 Fields 与 nginx 内置变量对应关系
+## 规则语法说明
 
-| 7090        | Nginx        | 序号                | 说明                                    |
-|-------------|-------------|--------------------|-----------------------------------------|
-| method_name | method_name | NGX_VAR_METHOD    | http请求方法                             |
-| http_url    | unparsed_uri| NGX_VAR_UNPARSED_URI | 带有query参数且未经url解码的原始url    |
-| http_uri    | uri         | 暂定              | 经过解码和规范化的路径部分                  |
-| http_args   | args        | 暂定              | query string原始部分                     |
+本模块支持灵活的规则语法来定义 WAF 规则。以下是详细说明：
+
+### 基本规则格式
+
+```
+rule <规则ID>: <匹配表达式>;
+```
+
+- `规则ID`：规则的唯一数字标识符
+- `匹配表达式`：一个或多个通过逻辑运算符组合的匹配条件
+
+### 匹配类型
+
+1. 字符串精确匹配：
+```
+http.uri content "匹配内容"
+```
+
+2. 正则表达式匹配：
+```
+http.uri pcre "正则表达式"
+```
+
+### Hyperscan 标志位
+
+字符串匹配和正则表达式都支持以下 Hyperscan 标志位：
+
+- `/i`：不区分大小写匹配
+- `/m`：多行匹配模式
+- `/s`：点号匹配所有字符（包括换行符）
+- `/f`：单次匹配模式
+
+示例：
+```
+http.uri content "pattern"/i
+http.uri pcre "pattern"/m/s
+```
+
+### 逻辑运算符
+
+规则支持以下逻辑运算符：
+
+- AND：要求两个条件都匹配
+- OR：要求至少一个条件匹配
+- 括号：用于分组条件
+
+示例：
+```
+# 简单的 AND 组合
+rule 1000: http.uri content "a" and http.uri content "b";
+
+# 带括号的 OR 组合
+rule 1001: http.uri content "test" and (http.uri content "admin" or http.uri content "manager");
+
+# 复杂的 AND-OR 组合加标志位
+rule 1002: http.uri content "pattern"/i and http.uri pcre "^test.*"/m/s;
+```
+
+### 规则示例
+
+1. 基本的字符串匹配：
+```
+rule 10001: http.uri content "admin";
+```
+
+2. 不区分大小写的正则匹配：
+```
+rule 10002: http.uri pcre "^/admin.*"/i;
+```
+
+3. 复杂条件组合：
+```
+rule 10003: http.uri content "login"/i and (http.uri pcre "password.*" or http.uri content "auth");
+```
+
+4. 多个标志位组合：
+```
+rule 10004: http.uri pcre "^/api/.*"/m/s/f;
+```
+
+### 注意事项
+
+- 所有规则必须以分号(;)结尾
+- 字符串内容需要用双引号包围
+- 标志位可以按任意顺序组合
+- 逻辑运算符具有相同的优先级，从左到右计算
+- 使用括号来控制运算优先级
+- 规则ID必须是唯一的数字
 
 ## 常见问题
 

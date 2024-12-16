@@ -4,6 +4,7 @@
 #include <string.h>
 #include "waf_rule_types.h"
 #include "rule_parser.h"
+#include <hs/hs.h>
 
 extern int yylex();
 extern int yyparse();
@@ -22,7 +23,7 @@ uint16_t current_and_bit = 1;    // 当前and_bit，每个子式左移一位
 uint16_t current_not_mask = 0;   // 当前NOT掩码
 
 // 用于构建规则管理结构
-static void add_pattern_to_context(const char* proto_var, const char* pattern, int is_pcre, uint16_t and_bit) {
+static void add_pattern_to_context(const char* proto_var, const char* pattern, int is_pcre, uint16_t and_bit, uint32_t flags) {
     uint32_t rule_id = current_rule_id;
     uint8_t sub_id = current_sub_id;
     
@@ -43,8 +44,8 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
         }
     }
     
-    printf("Adding pattern: %s to %s (is_pcre: %d) for rule ID: %u (sub_id: %u, and_bit: 0x%x, not_mask: 0x%x)\n", 
-           pattern, proto_var, is_pcre, rule_id, sub_id, and_bit, current_not_mask);
+    printf("Adding pattern: %s to %s (is_pcre: %d, flags: 0x%x) for rule ID: %u (sub_id: %u, and_bit: 0x%x, not_mask: 0x%x)\n", 
+           pattern, proto_var, is_pcre, flags, rule_id, sub_id, and_bit, current_not_mask);
     
     if (!current_rule_mg) {
         current_rule_mg = calloc(1, sizeof(sign_rule_mg_t));
@@ -137,6 +138,8 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
         }
         pattern_entry->relations = NULL;
         pattern_entry->relation_count = 0;
+        pattern_entry->is_pcre = is_pcre;
+        pattern_entry->hs_flags = flags;
         ctx->string_patterns_num++;
         printf("Created new pattern at index %d\n", ctx->string_patterns_num - 1);
     }
@@ -164,24 +167,33 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
 %union {
     int number;
     char* string;
+    uint32_t flags;
     struct {
         char* proto_var;
         char* pattern;
         int is_pcre;
         uint16_t and_bit;
-        int is_not;  // 新增：标记是否为NOT操作
+        int is_not;
+        uint32_t flags;  // 新增：Hyperscan标志位
     } match_info;
 }
 
 %token <number> NUMBER
-%token <string> IDENTIFIER STRING
+%token <string> STRING IDENTIFIER
 %token RULE CONTENT PCRE
 %token HTTP_URI HTTP_HEADER HTTP_BODY
 %token AND OR NOT
 %token LPAREN RPAREN SEMICOLON
+%token NOCASE MULTILINE DOTALL SINGLEMATCH  // 新增的选项token
 
 %type <match_info> match_expr
 %type <match_info> rule_expr
+%type <flags> pattern_flags
+%type <flags> pattern_flag
+
+%left OR
+%left AND
+%right NOT
 
 %%
 
@@ -203,10 +215,85 @@ rule:
                 current_not_mask |= $4.and_bit;
                 printf("Added NOT mask: 0x%x\n", current_not_mask);
             }
-            add_pattern_to_context($4.proto_var, $4.pattern, $4.is_pcre, $4.and_bit);
+            add_pattern_to_context($4.proto_var, $4.pattern, $4.is_pcre, $4.and_bit, $4.flags);
             free($4.proto_var);
             free($4.pattern);
         }
+    }
+    ;
+
+pattern_flags:
+    /* empty */ { $$ = 0; }
+    | pattern_flags pattern_flag { $$ = $1 | $2; }
+    ;
+
+pattern_flag:
+    NOCASE { $$ = HS_FLAG_CASELESS; }
+    | MULTILINE { $$ = HS_FLAG_MULTILINE; }
+    | DOTALL { $$ = HS_FLAG_DOTALL; }
+    | SINGLEMATCH { $$ = HS_FLAG_SINGLEMATCH; }
+    ;
+
+match_expr:
+    HTTP_URI CONTENT STRING pattern_flags {
+        printf("Matched HTTP_URI CONTENT: %s with flags: 0x%x\n", $3, $4);
+        $$.proto_var = strdup("http.uri");
+        $$.pattern = $3;
+        $$.is_pcre = 0;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+    }
+    | HTTP_URI PCRE STRING pattern_flags {
+        printf("Matched HTTP_URI PCRE: %s with flags: 0x%x\n", $3, $4);
+        $$.proto_var = strdup("http.uri");
+        $$.pattern = $3;
+        $$.is_pcre = 1;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+    }
+    | HTTP_HEADER CONTENT STRING pattern_flags {
+        printf("Matched HTTP_HEADER CONTENT: %s with flags: 0x%x\n", $3, $4);
+        $$.proto_var = strdup("http.header");
+        $$.pattern = $3;
+        $$.is_pcre = 0;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+    }
+    | HTTP_HEADER PCRE STRING pattern_flags {
+        printf("Matched HTTP_HEADER PCRE: %s with flags: 0x%x\n", $3, $4);
+        $$.proto_var = strdup("http.header");
+        $$.pattern = $3;
+        $$.is_pcre = 1;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+    }
+    | HTTP_BODY CONTENT STRING pattern_flags {
+        printf("Matched HTTP_BODY CONTENT: %s with flags: 0x%x\n", $3, $4);
+        $$.proto_var = strdup("http.body");
+        $$.pattern = $3;
+        $$.is_pcre = 0;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+    }
+    | HTTP_BODY PCRE STRING pattern_flags {
+        printf("Matched HTTP_BODY PCRE: %s with flags: 0x%x\n", $3, $4);
+        $$.proto_var = strdup("http.body");
+        $$.pattern = $3;
+        $$.is_pcre = 1;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
     }
     ;
 
@@ -242,7 +329,7 @@ rule_expr:
             uint8_t original_sub_id = current_sub_id;
             for (uint8_t sub = 1; sub <= max_sub_id; sub++) {
                 current_sub_id = sub;
-                add_pattern_to_context($1.proto_var, $1.pattern, $1.is_pcre, $1.and_bit);
+                add_pattern_to_context($1.proto_var, $1.pattern, $1.is_pcre, $1.and_bit, $1.flags);
             }
             current_sub_id = original_sub_id;
             free($1.proto_var);
@@ -257,7 +344,7 @@ rule_expr:
             uint8_t original_sub_id = current_sub_id;
             for (uint8_t sub = 1; sub <= max_sub_id; sub++) {
                 current_sub_id = sub;
-                add_pattern_to_context($3.proto_var, $3.pattern, $3.is_pcre, $3.and_bit);
+                add_pattern_to_context($3.proto_var, $3.pattern, $3.is_pcre, $3.and_bit, $3.flags);
             }
             current_sub_id = original_sub_id;
             free($3.proto_var);
@@ -274,7 +361,7 @@ rule_expr:
                 current_not_mask |= $1.and_bit;
                 printf("Added NOT mask: 0x%x for left expr\n", current_not_mask);
             }
-            add_pattern_to_context($1.proto_var, $1.pattern, $1.is_pcre, $1.and_bit);
+            add_pattern_to_context($1.proto_var, $1.pattern, $1.is_pcre, $1.and_bit, $1.flags);
             free($1.proto_var);
             free($1.pattern);
         }
@@ -287,7 +374,7 @@ rule_expr:
                 current_not_mask |= $3.and_bit;
                 printf("Added NOT mask: 0x%x for right expr\n", current_not_mask);
             }
-            add_pattern_to_context($3.proto_var, $3.pattern, $3.is_pcre, $3.and_bit);
+            add_pattern_to_context($3.proto_var, $3.pattern, $3.is_pcre, $3.and_bit, $3.flags);
             free($3.proto_var);
             free($3.pattern);
         }
@@ -297,63 +384,6 @@ rule_expr:
     | LPAREN rule_expr RPAREN {
         printf("Processing parenthesized expression\n");
         $$ = $2;
-    }
-    ;
-
-match_expr:
-    HTTP_URI CONTENT STRING {
-        printf("Matched HTTP_URI CONTENT: %s\n", $3);
-        $$.proto_var = strdup("http.uri");
-        $$.pattern = $3;
-        $$.is_pcre = 0;
-        $$.and_bit = current_and_bit;
-        $$.is_not = 0;  // 初始化为非NOT操作
-        current_and_bit <<= 1;
-    }
-    | HTTP_HEADER CONTENT STRING {
-        printf("Matched HTTP_HEADER CONTENT: %s\n", $3);
-        $$.proto_var = strdup("http.header");
-        $$.pattern = $3;
-        $$.is_pcre = 0;
-        $$.and_bit = current_and_bit;
-        $$.is_not = 0;
-        current_and_bit <<= 1;
-    }
-    | HTTP_BODY CONTENT STRING {
-        printf("Matched HTTP_BODY CONTENT: %s\n", $3);
-        $$.proto_var = strdup("http.body");
-        $$.pattern = $3;
-        $$.is_pcre = 0;
-        $$.and_bit = current_and_bit;
-        $$.is_not = 0;
-        current_and_bit <<= 1;
-    }
-    | HTTP_URI PCRE STRING {
-        printf("Matched HTTP_URI PCRE: %s\n", $3);
-        $$.proto_var = strdup("http.uri");
-        $$.pattern = $3;
-        $$.is_pcre = 1;
-        $$.and_bit = current_and_bit;
-        $$.is_not = 0;
-        current_and_bit <<= 1;
-    }
-    | HTTP_HEADER PCRE STRING {
-        printf("Matched HTTP_HEADER PCRE: %s\n", $3);
-        $$.proto_var = strdup("http.header");
-        $$.pattern = $3;
-        $$.is_pcre = 1;
-        $$.and_bit = current_and_bit;
-        $$.is_not = 0;
-        current_and_bit <<= 1;
-    }
-    | HTTP_BODY PCRE STRING {
-        printf("Matched HTTP_BODY PCRE: %s\n", $3);
-        $$.proto_var = strdup("http.body");
-        $$.pattern = $3;
-        $$.is_pcre = 1;
-        $$.and_bit = current_and_bit;
-        $$.is_not = 0;
-        current_and_bit <<= 1;
     }
     ;
 
@@ -378,6 +408,8 @@ sign_rule_mg_t* parse_rule_file(const char* filename) {
     }
     current_rule_id = 0;
     current_sub_id = 0;
+    current_and_bit = 1;
+    current_not_mask = 0;
     
     yyin = file;
     int result = yyparse();
@@ -400,6 +432,8 @@ sign_rule_mg_t* parse_rule_string(const char* rule_str) {
     }
     current_rule_id = 0;
     current_sub_id = 0;
+    current_and_bit = 1;
+    current_not_mask = 0;
     
     void* buffer = yy_scan_string(rule_str);
     if (!buffer) {

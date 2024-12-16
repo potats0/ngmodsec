@@ -7,6 +7,11 @@
 extern int yylineno;
 %}
 
+%option noyywrap
+%option yylineno
+%option noinput
+%option nounput
+
 %%
 
 [ \t\n]+        ; /* 忽略空白字符 */
@@ -23,6 +28,10 @@ extern int yylineno;
 "("             { return LPAREN; }
 ")"             { return RPAREN; }
 ";"             { return SEMICOLON; }
+"/i"            { return NOCASE; }      /* 忽略大小写 */
+"/m"            { return MULTILINE; }   /* 多行模式 */
+"/s"            { return DOTALL; }      /* 点号匹配换行 */
+"/f"            { return SINGLEMATCH; } /* 单次匹配 */
 [0-9]+          { yylval.number = atoi(yytext); return NUMBER; }
 [a-zA-Z][a-zA-Z0-9_]*  { yylval.string = strdup(yytext); return IDENTIFIER; }
 \"[^\"]*\"      { 
@@ -33,7 +42,3 @@ extern int yylineno;
 .               { printf("Unknown character: %s\n", yytext); }
 
 %%
-
-int yywrap() {
-    return 1;
-}
