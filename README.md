@@ -22,29 +22,59 @@
 
 ## 依赖项
 
-1. 基本依赖：
-   - Nginx 源码
-   - C 编译器（gcc/clang）
-   - GNU Make
-   - Flex (用于词法分析)
-   - Bison (用于语法分析)
+### 系统要求
+- Ubuntu 22.04 LTS
+- 足够的磁盘空间（至少 1GB 用于依赖安装）
 
-2. 测试依赖：
-   - Test::Nginx::Socket（用于 Nginx 模块测试）
-   - Perl（用于运行测试套件）
+### 核心依赖
+- Nginx 源码
+- C 编译器（gcc/clang）
+- GNU Make
+- Flex（用于词法分析）
+- Bison（用于语法分析）
+- Hyperscan（用于高性能正则匹配）
 
-## 安装
+### 开发工具
+- Git（版本控制）
+- Bear（生成编译数据库）
+- Clangd（代码补全和导航）
+- GDB（调试器）
+- Valgrind（内存检查）
 
-1. 安装依赖：
-   ```bash
-   ./dependencies.sh  # 自动在 Ubuntu 上安装依赖
-   ```
+### 测试依赖
+- Perl
+- Test::Nginx::Socket（Nginx 模块测试框架）
 
-2. 获取 Nginx 源码：
-   ```bash
-   git clone https://github.com/nginx/nginx.git
-   export NGINX_PATH=你的nginx源码路径
-   ```
+## 快速开始
+
+### 1. 安装依赖
+
+我们提供了自动安装脚本，它会自动安装所有必需的依赖：
+
+```bash
+# 克隆仓库
+git clone https://github.com/your-username/ngx_http_new_sign_module.git
+cd ngx_http_new_sign_module
+
+# 运行依赖安装脚本
+sudo ./dependencies.sh
+```
+
+如果你想手动安装依赖，可以参考 `dependencies.sh` 脚本中的内容。
+
+### 2. 获取 Nginx 源码
+
+```bash
+git clone https://github.com/nginx/nginx.git
+export NGINX_PATH=/path/to/nginx  # 替换为你的 Nginx 源码路径
+```
+
+### 3. 构建模块
+
+在项目根目录下执行：
+```bash
+make
+```
 
 ## 构建系统
 
@@ -114,18 +144,25 @@ make test
 | http_uri    | uri         | 暂定              | 经过解码和规范化的路径部分                  |
 | http_args   | args        | 暂定              | query string原始部分                     |
 
-## FAQ
+## 常见问题
 
 1. 编译报错？
    - 请先执行 `make clangd` 生成依赖文件，然后再执行 `make`
+   - 确保所有依赖都已正确安装
+   - 检查 `NGINX_PATH` 环境变量是否正确设置
 
 2. 测试失败？
    - 确保已安装所有依赖
    - 检查 Nginx 源码路径是否正确
    - 查看测试日志获取详细信息
 
+3. 找不到 Hyperscan 库？
+   - 确保已通过 `dependencies.sh` 安装了 Hyperscan
+   - 如果手动安装，确保安装了 `libhyperscan5` 和 `libhyperscan-dev`
+
 更多问题请参考：https://blog.csdn.net/zzhongcy/article/details/133175929
 
 ## 参考资料
 
 - [Nginx $request_uri和$uri详解](https://blog.csdn.net/weixin_42905245/article/details/106424144)
+- [Hyperscan 文档](https://intel.github.io/hyperscan/dev-reference/)
