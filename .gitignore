@@ -2,3 +2,54 @@
 .vscode/*
 compile_commands.json
 t/servroot/*
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+rule_parser
+
+# Flex & Bison generated files
+src/lex.yy.c
+src/rule_parser.tab.c
+src/rule_parser.tab.h
+
+# IDE and editor files
+.idea/
+*.swp
+*~
+
+# Build directories
+build/
+objs/
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Dependency files
+*.d
+
+# Core dumps
+core
