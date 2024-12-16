@@ -63,7 +63,7 @@ check-source:
 		$(MAKE) build; \
 	fi
 
-build:
+build: prepare
 	cd $(NGINX_PATH) && make
 
 verify: build
