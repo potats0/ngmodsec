@@ -22,6 +22,16 @@ static ngx_http_output_header_filter_pt ngx_http_next_header_filter;
 extern ngx_int_t custom_sign_checker(ngx_http_request_t *r);
 #endif
 
+/**
+ * @brief 为WAF规则匹配引擎分配hyperscan scratch空间
+ * @details 该函数负责为hyperscan规则匹配引擎分配scratch空间，scratch是hyperscan
+ *          进行模式匹配时必需的临时工作空间。每个线程都需要独立的scratch空间，
+ *          以保证线程安全。
+ *
+ * @param[in] mg WAF规则匹配引擎配置结构体指针
+ *
+ * @return void 无返回值
+ */
 void new_sign_alloc_scratch(sign_rule_mg_t *mg) {
   for (ngx_uint_t i = 0; i < NGX_VAR_MAX; i++) {
     if (mg->string_match_context_array && mg->string_match_context_array[i]) {
@@ -38,7 +48,7 @@ void new_sign_alloc_scratch(sign_rule_mg_t *mg) {
   }
 }
 
-void new_sign_rule_reload() {
+void ngx_http_waf_rule_match_engine_reload() {
 #ifdef WAF
   sign_rule_mg = wafconf_conf_get_by_index(CONF1_NEW_SIGN_ENGINE, 1);
 #else
@@ -87,7 +97,6 @@ ngx_http_waf_rule_match_engine_process_exit(ngx_cycle_t *cycle) {
 
 static ngx_int_t
 ngx_http_waf_rule_match_engine_module_init(ngx_cycle_t *cycle) {
-  new_sign_rule_reload();
   LOGN(cycle->log, "enter ngx_http_waf_rule_match_engine_module_init");
   return NGX_OK;
 }
@@ -172,7 +181,7 @@ static ngx_int_t ngx_http_waf_rule_checker(ngx_http_request_t *r) {
   usrdata->r = r;
 
   // 1. http method不过hyperscan
-  // NGINX_CHECK_HEAD_STR(r->method_name, NGX_VAR_METHOD);
+  NGINX_CHECK_HEAD_STR(r->method_name, NGX_VAR_METHOD);
   // 2. 原始raw 包含参数部分
   //
 

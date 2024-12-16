@@ -39,40 +39,34 @@ typedef struct proto_var_desc_s {
 
 /** 规则命中子式的逻辑关系 **/
 typedef struct rule_relation_s {
-#ifdef TODO
-  struct list_head list;
-#endif
-  u_int32_t threat_id; // rule_id
-  u_int16_t proto_var_id;
-  u_int16_t line_num;          // hs编译时用到
-  u_int32_t pattern_id;        // 规则子式id
-  u_int32_t pattern_offset;    // 规则子式在规则文件中的偏移
-  u_int32_t pattern_len;       // 规则子式长度
-  u_int16_t and_bit;           // 命中的子式条件
-  u_int16_t sum_and_bit;       // 告警所需子式条件
-  u_int32_t attribute_bit;     // 命中的属性条件
+  u_int32_t threat_id;        // 规则子式id (rule_id<<8|sub_id)
+  u_int16_t proto_var_id;     // 协议变量ID
+  u_int16_t line_num;         // hs编译时用到
+  u_int32_t pattern_id;       // 规则子式在string_patterns_list中的索引
+  u_int32_t pattern_offset;   // 规则子式在规则文件中的偏移
+  u_int32_t pattern_len;      // 规则子式长度
+  u_int16_t and_bit;         // 命中的子式条件
+  u_int16_t sum_and_bit;     // 告警所需子式条件
+  u_int32_t attribute_bit;    // 命中的属性条件
   u_int32_t sum_attribute_bit; // 告警所需属性条件
   u_int8_t operator_type;
 } rule_relation_t;
 
 /** 字符串类型规则子式结构 **/
 typedef struct string_pattern_s {
-  char *string_pattern;
-#ifdef TODO
-  struct list_head relation_list; // 命中子式所涵盖的rule_relation_list
-#endif
-  int relation_count; // 命中子式所涵盖的relation条目总数
+  char *string_pattern;       // 匹配的字符串模式
+  rule_relation_t *relations; // 引用这个模式的规则关系数组
+  int relation_count;        // 引用这个模式的规则关系数量
   unsigned int attribute_bit; // 如果该字符串为属性特征，所占属性的bit位
 } string_pattern_t;
 
-/** 模式字符串规则匹配上下文 ，以每协议变量分配 **/
+/** 模式字符串规则匹配上下文，以每协议变量分配 **/
 typedef struct string_match_context_s {
   char proto_var_name[32];                // 所属协议变量名
   string_pattern_t *string_patterns_list; // 模式字符串list
   int string_patterns_num;                // 模式字符串规则数量
-
-  unsigned int *string_ids; // 编译hs用
-  hs_database_t *db;        // hs数据库
+  unsigned int *string_ids;               // 编译hs用，对应string_patterns_list的索引
+  hs_database_t *db;                      // hs数据库
 } string_match_context_t;
 
 /** 全局规则管理结构mg, 目前只实现字符串 **/
@@ -83,7 +77,8 @@ typedef struct sign_rule_mg_s {
 typedef void *(*waf_rule_malloc_fn)(uint64_t size);
 typedef void (*waf_rule_free_fn)(void *memp);
 
-extern void sign_rule_set_alloc(waf_rule_malloc_fn f_malloc, waf_rule_free_fn f_free);
+extern void sign_rule_set_alloc(waf_rule_malloc_fn f_malloc,
+                                waf_rule_free_fn f_free);
 
 #ifdef WAF
 extern proto_var_desc g_pvar_desc[];

@@ -1,0 +1,1 @@
+rule 1000 http.uri content "t66y" and (http.uri content "admin" or http.uri content "manager") and http.uri content "login.php" ;
