@@ -1,15 +1,24 @@
 # 规则1：检测SQL注入尝试
 # 子规则1: 包含常见SQL注入关键字
-# 子规则2: 包含其他SQL注入特征
+# 子规则2: 包含其他SQL注入特征，但不包含注释
 rule 1001 (http.uri content "select" and http.uri content "from" and http.uri content "where") or
-         (http.uri content "union" and http.uri content "select" and http.uri content "*") ;
+         (http.uri content "union" and http.uri content "select" and http.uri content "*" and not http.uri content "--") ;
 
 # 规则2：检测XSS攻击
-# 子规则1: 包含script标签
+# 子规则1: 包含script标签，但不是img标签
 # 子规则2: 包含其他XSS特征
-rule 1002 (http.uri content "script" and http.uri content "alert") or
+rule 1002 (http.uri content "script" and http.uri content "alert" and not http.uri content "img") or
          (http.uri content "script" and http.uri content "eval") ;
 
 # 规则3：检测路径遍历
-# 注意这里复用了规则1中的"select"和规则2中的"script"
-rule 1003 http.uri content "../" and http.uri content "select" and http.uri content "script" ;
+# 子规则1: 包含../但不在合法目录中
+rule 1003 http.uri content "../" and not http.uri content "/static/" and not http.uri content "/public/" ;
+
+# 规则4：检测文件包含漏洞
+# 子规则1: 包含文件包含函数，但不是合法的包含路径
+rule 1004 (http.uri content "include" and http.uri content ".php" and not http.uri content "/includes/") or
+         (http.uri content "require" and http.uri content ".php" and not http.uri content "/lib/") ;
+
+# 规则5：测试复合NOT操作
+# 不允许在任何静态资源目录中
+rule 1005 http.uri content "admin" and not (http.uri content "/static/" or http.uri content "/public/" or http.uri content "/assets/") ;

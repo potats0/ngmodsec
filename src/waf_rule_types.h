@@ -32,6 +32,7 @@
 /** 规则掩码存储结构 **/
 typedef struct rule_mask_array_s {
   u_int16_t and_masks[MAX_SUB_RULES_NUM]; // 每个子规则的条件掩码
+  u_int16_t not_masks[MAX_SUB_RULES_NUM]; // 每个子规则的NOT条件掩码
   u_int8_t sub_rules_count;               // 实际子规则数量
 } rule_mask_array_t;
 

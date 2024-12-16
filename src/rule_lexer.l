@@ -1,9 +1,10 @@
 %{
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "rule_parser.tab.h"
 
-void yyerror(const char *s);
+extern int yylineno;
 %}
 
 %%
@@ -18,6 +19,7 @@ void yyerror(const char *s);
 "http.body"     { return HTTP_BODY; }
 "and"           { return AND; }
 "or"            { return OR; }
+"not"           { return NOT; }  /* 添加NOT关键字支持 */
 "("             { return LPAREN; }
 ")"             { return RPAREN; }
 ";"             { return SEMICOLON; }
@@ -32,6 +34,6 @@ void yyerror(const char *s);
 
 %%
 
-int yywrap(void) {
+int yywrap() {
     return 1;
 }

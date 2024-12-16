@@ -19,6 +19,7 @@ sign_rule_mg_t* current_rule_mg = NULL;
 uint32_t current_rule_id = 0;    // 当前规则ID
 uint8_t current_sub_id = 0;      // 当前子规则ID
 uint16_t current_and_bit = 1;    // 当前and_bit，每个子式左移一位
+uint16_t current_not_mask = 0;   // 当前NOT掩码
 
 // 用于构建规则管理结构
 static void add_pattern_to_context(const char* proto_var, const char* pattern, int is_pcre, uint16_t and_bit) {
@@ -42,8 +43,8 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
         }
     }
     
-    printf("Adding pattern: %s to %s (is_pcre: %d) for rule ID: %u (sub_id: %u, and_bit: 0x%x)\n", 
-           pattern, proto_var, is_pcre, rule_id, sub_id, and_bit);
+    printf("Adding pattern: %s to %s (is_pcre: %d) for rule ID: %u (sub_id: %u, and_bit: 0x%x, not_mask: 0x%x)\n", 
+           pattern, proto_var, is_pcre, rule_id, sub_id, and_bit, current_not_mask);
     
     if (!current_rule_mg) {
         current_rule_mg = calloc(1, sizeof(sign_rule_mg_t));
@@ -84,6 +85,7 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
         rule_mask->sub_rules_count = sub_id;
     }
     rule_mask->and_masks[sub_id - 1] |= and_bit;  // 子规则ID从1开始，数组索引从0开始
+    rule_mask->not_masks[sub_id - 1] |= (current_not_mask & and_bit);  // 更新NOT掩码
 
     // 查找或创建对应的context
     string_match_context_t* ctx = NULL;
@@ -167,6 +169,7 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
         char* pattern;
         int is_pcre;
         uint16_t and_bit;
+        int is_not;  // 新增：标记是否为NOT操作
     } match_info;
 }
 
@@ -174,7 +177,7 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
 %token <string> IDENTIFIER STRING
 %token RULE CONTENT PCRE
 %token HTTP_URI HTTP_HEADER HTTP_BODY
-%token AND OR
+%token AND OR NOT
 %token LPAREN RPAREN SEMICOLON
 
 %type <match_info> match_expr
@@ -189,12 +192,17 @@ rules:
 rule:
     RULE NUMBER {
         printf("Starting rule %d\n", $2);
-        current_rule_id = $2;  // 在解析规则内容之前设置规则ID
-        current_sub_id = 1;    // 初始化为第一个子规则
-        current_and_bit = 1;   // 重置and_bit为1
+        current_rule_id = $2;
+        current_sub_id = 1;
+        current_and_bit = 1;
+        current_not_mask = 0;
     } rule_expr SEMICOLON {
         printf("Completed rule %d\n", current_rule_id);
         if ($4.proto_var && $4.pattern) {
+            if ($4.is_not) {
+                current_not_mask |= $4.and_bit;
+                printf("Added NOT mask: 0x%x\n", current_not_mask);
+            }
             add_pattern_to_context($4.proto_var, $4.pattern, $4.is_pcre, $4.and_bit);
             free($4.proto_var);
             free($4.pattern);
@@ -207,12 +215,30 @@ rule_expr:
         printf("Converting match_expr to rule_expr\n");
         $$ = $1;
     }
+    | NOT match_expr {
+        printf("Processing NOT expression\n");
+        $$ = $2;
+        $$.is_not = 1;  // 标记为NOT操作
+    }
+    | NOT LPAREN rule_expr RPAREN {
+        printf("Processing NOT group expression\n");
+        $$ = $3;
+        $$.is_not = 1;  // 标记整个组为NOT操作
+        
+        // 对于复合NOT，我们需要设置组内所有条件的NOT标记
+        if ($3.proto_var && $3.pattern) {
+            current_not_mask |= $3.and_bit;
+        }
+    }
     | rule_expr AND rule_expr {
         printf("Processing AND expression (sub_id: %d)\n", current_sub_id);
         uint8_t max_sub_id = current_sub_id;
 
-        // 先处理左侧表达式，同样需要添加到所有子规则中
         if ($1.proto_var && $1.pattern) {
+            if ($1.is_not) {
+                current_not_mask |= $1.and_bit;
+                printf("Added NOT mask: 0x%x for left expr\n", current_not_mask);
+            }
             uint8_t original_sub_id = current_sub_id;
             for (uint8_t sub = 1; sub <= max_sub_id; sub++) {
                 current_sub_id = sub;
@@ -223,8 +249,11 @@ rule_expr:
             free($1.pattern);
         }
 
-        // 再处理右侧表达式，需要添加到所有子规则中
         if ($3.proto_var && $3.pattern) {
+            if ($3.is_not) {
+                current_not_mask |= $3.and_bit;
+                printf("Added NOT mask: 0x%x for right expr\n", current_not_mask);
+            }
             uint8_t original_sub_id = current_sub_id;
             for (uint8_t sub = 1; sub <= max_sub_id; sub++) {
                 current_sub_id = sub;
@@ -241,14 +270,23 @@ rule_expr:
     | rule_expr OR rule_expr {
         printf("Processing OR expression, creating new sub-rule\n");
         if ($1.proto_var && $1.pattern) {
+            if ($1.is_not) {
+                current_not_mask |= $1.and_bit;
+                printf("Added NOT mask: 0x%x for left expr\n", current_not_mask);
+            }
             add_pattern_to_context($1.proto_var, $1.pattern, $1.is_pcre, $1.and_bit);
             free($1.proto_var);
             free($1.pattern);
         }
-        current_sub_id++;  // 为OR的右边部分创建新的子规则
-        current_and_bit = 1;  // 重置and_bit
+        current_sub_id++;
+        current_and_bit = 1;
+        current_not_mask = 0;  // 重置NOT掩码
         printf("Switched to sub-rule %d\n", current_sub_id);
         if ($3.proto_var && $3.pattern) {
+            if ($3.is_not) {
+                current_not_mask |= $3.and_bit;
+                printf("Added NOT mask: 0x%x for right expr\n", current_not_mask);
+            }
             add_pattern_to_context($3.proto_var, $3.pattern, $3.is_pcre, $3.and_bit);
             free($3.proto_var);
             free($3.pattern);
@@ -269,7 +307,8 @@ match_expr:
         $$.pattern = $3;
         $$.is_pcre = 0;
         $$.and_bit = current_and_bit;
-        current_and_bit <<= 1;  // 为下一个子式准备and_bit
+        $$.is_not = 0;  // 初始化为非NOT操作
+        current_and_bit <<= 1;
     }
     | HTTP_HEADER CONTENT STRING {
         printf("Matched HTTP_HEADER CONTENT: %s\n", $3);
@@ -277,6 +316,7 @@ match_expr:
         $$.pattern = $3;
         $$.is_pcre = 0;
         $$.and_bit = current_and_bit;
+        $$.is_not = 0;
         current_and_bit <<= 1;
     }
     | HTTP_BODY CONTENT STRING {
@@ -285,6 +325,7 @@ match_expr:
         $$.pattern = $3;
         $$.is_pcre = 0;
         $$.and_bit = current_and_bit;
+        $$.is_not = 0;
         current_and_bit <<= 1;
     }
     | HTTP_URI PCRE STRING {
@@ -293,6 +334,7 @@ match_expr:
         $$.pattern = $3;
         $$.is_pcre = 1;
         $$.and_bit = current_and_bit;
+        $$.is_not = 0;
         current_and_bit <<= 1;
     }
     | HTTP_HEADER PCRE STRING {
@@ -301,6 +343,7 @@ match_expr:
         $$.pattern = $3;
         $$.is_pcre = 1;
         $$.and_bit = current_and_bit;
+        $$.is_not = 0;
         current_and_bit <<= 1;
     }
     | HTTP_BODY PCRE STRING {
@@ -309,6 +352,7 @@ match_expr:
         $$.pattern = $3;
         $$.is_pcre = 1;
         $$.and_bit = current_and_bit;
+        $$.is_not = 0;
         current_and_bit <<= 1;
     }
     ;
@@ -332,8 +376,8 @@ sign_rule_mg_t* parse_rule_file(const char* filename) {
         fprintf(stderr, "Warning: current_rule_mg not NULL at start of parsing\n");
         current_rule_mg = NULL;
     }
-    current_rule_id = 0;  // 重置规则ID
-    current_sub_id = 0;   // 重置子规则ID
+    current_rule_id = 0;
+    current_sub_id = 0;
     
     yyin = file;
     int result = yyparse();
@@ -354,23 +398,19 @@ sign_rule_mg_t* parse_rule_string(const char* rule_str) {
         fprintf(stderr, "Warning: current_rule_mg not NULL at start of parsing\n");
         current_rule_mg = NULL;
     }
-    current_rule_id = 0;  // 重置规则ID
-    current_sub_id = 0;   // 重置子规则ID
+    current_rule_id = 0;
+    current_sub_id = 0;
     
-    // 创建一个新的扫描缓冲区
     void* buffer = yy_scan_string(rule_str);
     if (!buffer) {
         fprintf(stderr, "Failed to create scan buffer\n");
         return NULL;
     }
     
-    // 切换到新的缓冲区
     yy_switch_to_buffer(buffer);
     
-    // 解析规则
     int result = yyparse();
     
-    // 删除缓冲区
     yy_delete_buffer(buffer);
     
     if (result != 0) {
