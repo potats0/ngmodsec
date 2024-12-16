@@ -150,19 +150,34 @@ rule <规则ID>: <匹配表达式>;
 
 ### 匹配类型
 
-1. 字符串精确匹配：
+1. 包含匹配（字符串部分匹配）：
 ```
-http.uri content "匹配内容"
+http.uri contains "匹配内容"
 ```
 
 2. 正则表达式匹配：
 ```
-http.uri pcre "正则表达式"
+http.uri matches "正则表达式"
+```
+
+3. 完全相等匹配：
+```
+http.uri equals "完整内容"
+```
+
+4. 前缀匹配：
+```
+http.uri starts_with "前缀"
+```
+
+5. 后缀匹配：
+```
+http.uri ends_with "后缀"
 ```
 
 ### Hyperscan 标志位
 
-字符串匹配和正则表达式都支持以下 Hyperscan 标志位：
+所有匹配类型都支持以下 Hyperscan 标志位：
 
 - `/i`：不区分大小写匹配
 - `/m`：多行匹配模式
@@ -171,8 +186,8 @@ http.uri pcre "正则表达式"
 
 示例：
 ```
-http.uri content "pattern"/i
-http.uri pcre "pattern"/m/s
+http.uri contains "pattern"/i
+http.uri matches "pattern"/m/s
 ```
 
 ### 逻辑运算符
@@ -183,38 +198,74 @@ http.uri pcre "pattern"/m/s
 - OR：要求至少一个条件匹配
 - 括号：用于分组条件
 
-示例：
-```
-# 简单的 AND 组合
-rule 1000: http.uri content "a" and http.uri content "b";
-
-# 带括号的 OR 组合
-rule 1001: http.uri content "test" and (http.uri content "admin" or http.uri content "manager");
-
-# 复杂的 AND-OR 组合加标志位
-rule 1002: http.uri content "pattern"/i and http.uri pcre "^test.*"/m/s;
-```
-
 ### 规则示例
 
-1. 基本的字符串匹配：
+1. 基本的包含匹配：
 ```
-rule 10001: http.uri content "admin";
+# 检测 URI 中是否包含 "admin"
+rule 10001: http.uri contains "admin";
 ```
 
 2. 不区分大小写的正则匹配：
 ```
-rule 10002: http.uri pcre "^/admin.*"/i;
+# 检测以 /admin 开头的任意 URI
+rule 10002: http.uri matches "^/admin.*"/i;
 ```
 
-3. 复杂条件组合：
+3. 精确匹配：
 ```
-rule 10003: http.uri content "login"/i and (http.uri pcre "password.*" or http.uri content "auth");
+# 检测是否精确匹配 /login.php
+rule 10003: http.uri equals "/login.php";
 ```
 
-4. 多个标志位组合：
+4. 前缀和后缀匹配：
 ```
-rule 10004: http.uri pcre "^/api/.*"/m/s/f;
+# 检测以 .php 结尾的 URI
+rule 10004: http.uri ends_with ".php";
+
+# 检测以 /api 开头的 URI
+rule 10005: http.uri starts_with "/api";
+```
+
+5. 复杂条件组合：
+```
+# 检测登录页面的敏感操作
+rule 10006: http.uri contains "login"/i and (http.uri matches "password.*" or http.uri contains "auth");
+
+# 检测特定文件类型的访问
+rule 10007: http.uri ends_with ".php" and (http.uri starts_with "/admin" or http.uri starts_with "/manager");
+```
+
+6. 多个标志位组合：
+```
+# 不区分大小写且支持多行的 API 路径匹配
+rule 10008: http.uri matches "^/api/v[0-9]+/.*"/i/m;
+```
+
+7. 安全检测示例：
+```
+# SQL 注入检测
+rule 20001: http.uri contains "select"/i or http.uri contains "union"/i;
+
+# XSS 检测
+rule 20002: http.uri matches "<script.*>.*</script>"/i;
+
+# 路径遍历检测
+rule 20003: http.uri contains "../" or http.uri matches "\.\.%2f"/i;
+```
+
+8. 组合规则示例：
+```
+# 检测后台敏感操作
+rule 30001: http.uri starts_with "/admin" and 
+           (http.uri contains "delete" or 
+            http.uri contains "modify" or 
+            http.uri ends_with ".php");
+
+# API 访问控制
+rule 30002: http.uri starts_with "/api" and
+           (http.uri matches "v[0-9]+/users/.*" or
+            http.uri matches "v[0-9]+/admin/.*");
 ```
 
 ### 注意事项
@@ -225,6 +276,10 @@ rule 10004: http.uri pcre "^/api/.*"/m/s/f;
 - 逻辑运算符具有相同的优先级，从左到右计算
 - 使用括号来控制运算优先级
 - 规则ID必须是唯一的数字
+- 建议根据规则用途划分规则ID范围，如：
+  - 10000-19999：基本功能性规则
+  - 20000-29999：安全防护规则
+  - 30000-39999：访问控制规则
 
 ## 常见问题
 

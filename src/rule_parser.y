@@ -180,7 +180,7 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
 
 %token <number> NUMBER
 %token <string> STRING IDENTIFIER
-%token RULE CONTENT PCRE
+%token RULE CONTAINS MATCHES
 %token HTTP_URI HTTP_HEADER HTTP_BODY
 %token AND OR NOT
 %token LPAREN RPAREN SEMICOLON
@@ -235,8 +235,8 @@ pattern_flag:
     ;
 
 match_expr:
-    HTTP_URI CONTENT STRING pattern_flags {
-        printf("Matched HTTP_URI CONTENT: %s with flags: 0x%x\n", $3, $4);
+    HTTP_URI CONTAINS STRING pattern_flags {
+        printf("Matched HTTP_URI CONTAINS: %s with flags: 0x%x\n", $3, $4);
         $$.proto_var = strdup("http.uri");
         $$.pattern = $3;
         $$.is_pcre = 0;
@@ -245,8 +245,8 @@ match_expr:
         $$.flags = $4;
         current_and_bit <<= 1;
     }
-    | HTTP_URI PCRE STRING pattern_flags {
-        printf("Matched HTTP_URI PCRE: %s with flags: 0x%x\n", $3, $4);
+    | HTTP_URI MATCHES STRING pattern_flags {
+        printf("Matched HTTP_URI MATCHES: %s with flags: 0x%x\n", $3, $4);
         $$.proto_var = strdup("http.uri");
         $$.pattern = $3;
         $$.is_pcre = 1;
@@ -255,8 +255,8 @@ match_expr:
         $$.flags = $4;
         current_and_bit <<= 1;
     }
-    | HTTP_HEADER CONTENT STRING pattern_flags {
-        printf("Matched HTTP_HEADER CONTENT: %s with flags: 0x%x\n", $3, $4);
+    | HTTP_HEADER CONTAINS STRING pattern_flags {
+        printf("Matched HTTP_HEADER CONTAINS: %s with flags: 0x%x\n", $3, $4);
         $$.proto_var = strdup("http.header");
         $$.pattern = $3;
         $$.is_pcre = 0;
@@ -265,8 +265,8 @@ match_expr:
         $$.flags = $4;
         current_and_bit <<= 1;
     }
-    | HTTP_HEADER PCRE STRING pattern_flags {
-        printf("Matched HTTP_HEADER PCRE: %s with flags: 0x%x\n", $3, $4);
+    | HTTP_HEADER MATCHES STRING pattern_flags {
+        printf("Matched HTTP_HEADER MATCHES: %s with flags: 0x%x\n", $3, $4);
         $$.proto_var = strdup("http.header");
         $$.pattern = $3;
         $$.is_pcre = 1;
@@ -275,8 +275,8 @@ match_expr:
         $$.flags = $4;
         current_and_bit <<= 1;
     }
-    | HTTP_BODY CONTENT STRING pattern_flags {
-        printf("Matched HTTP_BODY CONTENT: %s with flags: 0x%x\n", $3, $4);
+    | HTTP_BODY CONTAINS STRING pattern_flags {
+        printf("Matched HTTP_BODY CONTAINS: %s with flags: 0x%x\n", $3, $4);
         $$.proto_var = strdup("http.body");
         $$.pattern = $3;
         $$.is_pcre = 0;
@@ -285,8 +285,8 @@ match_expr:
         $$.flags = $4;
         current_and_bit <<= 1;
     }
-    | HTTP_BODY PCRE STRING pattern_flags {
-        printf("Matched HTTP_BODY PCRE: %s with flags: 0x%x\n", $3, $4);
+    | HTTP_BODY MATCHES STRING pattern_flags {
+        printf("Matched HTTP_BODY MATCHES: %s with flags: 0x%x\n", $3, $4);
         $$.proto_var = strdup("http.body");
         $$.pattern = $3;
         $$.is_pcre = 1;

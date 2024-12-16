@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "waf_rule_types.h"
 #include "rule_parser.tab.h"
 
 extern int yylineno;
@@ -17,8 +18,8 @@ extern int yylineno;
 [ \t\n]+        ; /* 忽略空白字符 */
 #[^\n]*         ; /* 忽略以#开头的单行注释 */
 "rule"          { return RULE; }
-"content"       { return CONTENT; }
-"pcre"          { return PCRE; }
+"contains"      { return CONTAINS; }
+"matches"       { return MATCHES; }
 "http.uri"      { return HTTP_URI; }
 "http.header"   { return HTTP_HEADER; }
 "http.body"     { return HTTP_BODY; }
@@ -37,7 +38,7 @@ extern int yylineno;
 \"[^\"]*\"      { 
     yylval.string = strdup(yytext + 1);
     yylval.string[strlen(yylval.string)-1] = 0;
-    return STRING;
+    return STRING; 
 }
 .               { printf("Unknown character: %s\n", yytext); }
 
