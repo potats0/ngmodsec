@@ -9,6 +9,7 @@ void yyerror(const char *s);
 %%
 
 [ \t\n]+        ; /* 忽略空白字符 */
+#[^\n]*         ; /* 忽略以#开头的单行注释 */
 "rule"          { return RULE; }
 "content"       { return CONTENT; }
 "pcre"          { return PCRE; }

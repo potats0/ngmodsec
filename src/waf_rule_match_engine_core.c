@@ -82,35 +82,34 @@ int Threat_find_func(rule_hit_unit_t *unit, rule_relation_t *relation_node,
   // 攻击特征
   unit->save_and_bit |= relation_node->and_bit;
 
-  // 判断攻击特征是否全部命中
-  if (1 << (relation_node->sum_and_bit) == (unit->save_and_bit) + 1) {
-    // 判断流属性是否命中
-    unsigned int save_attr = hs_usrdata->rule_hit_context.save_attribute;
-    unsigned int sum_attr = relation_node->sum_attribute_bit;
-    if ((save_attr & sum_attr) != sum_attr) {
-      return 0;
-    }
-    // 特征全部命中
-    unit->threat_id = relation_node->threat_id >> 8;
-    MLOGN("RULE  MATCHED  threat 222 %d !!! \n", unit->threat_id);
+  // // 判断攻击特征是否全部命中
+  // if (1 << (relation_node->sum_and_bit) == (unit->save_and_bit) + 1) {
+  //   // 判断流属性是否命中
+  //   unsigned int save_attr = hs_usrdata->rule_hit_context.save_attribute;
+  //   unsigned int sum_attr = relation_node->sum_attribute_bit;
+  //   if ((save_attr & sum_attr) != sum_attr) {
+  //     return 0;
+  //   }
+  // 特征全部命中
+  unit->threat_id = relation_node->threat_id >> 8;
+  MLOGN("RULE  MATCHED  threat 222 %d !!! \n", unit->threat_id);
 
 #ifdef WAF
-    if (unit->threat_id >= ANTI_CRAWLER_ID_MIN &&
-        unit->threat_id <= ANTI_CRAWLER_ID_MAX) {
-      ngx_anti_crawler_process(hs_usrdata->r, unit->threat_id);
-      unit->save_and_bit = 0;
-      return 0;
-    }
-
-    if (ngx_http_white_check_event(hs_usrdata->r, unit->threat_id, 0) !=
-        NGX_OK) {
-      fill_event_info(hs_usrdata->r, unit->threat_id, NULL,
-                      &unit->rule_log_array);
-      set_protovar_int(hs_usrdata->r, NGX_VAR_THREAT_ID, unit->threat_id);
-    }
-#endif
+  if (unit->threat_id >= ANTI_CRAWLER_ID_MIN &&
+      unit->threat_id <= ANTI_CRAWLER_ID_MAX) {
+    ngx_anti_crawler_process(hs_usrdata->r, unit->threat_id);
     unit->save_and_bit = 0;
+    return 0;
   }
+
+  if (ngx_http_white_check_event(hs_usrdata->r, unit->threat_id, 0) != NGX_OK) {
+    fill_event_info(hs_usrdata->r, unit->threat_id, NULL,
+                    &unit->rule_log_array);
+    set_protovar_int(hs_usrdata->r, NGX_VAR_THREAT_ID, unit->threat_id);
+  }
+#endif
+  //   unit->save_and_bit = 0;
+  // }
   return 0;
 }
 
@@ -135,8 +134,8 @@ rule_hit_unit_t *Threat_insert_func(rule_hit_context_t *context,
     return NULL;
   }
   unit->threat_id = relation_node->threat_id;
-  unit->sum_and_bit = relation_node->sum_and_bit;
-  unit->save_and_bit |= relation_node->and_bit;
+  // unit->sum_and_bit = relation_node->sum_and_bit;
+  // unit->save_and_bit |= relation_node->and_bit;
   (*hit_count_p)++;
 
   ngx_array_init(&(unit->rule_log_array), hs_usrdata->r->pool, 8,
@@ -159,12 +158,12 @@ int rbtree_search_insert(rule_relation_t *relation_node,
   struct rb_root *root = &(hit_ctx->rule_hit_root);
   struct rb_node **tmp = &(root->rb_node), *parent = NULL;
   /* Only add flow attribute sign */
-  if (relation_node->attribute_bit) {
-    hs_usrdata->rule_hit_context.save_attribute |= relation_node->attribute_bit;
-    return 0;
-    // TODO  为了性能考虑 如果特征在属性之前拼凑齐 那么会漏报。
-    // 等做完dolog_list 告警中心 就可以解决了。
-  }
+  // if (relation_node->attribute_bit) {
+  //   hs_usrdata->rule_hit_context.save_attribute |=
+  //   relation_node->attribute_bit; return 0;
+  //   // TODO  为了性能考虑 如果特征在属性之前拼凑齐 那么会漏报。
+  //   // 等做完dolog_list 告警中心 就可以解决了。
+  // }
 
   while (*tmp) {
     rule_hit_unit_t *unit = container_of(*tmp, rule_hit_unit_t, node);
@@ -185,29 +184,29 @@ int rbtree_search_insert(rule_relation_t *relation_node,
   }
 
   /* Single condition Threat ,  dolog,  dont insert into rbtree. */
-  if (relation_node->sum_and_bit == 1 &&
-      relation_node->sum_attribute_bit == 0) {
-    MLOGN("RULE  MATCHED  threat 111 %d !!! \n", relation_node->threat_id);
+  // if (relation_node->sum_and_bit == 1 &&
+  //     relation_node->sum_attribute_bit == 0) {
+  //   MLOGN("RULE  MATCHED  threat 111 %d !!! \n", relation_node->threat_id);
 
 #ifdef WAF
-    if (relation_node->threat_id >> 8 >= ANTI_CRAWLER_ID_MIN &&
-        relation_node->threat_id >> 8 <= ANTI_CRAWLER_ID_MAX) {
-      ngx_anti_crawler_process(hs_usrdata->r, relation_node->threat_id >> 8);
-      return 0;
-    }
-
-    if (ngx_http_white_check_event(hs_usrdata->r, relation_node->threat_id >> 8,
-                                   0) != NGX_OK) {
-      fill_event_info(hs_usrdata->r, relation_node->threat_id >> 8, log_unit,
-                      NULL);
-      set_protovar_int(hs_usrdata->r, NGX_VAR_THREAT_ID,
-                       relation_node->threat_id >> 8);
-    }
-
+  if (relation_node->threat_id >> 8 >= ANTI_CRAWLER_ID_MIN &&
+      relation_node->threat_id >> 8 <= ANTI_CRAWLER_ID_MAX) {
+    ngx_anti_crawler_process(hs_usrdata->r, relation_node->threat_id >> 8);
     return 0;
+  }
+
+  if (ngx_http_white_check_event(hs_usrdata->r, relation_node->threat_id >> 8,
+                                 0) != NGX_OK) {
+    fill_event_info(hs_usrdata->r, relation_node->threat_id >> 8, log_unit,
+                    NULL);
+    set_protovar_int(hs_usrdata->r, NGX_VAR_THREAT_ID,
+                     relation_node->threat_id >> 8);
+  }
+
+  return 0;
 
 #endif
-  }
+  // }
   /* Add new node into rbtree and rebalance tree. */
   rule_hit_unit_t *unit =
       Threat_insert_func(hit_ctx, relation_node, hs_usrdata);
