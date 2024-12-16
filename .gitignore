@@ -27,6 +27,7 @@ t/servroot/*
 *.x86_64
 *.hex
 rule_parser
+test_parser
 
 # Flex & Bison generated files
 src/lex.yy.c
