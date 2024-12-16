@@ -21,10 +21,29 @@ uint8_t current_sub_id = 0;      // 当前子规则ID
 uint16_t current_and_bit = 1;    // 当前and_bit，每个子式左移一位
 
 // 用于构建规则管理结构
-static void add_pattern_to_context(const char* proto_var, const char* pattern, int is_pcre, uint16_t and_bit, uint16_t sum_and_bit) {
-    uint32_t threat_id = (current_rule_id << 8) | current_sub_id;
-    printf("Adding pattern: %s to %s (is_pcre: %d) for rule ID: %u (sub_id: %u, and_bit: 0x%x, sum_and_bit: 0x%x)\n", 
-           pattern, proto_var, is_pcre, current_rule_id, current_sub_id, and_bit, sum_and_bit);
+static void add_pattern_to_context(const char* proto_var, const char* pattern, int is_pcre, uint16_t and_bit) {
+    uint32_t rule_id = current_rule_id;
+    uint8_t sub_id = current_sub_id;
+    
+    // 检查当前规则和子规则的掩码是否已包含此and_bit
+    if (current_rule_mg && rule_id < MAX_RULES_NUM) {
+        uint16_t current_mask = current_rule_mg->rule_masks[rule_id].and_masks[sub_id - 1];
+        if (current_mask & and_bit) {
+            // 如果当前and_bit已存在于掩码中，生成新的未使用的and_bit
+            uint16_t new_bit = 1;
+            while ((current_mask & new_bit) && new_bit) {
+                new_bit <<= 1;
+            }
+            if (!new_bit) {
+                fprintf(stderr, "Error: No available and_bit for rule %u sub_rule %u\n", rule_id, sub_id);
+                return;
+            }
+            and_bit = new_bit;
+        }
+    }
+    
+    printf("Adding pattern: %s to %s (is_pcre: %d) for rule ID: %u (sub_id: %u, and_bit: 0x%x)\n", 
+           pattern, proto_var, is_pcre, rule_id, sub_id, and_bit);
     
     if (!current_rule_mg) {
         current_rule_mg = calloc(1, sizeof(sign_rule_mg_t));
@@ -39,7 +58,32 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
             current_rule_mg = NULL;
             return;
         }
+        current_rule_mg->max_rule_id = 0;
     }
+
+    // 更新最大规则ID
+    if (rule_id > current_rule_mg->max_rule_id) {
+        current_rule_mg->max_rule_id = rule_id;
+    }
+
+    // 检查规则ID是否有效
+    if (rule_id >= MAX_RULES_NUM) {
+        fprintf(stderr, "Rule ID %u exceeds maximum allowed (%d)\n", rule_id, MAX_RULES_NUM);
+        return;
+    }
+
+    // 检查子规则ID是否有效
+    if (sub_id >= MAX_SUB_RULES_NUM) {
+        fprintf(stderr, "Sub rule ID %u exceeds maximum allowed (%d)\n", sub_id, MAX_SUB_RULES_NUM);
+        return;
+    }
+
+    // 更新规则掩码
+    rule_mask_array_t* rule_mask = &current_rule_mg->rule_masks[rule_id];
+    if (sub_id > rule_mask->sub_rules_count) {
+        rule_mask->sub_rules_count = sub_id;
+    }
+    rule_mask->and_masks[sub_id - 1] |= and_bit;  // 子规则ID从1开始，数组索引从0开始
 
     // 查找或创建对应的context
     string_match_context_t* ctx = NULL;
@@ -105,10 +149,9 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
     pattern_entry->relations = new_relations;
     
     // 添加新的relation
-    pattern_entry->relations[pattern_entry->relation_count].threat_id = threat_id;
+    pattern_entry->relations[pattern_entry->relation_count].threat_id = (rule_id << 8) | sub_id;
     pattern_entry->relations[pattern_entry->relation_count].pattern_id = pattern_entry->relation_count;
     pattern_entry->relations[pattern_entry->relation_count].and_bit = and_bit;
-    pattern_entry->relations[pattern_entry->relation_count].sum_and_bit = sum_and_bit;
     pattern_entry->relation_count++;
     
     printf("Successfully added relation to pattern. Total relations: %d\n", pattern_entry->relation_count);
@@ -124,7 +167,6 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
         char* pattern;
         int is_pcre;
         uint16_t and_bit;
-        uint16_t sum_and_bit;
     } match_info;
 }
 
@@ -153,7 +195,7 @@ rule:
     } rule_expr SEMICOLON {
         printf("Completed rule %d\n", current_rule_id);
         if ($4.proto_var && $4.pattern) {
-            add_pattern_to_context($4.proto_var, $4.pattern, $4.is_pcre, $4.and_bit, $4.sum_and_bit);
+            add_pattern_to_context($4.proto_var, $4.pattern, $4.is_pcre, $4.and_bit);
             free($4.proto_var);
             free($4.pattern);
         }
@@ -164,11 +206,9 @@ rule_expr:
     match_expr {
         printf("Converting match_expr to rule_expr\n");
         $$ = $1;
-        $$.sum_and_bit = $$.and_bit;  // 单个表达式的sum_and_bit等于自己的and_bit
     }
     | rule_expr AND rule_expr {
         printf("Processing AND expression (sub_id: %d)\n", current_sub_id);
-        uint16_t sum_and_bit = $1.sum_and_bit | $3.sum_and_bit;  // 合并两边的sum_and_bit
         uint8_t max_sub_id = current_sub_id;
 
         // 先处理左侧表达式，同样需要添加到所有子规则中
@@ -176,7 +216,7 @@ rule_expr:
             uint8_t original_sub_id = current_sub_id;
             for (uint8_t sub = 1; sub <= max_sub_id; sub++) {
                 current_sub_id = sub;
-                add_pattern_to_context($1.proto_var, $1.pattern, $1.is_pcre, $1.and_bit, sum_and_bit);
+                add_pattern_to_context($1.proto_var, $1.pattern, $1.is_pcre, $1.and_bit);
             }
             current_sub_id = original_sub_id;
             free($1.proto_var);
@@ -188,7 +228,7 @@ rule_expr:
             uint8_t original_sub_id = current_sub_id;
             for (uint8_t sub = 1; sub <= max_sub_id; sub++) {
                 current_sub_id = sub;
-                add_pattern_to_context($3.proto_var, $3.pattern, $3.is_pcre, $3.and_bit, sum_and_bit);
+                add_pattern_to_context($3.proto_var, $3.pattern, $3.is_pcre, $3.and_bit);
             }
             current_sub_id = original_sub_id;
             free($3.proto_var);
@@ -197,12 +237,11 @@ rule_expr:
 
         $$.proto_var = NULL;
         $$.pattern = NULL;
-        $$.sum_and_bit = sum_and_bit;
     }
     | rule_expr OR rule_expr {
         printf("Processing OR expression, creating new sub-rule\n");
         if ($1.proto_var && $1.pattern) {
-            add_pattern_to_context($1.proto_var, $1.pattern, $1.is_pcre, $1.and_bit, $1.sum_and_bit);
+            add_pattern_to_context($1.proto_var, $1.pattern, $1.is_pcre, $1.and_bit);
             free($1.proto_var);
             free($1.pattern);
         }
@@ -210,13 +249,12 @@ rule_expr:
         current_and_bit = 1;  // 重置and_bit
         printf("Switched to sub-rule %d\n", current_sub_id);
         if ($3.proto_var && $3.pattern) {
-            add_pattern_to_context($3.proto_var, $3.pattern, $3.is_pcre, $3.and_bit, $3.sum_and_bit);
+            add_pattern_to_context($3.proto_var, $3.pattern, $3.is_pcre, $3.and_bit);
             free($3.proto_var);
             free($3.pattern);
         }
         $$.proto_var = NULL;
         $$.pattern = NULL;
-        $$.sum_and_bit = 0;  // OR关系不需要sum_and_bit
     }
     | LPAREN rule_expr RPAREN {
         printf("Processing parenthesized expression\n");
