@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "waf_rule_types.h"
-#include "rule_parser.h"
 #include <hs/hs.h>
 
 extern int yylex();

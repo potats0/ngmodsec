@@ -1,5 +1,4 @@
 #define TEST_PARSER
-#include "../src/rule_parser.h"
 #include "../src/waf_rule_types.h"
 #include <hs/hs.h>
 #include <stdio.h>

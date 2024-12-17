@@ -1,4 +1,3 @@
-#include "rule_parser.h"
 #include "waf_rule_types.h"
 #include <stdio.h>
 #include <stdlib.h>

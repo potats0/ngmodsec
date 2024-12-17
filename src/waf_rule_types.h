@@ -94,22 +94,19 @@ vs_proto_var_t *get_protovar(ngx_http_request_t *r, int proto_id);
 vs_url_vars_t *get_url_vars(ngx_http_request_t *r);
 #endif
 
-/** 规则掩码访问辅助函数 **/
-static inline u_int16_t get_rule_and_mask(rule_mask_array_t* masks, int sub_rule_index) {
-    return masks->and_masks[sub_rule_index];
-}
+/**
+ * @brief 从文件中解析规则
+ * @param filename 规则文件的路径
+ * @return 解析后的规则管理器结构，失败时返回NULL
+ */
+sign_rule_mg_t* parse_rule_file(const char* filename);
 
-static inline u_int16_t get_rule_not_mask(rule_mask_array_t* masks, int sub_rule_index) {
-    return masks->not_masks[sub_rule_index];
-}
-
-static inline void set_rule_and_mask(rule_mask_array_t* masks, int sub_rule_index, u_int16_t value) {
-    masks->and_masks[sub_rule_index] = value;
-}
-
-static inline void set_rule_not_mask(rule_mask_array_t* masks, int sub_rule_index, u_int16_t value) {
-    masks->not_masks[sub_rule_index] = value;
-}
+/**
+ * @brief 从字符串中解析规则
+ * @param rule_str 包含规则的字符串
+ * @return 解析后的规则管理器结构，失败时返回NULL
+ */
+sign_rule_mg_t* parse_rule_string(const char* rule_str);
 
 /**
  * @brief 清理规则管理器及其所有资源
@@ -150,6 +147,23 @@ static inline void cleanup_rule_mg(sign_rule_mg_t *rule_mg) {
     
     // 清理规则管理器
     free(rule_mg);
+}
+
+/** 规则掩码访问辅助函数 **/
+static inline u_int16_t get_rule_and_mask(rule_mask_array_t* masks, int sub_rule_index) {
+    return masks->and_masks[sub_rule_index];
+}
+
+static inline u_int16_t get_rule_not_mask(rule_mask_array_t* masks, int sub_rule_index) {
+    return masks->not_masks[sub_rule_index];
+}
+
+static inline void set_rule_and_mask(rule_mask_array_t* masks, int sub_rule_index, u_int16_t value) {
+    masks->and_masks[sub_rule_index] = value;
+}
+
+static inline void set_rule_not_mask(rule_mask_array_t* masks, int sub_rule_index, u_int16_t value) {
+    masks->not_masks[sub_rule_index] = value;
 }
 
 #endif // __NEW_SIGN_PUB_H__
