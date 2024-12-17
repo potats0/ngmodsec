@@ -194,88 +194,54 @@ http.uri matches "pattern"/m/s
 
 WAF 规则支持三种逻辑操作符：`and`、`or` 和 `not`。下面详细说明每种操作符的使用方法。
 
+#### 重要说明
+- 本模块不支持括号表达式，所有的逻辑组合必须通过 `and`、`or` 和 `not` 操作符直接组合。
+
 #### AND 操作符的使用
 
 AND 操作符用于表示所有条件都必须满足。
 
 1. 基本语法：
-   ```
-   <expression1> and <expression2>
-   (<expression1> and <expression2>) and <expression3>
-   ```
+```
+rule 10001: http.uri contains "admin" and http.method equals "POST";
+```
 
-2. 支持的用法：
-   - 简单组合：`http.uri contains "login" and http.uri contains "admin"`
-   - 多重组合：`http.uri contains "api" and http.uri contains "v1" and http.uri contains "user"`
-   - 与括号组合：`(http.uri contains "login" and http.uri contains "admin") and http.header contains "json"`
-   - 与其他操作符组合：`http.uri contains "admin" and not http.uri contains "test"`
-
-3. 示例：
-   ```
-   # 有效的用法
-   rule 1000 http.uri contains "login" and http.uri contains "admin";
-   rule 1001 (http.uri contains "api" and http.uri contains "v1") and http.header contains "json";
-   rule 1002 http.uri contains "user" and http.uri contains "profile" and http.uri contains "edit";
-   rule 1003 http.uri contains "admin" and not http.uri contains "test";
-   ```
+2. 多条件组合：
+```
+rule 10002: http.uri contains "login" and 
+            http.method equals "POST" and 
+            http.args contains "debug";
+```
 
 #### OR 操作符的使用
 
 OR 操作符用于表示满足任一条件即可。
 
 1. 基本语法：
-   ```
-   <expression1> or <expression2>
-   (<expression1> and <expression2>) or <expression3>
-   ```
+```
+rule 20001: http.uri contains "admin" or http.uri contains "manager";
+```
 
-2. 支持的用法：
-   - 简单组合：`http.uri contains "admin" or http.uri contains "manager"`
-   - 多重组合：`http.uri contains "login" or http.uri contains "signin" or http.uri contains "signup"`
-   - 与括号组合：`(http.uri contains "admin" and http.uri contains "login") or http.uri contains "superuser"`
-   - 与其他操作符组合：`http.uri contains "admin" or not http.uri contains "public"`
-
-3. 示例：
-   ```
-   # 有效的用法
-   rule 1000 http.uri contains "admin" or http.uri contains "manager";
-   rule 1001 (http.uri contains "login" and http.header contains "mobile") or http.uri contains "app";
-   rule 1002 http.uri contains "delete" or http.uri contains "remove" or http.uri contains "drop";
-   rule 1003 (http.uri contains "api" and http.uri contains "v1") or (http.uri contains "api" and http.uri contains "v2");
-   ```
+2. 多条件组合：
+```
+rule 20002: http.method equals "POST" or 
+            http.method equals "PUT" or 
+            http.method equals "DELETE";
+```
 
 #### NOT 操作符的使用
 
-NOT 操作符用于表示否定条件。
+NOT 操作符用于表示条件的否定。
 
 1. 基本语法：
-   ```
-   not <match_expression>
-   not (<expression>)
-   ```
+```
+rule 40001: not http.uri contains "public";
+```
 
-2. 支持的用法：
-   - 简单否定：`not http.uri contains "admin"`
-   - 与 AND 组合：`http.uri contains "login" and not http.uri contains "logout"`
-   - 与 OR 组合：`http.uri contains "admin" or not http.uri contains "public"`
-   - 对括号内的表达式使用 NOT：`not (http.uri contains "admin" and http.uri contains "login")`
-
-3. 限制条件：
-   - 不支持嵌套的 NOT 操作，例如：`not (a and not b)` 是不允许的
-   - 一个 NOT 操作符只能作用于一个表达式或一个括号内的表达式组
-
-4. 示例：
-   ```
-   # 有效的用法
-   rule 1000 http.uri contains "login" and not http.uri contains "public";
-   rule 1001 not http.uri contains "admin" and http.uri contains "index";
-   rule 1002 http.uri contains "api" or not http.uri contains "test";
-   rule 1003 not (http.uri contains "admin" and http.uri contains "login");
-
-   # 无效的用法
-   rule 1004 not (http.uri contains "a" and not http.uri contains "b");  # 不支持嵌套的 NOT
-   rule 1005 not (not http.uri contains "admin");                        # 不支持嵌套的 NOT
-   ```
+2. 与其他操作符组合：
+```
+rule 40002: not http.method equals "GET" and http.uri contains "api";
+```
 
 ### 规则示例
 
@@ -353,7 +319,7 @@ rule 30002: http.uri starts_with "/api" and
 - 字符串内容需要用双引号包围
 - 标志位可以按任意顺序组合
 - 逻辑运算符具有相同的优先级，从左到右计算
-- 使用括号来控制运算优先级
+- 使用逻辑运算符来控制运算优先级
 - 规则ID必须是唯一的数字
 - 建议根据规则用途划分规则ID范围，如：
   - 10000-19999：基本功能性规则
@@ -382,24 +348,3 @@ rule 30002: http.uri starts_with "/api" and
 
 - [Nginx $request_uri和$uri详解](https://blog.csdn.net/weixin_42905245/article/details/106424144)
 - [Hyperscan 文档](https://intel.github.io/hyperscan/dev-reference/)
-
-## 规则语法更新
-
-为了简化实现和提高性能，本模块不支持括号表达式。所有规则必须使用逻辑运算符（AND、OR、NOT）来组合匹配条件。
-
-示例：
-```
-# 简单匹配
-rule 1000 http.uri contains "admin";
-
-# AND 组合
-rule 1001 http.uri contains "admin" and http.uri contains "login";
-
-# OR 组合
-rule 1002 http.uri contains "admin" or http.uri contains "manager";
-
-# NOT 操作
-rule 1003 not http.uri contains "public";
-```
-
-请注意，规则语法的更新可能会影响现有的规则文件。请确保更新规则文件以符合新的语法规则。
