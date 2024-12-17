@@ -97,7 +97,7 @@ clean: clean-parser clean-module
 
 clean-parser:
 	rm -f $(PARSER_OBJS) src/main.o src/main_test.o tests/test_parser.o \
-		rule_parser test_parser \
+		rule_parser test_parser src/rule_parser.o \
 		src/rule_parser.tab.c src/rule_parser.tab.h src/lex.yy.c
 
 clean-module:
