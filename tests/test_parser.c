@@ -23,12 +23,12 @@ static int passed_tests = 0;
   return (passed_tests == total_tests) ? 0 : 1;
 
 #define TEST_CASE(name)                                                        \
-  void test_##name();                                                          \
+  static inline void test_##name();                                             \
   struct test_##name {                                                         \
     void (*func)();                                                            \
     const char *name;                                                          \
   } _test_##name = {test_##name, #name};                                       \
-  void test_##name()
+  static inline void test_##name()
 
 #define RUN_TEST(name)                                                         \
   do {                                                                         \
@@ -74,7 +74,7 @@ static int passed_tests = 0;
     return;                                                                    \
   }
 
-string_pattern_t *get_pattern_by_content(sign_rule_mg_t *rule_mg,
+static inline string_pattern_t *get_pattern_by_content(sign_rule_mg_t *rule_mg,
                                          const char *content) {
   string_match_context_t *ctx = rule_mg->string_match_context_array[0];
   for (int i = 0; i < ctx->string_patterns_num; i++) {
@@ -114,7 +114,7 @@ TEST_CASE(single_contains) {
 }
 
 // 打印规则管理器状态的辅助函数
-void print_rule_mg_state(sign_rule_mg_t *rule_mg, uint32_t rule_id) {
+static inline void print_rule_mg_state(sign_rule_mg_t *rule_mg, uint32_t rule_id) {
     printf("\n=== Rule Management State ===\n");
     printf("Total Rules: %u\n", rule_mg->rules_count);
     printf("Rule IDs: ");

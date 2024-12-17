@@ -9,7 +9,6 @@
 void print_binary16(uint16_t num);
 void print_binary(unsigned int num);
 void print_rule_info(sign_rule_mg_t *rule_mg);
-void cleanup_rule_mg(sign_rule_mg_t *rule_mg);
 int parse_main(int argc, char *argv[]);
 int match_rule_mg(sign_rule_mg_t *rule_mg);
 
@@ -121,44 +120,7 @@ uint16_t find_rule_mask(sign_rule_mg_t *rule_mg, uint32_t threat_id) {
   return rule_mask->and_masks[sub_id - 1]; // 子规则ID从1开始，数组索引从0开始
 }
 
-// 清理资源
-void cleanup_rule_mg(sign_rule_mg_t *rule_mg) {
-  if (!rule_mg) return;
-
-  // 清理每个规则的上下文
-  if (rule_mg->string_match_context_array) {
-    for (int i = 0; rule_mg->string_match_context_array[i] != NULL; i++) {
-      string_match_context_t *ctx = rule_mg->string_match_context_array[i];
-      if (ctx->string_patterns_list) {
-        for (int j = 0; j < ctx->string_patterns_num; j++) {
-          if (ctx->string_patterns_list[j].string_pattern) {
-            free(ctx->string_patterns_list[j].string_pattern);
-          }
-          if (ctx->string_patterns_list[j].relations) {
-            free(ctx->string_patterns_list[j].relations);
-          }
-        }
-        free(ctx->string_patterns_list);
-      }
-      free(ctx);
-    }
-    free(rule_mg->string_match_context_array);
-  }
-
-  // 清理规则掩码数组
-  if (rule_mg->rule_masks) {
-    free(rule_mg->rule_masks);
-  }
-
-  // 清理规则ID数组
-  if (rule_mg->rule_ids) {
-    free(rule_mg->rule_ids);
-  }
-  
-  // 清理规则管理器
-  free(rule_mg);
-}
-
+// 检查规则是否匹配
 int match_rule_mg(sign_rule_mg_t *rule_mg) {
   if (!rule_mg) return 0;
 
@@ -200,7 +162,6 @@ int parse_main(int argc, char *argv[]) {
   print_rule_info(rule_mg);
 
   printf("\nCleaning up resources...\n");
-  cleanup_rule_mg(rule_mg);
   printf("Done.\n");
 
   return 0;

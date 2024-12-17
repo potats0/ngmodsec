@@ -4,6 +4,8 @@
 #include <hs/hs_common.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #ifdef WAF
 #include "ngx_proto_varid.h"
@@ -107,6 +109,47 @@ static inline void set_rule_and_mask(rule_mask_array_t* masks, int sub_rule_inde
 
 static inline void set_rule_not_mask(rule_mask_array_t* masks, int sub_rule_index, u_int16_t value) {
     masks->not_masks[sub_rule_index] = value;
+}
+
+/**
+ * @brief 清理规则管理器及其所有资源
+ * @param rule_mg 要清理的规则管理器
+ */
+static inline void cleanup_rule_mg(sign_rule_mg_t *rule_mg) {
+    if (!rule_mg) return;
+
+    // 清理每个规则的上下文
+    if (rule_mg->string_match_context_array) {
+        for (int i = 0; rule_mg->string_match_context_array[i] != NULL; i++) {
+            string_match_context_t *ctx = rule_mg->string_match_context_array[i];
+            if (ctx->string_patterns_list) {
+                for (int j = 0; j < ctx->string_patterns_num; j++) {
+                    if (ctx->string_patterns_list[j].string_pattern) {
+                        free(ctx->string_patterns_list[j].string_pattern);
+                    }
+                    if (ctx->string_patterns_list[j].relations) {
+                        free(ctx->string_patterns_list[j].relations);
+                    }
+                }
+                free(ctx->string_patterns_list);
+            }
+            free(ctx);
+        }
+        free(rule_mg->string_match_context_array);
+    }
+
+    // 清理规则掩码数组
+    if (rule_mg->rule_masks) {
+        free(rule_mg->rule_masks);
+    }
+
+    // 清理规则ID数组
+    if (rule_mg->rule_ids) {
+        free(rule_mg->rule_ids);
+    }
+    
+    // 清理规则管理器
+    free(rule_mg);
 }
 
 #endif // __NEW_SIGN_PUB_H__
