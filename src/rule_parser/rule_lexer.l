@@ -47,6 +47,9 @@ extern YYSTYPE yylval;
                     return STRING;
                 }
 
-.               { printf("Unexpected character: %s\n", yytext); }
+.               { 
+                    fprintf(stderr, "Error: Unexpected character '%s' at line %d\n", yytext, yylineno);
+                    return YYUNDEF;  /* 返回一个未定义的 token，让 bison 处理错误 */
+                }
 
 %%

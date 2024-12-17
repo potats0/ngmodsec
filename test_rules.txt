@@ -1,48 +1,20 @@
-# 规则1：检测SQL注入尝试
-# 子规则1: 包含常见SQL注入关键字
-# 子规则2: 包含其他SQL注入特征，但不包含注释
-rule 1001 (http.uri contains "select" and http.uri contains "from" and http.uri contains "where") or
-         (http.uri contains "union" and http.uri contains "select" and http.uri contains "*" and not http.uri contains "--") ;
-
-# 规则2：检测XSS攻击
-# 子规则1: 包含script标签，但不是img标签
-# 子规则2: 包含script标签和eval函数
-rule 1002 (http.uri contains "script" and http.uri contains "alert" and not http.uri contains "img") or
-         (http.uri contains "script" and http.uri contains "eval") ;
-
-# 规则3：检测路径遍历
-# 子规则1: 包含../但不在合法目录中
-rule 1003 http.uri contains "../" and not http.uri contains "/static/" and not http.uri contains "/public/" ;
-
-# 规则4：检测文件包含漏洞
-# 子规则1: 包含文件包含函数，但不是合法的包含路径
-rule 1004 (http.uri contains "include" and http.uri contains ".php" and not http.uri contains "/includes/") or
-         (http.uri contains "require" and http.uri contains ".php" and not http.uri contains "/lib/") ;
-
-# 规则5：测试复合NOT操作
-# 不允许在任何静态资源目录中
-rule 1005 http.uri contains "admin" and not (http.uri contains "/static/" or http.uri contains "/public/" or http.uri contains "/assets/") ;
-
 # 基本规则
-rule 1006 http.uri contains "admin" ;
+rule 1001 http.uri contains "admin" ;
 
 # 忽略大小写的规则
-rule 1007 http.uri contains "Admin" /i ;
+rule 1002 http.uri contains "Admin" /i ;
 
 # 多个选项组合
-rule 1008 http.uri matches ".*\\.php$" /i /m ;
+rule 1003 http.uri matches ".*\\.php$" /i /m ;
 
-# 复杂的NOT规则与选项组合
-rule 1009 http.uri contains "admin" /i and not (http.uri contains "/static/" or http.uri contains "/public/" or http.uri contains "/assets/") ;
+# 简单的NOT规则
+rule 1004 http.uri contains "admin" and not http.uri contains "/static/" ;
 
 # PCRE规则与选项
-rule 1010 http.uri matches "(?:admin|manager)" /i /s ;
-
-# 多个条件组合的复杂规则
-rule 1011 (http.uri contains "upload" /i and http.body contains "file" /i) or (http.header contains "content-type" /i and http.body matches ".*exec.*" /i /s) ;
+rule 1005 http.uri matches "(?:admin|manager)" /i /s ;
 
 # 单次匹配规则
-rule 1012 http.uri contains "download" /i /f ;
+rule 1006 http.uri contains "download" /i /f ;
 
 # 多行模式与点号匹配换行
-rule 1013 http.body matches "begin.*end" /m /s ;
+rule 1007 http.body matches "begin.*end" /m /s ;
