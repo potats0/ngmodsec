@@ -11,6 +11,7 @@ void print_binary(unsigned int num);
 void print_rule_info(sign_rule_mg_t *rule_mg);
 void cleanup_rule_mg(sign_rule_mg_t *rule_mg);
 int parse_main(int argc, char *argv[]);
+int match_rule_mg(sign_rule_mg_t *rule_mg);
 
 void print_rule_info(sign_rule_mg_t *rule_mg) {
   if (!rule_mg) {
@@ -18,69 +19,58 @@ void print_rule_info(sign_rule_mg_t *rule_mg) {
     return;
   }
 
-  printf("Rule Management Structure Info:\n");
+  printf("\nRule Management Structure Info:\n");
+  printf("Total Rules: %u\n", rule_mg->rules_count);
+  printf("Rule IDs: ");
+  for (uint32_t i = 0; i < rule_mg->rules_count; i++) {
+    printf("%u ", rule_mg->rule_ids[i]);
+  }
+  printf("\n\n");
 
-  // 打印规则掩码
-  printf("\nRule Masks:\n");
-  for (uint32_t rule_id = 0; rule_id <= rule_mg->max_rule_id; rule_id++) {
+  // 遍历所有有效规则
+  for (uint32_t i = 0; i < rule_mg->rules_count; i++) {
+    uint32_t rule_id = rule_mg->rule_ids[i];
     rule_mask_array_t *rule_mask = &rule_mg->rule_masks[rule_id];
-    if (rule_mask->sub_rules_count > 0) {
-      printf("Rule %u:\n", rule_id);
-      for (uint8_t sub_id = 0; sub_id < rule_mask->sub_rules_count; sub_id++) {
-        printf("  Sub-rule %u: and_mask = ", sub_id + 1);
-        print_binary16(rule_mask->and_masks[sub_id]);
-        printf("\n");
-      }
+    printf("Rule %u:\n", rule_id);
+    printf("  Sub-rules count: %u\n", rule_mask->sub_rules_count);
+
+    for (uint8_t sub_id = 0; sub_id < rule_mask->sub_rules_count; sub_id++) {
+      printf("  Sub-rule %u:\n", sub_id);
+      printf("    AND mask: 0x%x\n", rule_mask->and_masks[sub_id]);
+      printf("    NOT mask: 0x%x\n", rule_mask->not_masks[sub_id]);
     }
+    printf("\n");
   }
 
-  // 打印上下文信息
+  // 打印所有的匹配上下文
   if (rule_mg->string_match_context_array) {
-    int i;
-    for (i = 0; rule_mg->string_match_context_array[i] != NULL; i++) {
+    for (int i = 0; rule_mg->string_match_context_array[i] != NULL; i++) {
       string_match_context_t *ctx = rule_mg->string_match_context_array[i];
-      printf("\nContext %d:\n", i);
-      printf("Protocol Variable: %s\n", ctx->proto_var_name);
-      printf("Number of patterns: %d\n", ctx->string_patterns_num);
+      printf("Match Context %d:\n", i);
+      printf("  Protocol Variable: %s\n", ctx->proto_var_name);
+      printf("  Pattern Count: %d\n", ctx->string_patterns_num);
 
       for (int j = 0; j < ctx->string_patterns_num; j++) {
         string_pattern_t *pattern = &ctx->string_patterns_list[j];
-        if (pattern && pattern->string_pattern) {
-          printf("  Pattern %d:\n", j);
-          printf("    Pattern: %s\n", pattern->string_pattern);
-          printf("    Is PCRE: %s\n", pattern->is_pcre ? "Yes" : "No");
-          printf("    Hyperscan Flags: ");
-          
-          // 打印 Hyperscan 标志位
-          if (pattern->hs_flags == 0) {
-            printf("None");
-          } else {
-            if (pattern->hs_flags & HS_FLAG_CASELESS) printf("i");
-            if (pattern->hs_flags & HS_FLAG_MULTILINE) printf("m");
-            if (pattern->hs_flags & HS_FLAG_DOTALL) printf("s");
-            if (pattern->hs_flags & HS_FLAG_SINGLEMATCH) printf("f");
-          }
-          printf("\n");
+        printf("  Pattern %d:\n", j);
+        printf("    Content: %s\n", pattern->string_pattern);
+        printf("    Is PCRE: %s\n", pattern->is_pcre ? "Yes" : "No");
+        printf("    HS Flags: 0x%x\n", pattern->hs_flags);
+        printf("    Relations Count: %d\n", pattern->relation_count);
 
-          printf("    Relations count: %d\n", pattern->relation_count);
-          printf("    Relations:\n");
-          for (int k = 0; k < pattern->relation_count; k++) {
-            rule_relation_t *relation = &pattern->relations[k];
-            uint32_t rule_id = relation->threat_id >> 8;
-            uint8_t sub_id = relation->threat_id & 0xFF;
-            printf(
-                "      - Rule ID: %u (0x%x), Sub Rule ID: %u, Pattern ID: %u\n",
-                rule_id, relation->threat_id, sub_id, relation->pattern_id);
-            printf("        and_bit:\t");
-            print_binary16(relation->and_bit);
-            printf("\n");
-          }
+        for (int k = 0; k < pattern->relation_count; k++) {
+          rule_relation_t *rel = &pattern->relations[k];
+          printf("    Relation %d:\n", k);
+          printf("      Threat ID: %u\n", rel->threat_id);
+          printf("      Pattern ID: %u\n", rel->pattern_id);
+          printf("      AND Bit: 0x%x\n", rel->and_bit);
+          printf("      Operator Type: %u\n", rel->operator_type);
         }
       }
+      printf("\n");
     }
-    printf("\nTotal contexts: %d\n", i);
   } else {
-    printf("No string match contexts found\n");
+    printf("No string match contexts found.\n");
   }
 }
 
@@ -133,29 +123,58 @@ uint16_t find_rule_mask(sign_rule_mg_t *rule_mg, uint32_t threat_id) {
 
 // 清理资源
 void cleanup_rule_mg(sign_rule_mg_t *rule_mg) {
-  if (!rule_mg)
-    return;
+  if (!rule_mg) return;
 
+  // 清理每个规则的上下文
   if (rule_mg->string_match_context_array) {
     for (int i = 0; rule_mg->string_match_context_array[i] != NULL; i++) {
       string_match_context_t *ctx = rule_mg->string_match_context_array[i];
-      if (ctx) {
-        if (ctx->string_patterns_list) {
-          for (int j = 0; j < ctx->string_patterns_num; j++) {
-            string_pattern_t *pattern = &ctx->string_patterns_list[j];
-            if (pattern) {
-              free(pattern->string_pattern);
-              free(pattern->relations);
-            }
+      if (ctx->string_patterns_list) {
+        for (int j = 0; j < ctx->string_patterns_num; j++) {
+          if (ctx->string_patterns_list[j].string_pattern) {
+            free(ctx->string_patterns_list[j].string_pattern);
           }
-          free(ctx->string_patterns_list);
+          if (ctx->string_patterns_list[j].relations) {
+            free(ctx->string_patterns_list[j].relations);
+          }
         }
-        free(ctx);
+        free(ctx->string_patterns_list);
       }
+      // proto_var_name 是一个字符数组，不需要释放
+      free(ctx);
     }
     free(rule_mg->string_match_context_array);
   }
+
+  // 清理规则ID数组
+  if (rule_mg->rule_ids) {
+    free(rule_mg->rule_ids);
+  }
+  
+  // 清理规则管理器
   free(rule_mg);
+}
+
+int match_rule_mg(sign_rule_mg_t *rule_mg) {
+  if (!rule_mg) return 0;
+
+  // 遍历所有有效规则
+  for (uint32_t i = 0; i < rule_mg->rules_count; i++) {
+    uint32_t rule_id = rule_mg->rule_ids[i];
+    rule_mask_array_t *rule_mask = &rule_mg->rule_masks[rule_id];
+    
+    // 检查每个子规则
+    for (uint8_t sub_id = 0; sub_id < rule_mask->sub_rules_count; sub_id++) {
+      uint16_t and_mask = rule_mask->and_masks[sub_id];
+      uint16_t not_mask = rule_mask->not_masks[sub_id];
+      
+      // 在这里添加规则匹配逻辑
+      printf("Checking rule %u sub-rule %u (and_mask: 0x%x, not_mask: 0x%x)\n",
+             rule_id, sub_id, and_mask, not_mask);
+    }
+  }
+
+  return 0;
 }
 
 int parse_main(int argc, char *argv[]) {

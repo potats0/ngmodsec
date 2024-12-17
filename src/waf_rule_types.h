@@ -70,9 +70,10 @@ typedef struct string_match_context_s {
 
 /** 全局规则管理结构mg, 目前只实现字符串 **/
 typedef struct sign_rule_mg_s {
-  string_match_context_t **string_match_context_array;
-  rule_mask_array_t rule_masks[MAX_RULES_NUM]; // 规则掩码数组，索引为rule_id
-  u_int32_t max_rule_id;                       // 最大规则ID
+  string_match_context_t **string_match_context_array;  // 字符串匹配上下文数组
+  rule_mask_array_t rule_masks[MAX_RULES_NUM];         // 规则掩码数组
+  uint32_t rules_count;                                // 实际规则数量
+  uint32_t *rule_ids;                                  // 有效规则ID数组
 } sign_rule_mg_t;
 
 typedef void *(*waf_rule_malloc_fn)(uint64_t size);

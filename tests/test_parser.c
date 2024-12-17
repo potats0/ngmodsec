@@ -85,59 +85,16 @@ string_pattern_t *get_pattern_by_content(sign_rule_mg_t *rule_mg,
   return NULL;
 }
 
-// 打印规则管理器状态的辅助函数
-void print_rule_mg_state(sign_rule_mg_t *rule_mg, uint32_t rule_id) {
-  printf("\n=== Rule Management State ===\n");
-  printf("Rule ID: %u\n", rule_id);
-  printf("Sub Rules Count: %u\n", rule_mg->rule_masks[rule_id].sub_rules_count);
-
-  // 打印子规则掩码
-  for (int i = 0; i < rule_mg->rule_masks[rule_id].sub_rules_count; i++) {
-    printf("\nSub Rule %d:\n", i);
-    printf("  AND Mask: 0x%x\n", rule_mg->rule_masks[rule_id].and_masks[i]);
-    printf("  NOT Mask: 0x%x\n", rule_mg->rule_masks[rule_id].not_masks[i]);
-  }
-
-  // 打印所有的 pattern
-  printf("\nPatterns:\n");
-  if (rule_mg->string_match_context_array) {
-    for (int i = 0; rule_mg->string_match_context_array[i] != NULL; i++) {
-      string_match_context_t *ctx = rule_mg->string_match_context_array[i];
-      printf("\nProtocol Variable: %s\n", ctx->proto_var_name);
-      printf("Pattern Count: %d\n", ctx->string_patterns_num);
-
-      for (int j = 0; j < ctx->string_patterns_num; j++) {
-        string_pattern_t *pattern = &ctx->string_patterns_list[j];
-        printf("  Pattern %d:\n", j);
-        printf("    Content: %s\n", pattern->string_pattern);
-        printf("    Is PCRE: %s\n", pattern->is_pcre ? "Yes" : "No");
-        printf("    HS Flags: 0x%x\n", pattern->hs_flags);
-        printf("    Relations Count: %d\n", pattern->relation_count);
-
-        // 打印每个 pattern 的关系
-        for (int k = 0; k < pattern->relation_count; k++) {
-          rule_relation_t *rel = &pattern->relations[k];
-          printf("    Relation %d:\n", k);
-          printf("      Threat ID: %u\n", rel->threat_id);
-          printf("      Pattern ID: %u\n", rel->pattern_id);
-          printf("      AND Bit: 0x%x\n", rel->and_bit);
-          printf("      Operator Type: %u\n", rel->operator_type);
-        }
-      }
-    }
-  } else {
-    printf("No string match contexts found.\n");
-  }
-
-  printf("========================\n\n");
-}
-
 // 测试单个 http.uri contains
 TEST_CASE(single_contains) {
     const char *rule_str = "rule 1000 http.uri contains \"a\";";
     sign_rule_mg_t *rule_mg = parse_rule_string(rule_str);
     ASSERT(rule_mg != NULL, "Rule parsing failed");
-    ASSERT(rule_mg->max_rule_id == 1000, "Rule ID mismatch");
+    
+    // 验证规则计数和ID
+    ASSERT(rule_mg->rules_count == 1, "Expected one rule");
+    ASSERT(rule_mg->rule_ids != NULL, "Rule IDs array is NULL");
+    ASSERT(rule_mg->rule_ids[0] == 1000, "Wrong rule ID");
 
     // 应该只有一个子规则
     ASSERT(rule_mg->rule_masks[1000].sub_rules_count == 1, "Expected one sub rule");
@@ -167,6 +124,60 @@ TEST_CASE(single_contains) {
 
     cleanup_rule_mg(rule_mg);
     passed_tests++;
+}
+
+// 打印规则管理器状态的辅助函数
+void print_rule_mg_state(sign_rule_mg_t *rule_mg, uint32_t rule_id) {
+    printf("\n=== Rule Management State ===\n");
+    printf("Total Rules: %u\n", rule_mg->rules_count);
+    printf("Rule IDs: ");
+    for (uint32_t i = 0; i < rule_mg->rules_count; i++) {
+        printf("%u ", rule_mg->rule_ids[i]);
+    }
+    printf("\n");
+    
+    printf("\nChecking Rule ID: %u\n", rule_id);
+    printf("Sub Rules Count: %u\n", rule_mg->rule_masks[rule_id].sub_rules_count);
+
+    // 打印子规则掩码
+    for (int i = 0; i < rule_mg->rule_masks[rule_id].sub_rules_count; i++) {
+        printf("\nSub Rule %d:\n", i);
+        printf("  AND Mask: 0x%x\n", rule_mg->rule_masks[rule_id].and_masks[i]);
+        printf("  NOT Mask: 0x%x\n", rule_mg->rule_masks[rule_id].not_masks[i]);
+    }
+
+    // 打印所有的 pattern
+    printf("\nPatterns:\n");
+    if (rule_mg->string_match_context_array) {
+        for (int i = 0; rule_mg->string_match_context_array[i] != NULL; i++) {
+            string_match_context_t *ctx = rule_mg->string_match_context_array[i];
+            printf("\nProtocol Variable: %s\n", ctx->proto_var_name);
+            printf("Pattern Count: %d\n", ctx->string_patterns_num);
+
+            for (int j = 0; j < ctx->string_patterns_num; j++) {
+                string_pattern_t *pattern = &ctx->string_patterns_list[j];
+                printf("  Pattern %d:\n", j);
+                printf("    Content: %s\n", pattern->string_pattern);
+                printf("    Is PCRE: %s\n", pattern->is_pcre ? "Yes" : "No");
+                printf("    HS Flags: 0x%x\n", pattern->hs_flags);
+                printf("    Relations Count: %d\n", pattern->relation_count);
+
+                // 打印每个 pattern 的关系
+                for (int k = 0; k < pattern->relation_count; k++) {
+                    rule_relation_t *rel = &pattern->relations[k];
+                    printf("    Relation %d:\n", k);
+                    printf("      Threat ID: %u\n", rel->threat_id);
+                    printf("      Pattern ID: %u\n", rel->pattern_id);
+                    printf("      AND Bit: 0x%x\n", rel->and_bit);
+                    printf("      Operator Type: %u\n", rel->operator_type);
+                }
+            }
+        }
+    } else {
+        printf("No string match contexts found.\n");
+    }
+
+    printf("========================\n\n");
 }
 
 int main() {

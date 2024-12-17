@@ -60,12 +60,8 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
             current_rule_mg = NULL;
             return;
         }
-        current_rule_mg->max_rule_id = 0;
-    }
-
-    // 更新最大规则ID
-    if (rule_id > current_rule_mg->max_rule_id) {
-        current_rule_mg->max_rule_id = rule_id;
+        current_rule_mg->rules_count = 0;
+        current_rule_mg->rule_ids = NULL;
     }
 
     // 检查规则ID是否有效
@@ -74,10 +70,24 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
         return;
     }
 
-    // 检查子规则ID是否有效
-    if (sub_id >= MAX_SUB_RULES_NUM) {
-        fprintf(stderr, "Sub rule ID %u exceeds maximum allowed (%d)\n", sub_id, MAX_SUB_RULES_NUM);
-        return;
+    // 检查规则ID是否已存在
+    int rule_exists = 0;
+    for (uint32_t i = 0; i < current_rule_mg->rules_count; i++) {
+        if (current_rule_mg->rule_ids[i] == rule_id) {
+            rule_exists = 1;
+            break;
+        }
+    }
+
+    // 只有当规则ID不存在时才添加
+    if (!rule_exists) {
+        uint32_t *new_ids = realloc(current_rule_mg->rule_ids, (current_rule_mg->rules_count + 1) * sizeof(uint32_t));
+        if (!new_ids) {
+            fprintf(stderr, "Failed to allocate rule IDs array\n");
+            return;
+        }
+        current_rule_mg->rule_ids = new_ids;
+        current_rule_mg->rule_ids[current_rule_mg->rules_count++] = rule_id;
     }
 
     // 更新规则掩码
@@ -85,8 +95,8 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
     if (sub_id > rule_mask->sub_rules_count) {
         rule_mask->sub_rules_count = sub_id;
     }
-    rule_mask->and_masks[sub_id - 1] |= and_bit;  // 子规则ID从1开始，数组索引从0开始
-    rule_mask->not_masks[sub_id - 1] |= (current_not_mask & and_bit);  // 更新NOT掩码
+    rule_mask->and_masks[sub_id - 1] |= and_bit;
+    rule_mask->not_masks[sub_id - 1] |= (current_not_mask & and_bit);
 
     // 查找或创建对应的context
     string_match_context_t* ctx = NULL;
