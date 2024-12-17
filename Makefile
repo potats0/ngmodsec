@@ -9,15 +9,24 @@ CORE_INCS = -I$(NGINX_PATH)/src/core \
             -I$(NGINX_PATH)/src/http \
             -I$(NGINX_PATH)/src/os/unix \
             -I$(shell pwd)/src
+INCLUDES = $(CORE_INCS) -D_GNU_SOURCE
+CFLAGS = -g -O0 -Wall $(INCLUDES)
+LDFLAGS = -lhs -lfl
 
-# 编译标志
-CFLAGS = -g -O0 -Wall $(CORE_INCS) -D_GNU_SOURCE
+# 构建目录
+BUILD_DIR = build
+
+# 确保构建目录存在
+$(shell mkdir -p $(BUILD_DIR))
 
 # 源文件和目标文件
 PARSER_DIR = src/rule_parser
-PARSER_SRCS = $(PARSER_DIR)/rule_parser.tab.c $(PARSER_DIR)/lex.yy.c
+PARSER_SRCS = src/rule_parser/rule_parser.tab.c \
+              src/rule_parser/lex.yy.c \
+              src/rule_parser/main_test.c \
+              src/rule_parser/pattern_converter.c
 PARSER_OBJS = $(PARSER_SRCS:.c=.o)
-MAIN_OBJS = $(PARSER_DIR)/main.o $(PARSER_DIR)/main_test.o
+MAIN_OBJS = $(PARSER_DIR)/main.o 
 MODULE_SRCS = $(wildcard src/*.c)
 MODULE_OBJS = $(MODULE_SRCS:.c=.o)
 
@@ -29,8 +38,8 @@ rule_parser: $(PARSER_OBJS) $(PARSER_DIR)/main.o
 	$(CC) $(CFLAGS) $^ -o $@ -lhs -lfl
 
 # 测试程序目标
-test_parser: $(PARSER_OBJS) $(PARSER_DIR)/main_test.o tests/test_parser.o
-	$(CC) $(CFLAGS) $^ -o $@ -lhs -lfl
+test_parser: $(PARSER_OBJS) tests/test_parser.o
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 # 编译规则
 $(PARSER_DIR)/rule_parser.tab.c $(PARSER_DIR)/rule_parser.tab.h: $(PARSER_DIR)/rule_parser.y
@@ -80,11 +89,17 @@ verify: build
 	@echo "Test completed."
 
 # 测试目标
-test: test-parser test-nginx
+test: test-parser test-pattern-converter test-nginx
 
 test-parser: test_parser
 	@echo "Running parser tests..."
 	./test_parser
+
+test-pattern-converter: $(BUILD_DIR)/test_pattern_converter
+	$(BUILD_DIR)/test_pattern_converter
+
+$(BUILD_DIR)/test_pattern_converter: tests/test_pattern_converter.c src/rule_parser/pattern_converter.c
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 test-nginx: check-source
 	@if [ ! -f $(NGINX_PATH)/objs/nginx ]; then \
@@ -102,14 +117,15 @@ run: rule_parser
 
 # 清理目标
 clean: clean-parser clean-module
+	rm -f $(BUILD_DIR)/*
+	rm -f test_parser
+	rm -f $(BUILD_DIR)/test_pattern_converter
 
 clean-parser:
-	rm -f $(PARSER_OBJS) $(MAIN_OBJS) tests/test_parser.o \
-		rule_parser test_parser \
-		$(PARSER_DIR)/rule_parser.tab.c $(PARSER_DIR)/rule_parser.tab.h $(PARSER_DIR)/lex.yy.c
+	rm -f $(PARSER_DIR)/*.o $(PARSER_DIR)/rule_parser.tab.* $(PARSER_DIR)/lex.yy.* test_parser
 
 clean-module:
 	cd $(NGINX_PATH) && make clean 2>/dev/null || true
 
 .PHONY: all prepare build verify test clean \
-        test-parser test-nginx clean-parser clean-module run
+        test-parser test-pattern-converter test-nginx clean-parser clean-module run

@@ -24,6 +24,9 @@ extern YYSTYPE yylval;
 "http.body"     { return HTTP_BODY; }
 "contains"      { return CONTAINS; }
 "matches"       { return MATCHES; }
+"starts_with"   { return STARTS_WITH; }
+"ends_with"     { return ENDS_WITH; }
+"equals"        { return EQUALS; }
 "and"           { return AND; }
 "or"            { return OR; }
 "not"           { return NOT; }

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "waf_rule_types.h"
+#include "pattern_converter.h"
 #include <hs/hs.h>
 
 extern int yylex();
@@ -216,11 +217,11 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
 
 %token <number> NUMBER
 %token <string> STRING
-%token RULE CONTAINS MATCHES
+%token RULE CONTAINS MATCHES STARTS_WITH ENDS_WITH EQUALS
 %token HTTP_URI HTTP_HEADER HTTP_BODY
 %token AND OR NOT
 %token SEMICOLON
-%token NOCASE MULTILINE DOTALL SINGLEMATCH  // 新增的选项token
+%token NOCASE MULTILINE DOTALL SINGLEMATCH
 
 %type <match_info> match_expr
 %type <match_info> rule_expr
@@ -274,63 +275,243 @@ pattern_flag:
 match_expr:
     HTTP_URI CONTAINS STRING pattern_flags {
         printf("Matched HTTP_URI CONTAINS: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_CONTAINS);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
         $$.proto_var = strdup("http.uri");
-        $$.pattern = $3;
-        $$.is_pcre = 0;
+        $$.pattern = converted_pattern;
+        $$.is_pcre = 1;  // 所有模式都转换为正则表达式
         $$.and_bit = current_and_bit;
         $$.is_not = 0;
         $$.flags = $4;
         current_and_bit <<= 1;
+        free($3);  // 释放原始字符串
     }
     | HTTP_URI MATCHES STRING pattern_flags {
         printf("Matched HTTP_URI MATCHES: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_MATCHES);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
         $$.proto_var = strdup("http.uri");
-        $$.pattern = $3;
+        $$.pattern = converted_pattern;
         $$.is_pcre = 1;
         $$.and_bit = current_and_bit;
         $$.is_not = 0;
         $$.flags = $4;
         current_and_bit <<= 1;
+        free($3);
+    }
+    | HTTP_URI STARTS_WITH STRING pattern_flags {
+        printf("Matched HTTP_URI STARTS_WITH: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_STARTS_WITH);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
+        $$.proto_var = strdup("http.uri");
+        $$.pattern = converted_pattern;
+        $$.is_pcre = 1;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+        free($3);
+    }
+    | HTTP_URI ENDS_WITH STRING pattern_flags {
+        printf("Matched HTTP_URI ENDS_WITH: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_ENDS_WITH);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
+        $$.proto_var = strdup("http.uri");
+        $$.pattern = converted_pattern;
+        $$.is_pcre = 1;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+        free($3);
+    }
+    | HTTP_URI EQUALS STRING pattern_flags {
+        printf("Matched HTTP_URI EQUALS: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_EQUALS);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
+        $$.proto_var = strdup("http.uri");
+        $$.pattern = converted_pattern;
+        $$.is_pcre = 1;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+        free($3);
     }
     | HTTP_HEADER CONTAINS STRING pattern_flags {
         printf("Matched HTTP_HEADER CONTAINS: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_CONTAINS);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
         $$.proto_var = strdup("http.header");
-        $$.pattern = $3;
-        $$.is_pcre = 0;
+        $$.pattern = converted_pattern;
+        $$.is_pcre = 1;
         $$.and_bit = current_and_bit;
         $$.is_not = 0;
         $$.flags = $4;
         current_and_bit <<= 1;
+        free($3);
     }
     | HTTP_HEADER MATCHES STRING pattern_flags {
         printf("Matched HTTP_HEADER MATCHES: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_MATCHES);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
         $$.proto_var = strdup("http.header");
-        $$.pattern = $3;
+        $$.pattern = converted_pattern;
         $$.is_pcre = 1;
         $$.and_bit = current_and_bit;
         $$.is_not = 0;
         $$.flags = $4;
         current_and_bit <<= 1;
+        free($3);
+    }
+    | HTTP_HEADER STARTS_WITH STRING pattern_flags {
+        printf("Matched HTTP_HEADER STARTS_WITH: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_STARTS_WITH);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
+        $$.proto_var = strdup("http.header");
+        $$.pattern = converted_pattern;
+        $$.is_pcre = 1;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+        free($3);
+    }
+    | HTTP_HEADER ENDS_WITH STRING pattern_flags {
+        printf("Matched HTTP_HEADER ENDS_WITH: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_ENDS_WITH);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
+        $$.proto_var = strdup("http.header");
+        $$.pattern = converted_pattern;
+        $$.is_pcre = 1;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+        free($3);
+    }
+    | HTTP_HEADER EQUALS STRING pattern_flags {
+        printf("Matched HTTP_HEADER EQUALS: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_EQUALS);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
+        $$.proto_var = strdup("http.header");
+        $$.pattern = converted_pattern;
+        $$.is_pcre = 1;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+        free($3);
     }
     | HTTP_BODY CONTAINS STRING pattern_flags {
         printf("Matched HTTP_BODY CONTAINS: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_CONTAINS);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
         $$.proto_var = strdup("http.body");
-        $$.pattern = $3;
-        $$.is_pcre = 0;
-        $$.and_bit = current_and_bit;
-        $$.is_not = 0;
-        $$.flags = $4;
-        current_and_bit <<= 1;
-    }
-    | HTTP_BODY MATCHES STRING pattern_flags {
-        printf("Matched HTTP_BODY MATCHES: %s with flags: 0x%x\n", $3, $4);
-        $$.proto_var = strdup("http.body");
-        $$.pattern = $3;
+        $$.pattern = converted_pattern;
         $$.is_pcre = 1;
         $$.and_bit = current_and_bit;
         $$.is_not = 0;
         $$.flags = $4;
         current_and_bit <<= 1;
+        free($3);
+    }
+    | HTTP_BODY MATCHES STRING pattern_flags {
+        printf("Matched HTTP_BODY MATCHES: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_MATCHES);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
+        $$.proto_var = strdup("http.body");
+        $$.pattern = converted_pattern;
+        $$.is_pcre = 1;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+        free($3);
+    }
+    | HTTP_BODY STARTS_WITH STRING pattern_flags {
+        printf("Matched HTTP_BODY STARTS_WITH: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_STARTS_WITH);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
+        $$.proto_var = strdup("http.body");
+        $$.pattern = converted_pattern;
+        $$.is_pcre = 1;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+        free($3);
+    }
+    | HTTP_BODY ENDS_WITH STRING pattern_flags {
+        printf("Matched HTTP_BODY ENDS_WITH: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_ENDS_WITH);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
+        $$.proto_var = strdup("http.body");
+        $$.pattern = converted_pattern;
+        $$.is_pcre = 1;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+        free($3);
+    }
+    | HTTP_BODY EQUALS STRING pattern_flags {
+        printf("Matched HTTP_BODY EQUALS: %s with flags: 0x%x\n", $3, $4);
+        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_EQUALS);
+        if (!converted_pattern) {
+            yyerror("Failed to convert pattern");
+            YYERROR;
+        }
+        $$.proto_var = strdup("http.body");
+        $$.pattern = converted_pattern;
+        $$.is_pcre = 1;
+        $$.and_bit = current_and_bit;
+        $$.is_not = 0;
+        $$.flags = $4;
+        current_and_bit <<= 1;
+        free($3);
     }
     ;
 

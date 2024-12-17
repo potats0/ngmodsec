@@ -303,13 +303,113 @@ TEST_CASE(regex_html_forms) {
     passed_tests++;
 }
 
+// 测试 starts_with 操作符
+TEST_CASE(starts_with_basic) {
+    const char *rule_str = "rule 3010 http.uri starts_with \"/api\";";
+    sign_rule_mg_t *rule_mg = parse_rule_string(rule_str);
+    ASSERT_NOT_NULL(rule_mg, "Rule parsing failed");
+    ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
+    ASSERT_EQ(3010, rule_mg->rule_ids[0], "Wrong rule ID");
+
+    // 验证转换后的正则表达式
+    string_match_context_t *ctx = rule_mg->string_match_context_array[0];
+    ASSERT_NOT_NULL(ctx, "Pattern context is NULL");
+    ASSERT_EQ(1, ctx->string_patterns_num, "Expected one pattern");
+    ASSERT_STR_EQ("^/api", ctx->string_patterns_list[0].string_pattern, "Wrong pattern conversion");
+    
+    passed_tests++;
+}
+
+// 测试 ends_with 操作符
+TEST_CASE(ends_with_basic) {
+    const char *rule_str = "rule 3011 http.uri ends_with \".php\";";
+    sign_rule_mg_t *rule_mg = parse_rule_string(rule_str);
+    ASSERT_NOT_NULL(rule_mg, "Rule parsing failed");
+    ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
+    ASSERT_EQ(3011, rule_mg->rule_ids[0], "Wrong rule ID");
+
+    // 验证转换后的正则表达式
+    string_match_context_t *ctx = rule_mg->string_match_context_array[0];
+    ASSERT_NOT_NULL(ctx, "Pattern context is NULL");
+    ASSERT_EQ(1, ctx->string_patterns_num, "Expected one pattern");
+    ASSERT_STR_EQ("\\.php$", ctx->string_patterns_list[0].string_pattern, "Wrong pattern conversion");
+    
+    passed_tests++;
+}
+
+// 测试 equals 操作符
+TEST_CASE(equals_basic) {
+    const char *rule_str = "rule 3012 http.uri equals \"/login\";";
+    sign_rule_mg_t *rule_mg = parse_rule_string(rule_str);
+    ASSERT_NOT_NULL(rule_mg, "Rule parsing failed");
+    ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
+    ASSERT_EQ(3012, rule_mg->rule_ids[0], "Wrong rule ID");
+
+    // 验证转换后的正则表达式
+    string_match_context_t *ctx = rule_mg->string_match_context_array[0];
+    ASSERT_NOT_NULL(ctx, "Pattern context is NULL");
+    ASSERT_EQ(1, ctx->string_patterns_num, "Expected one pattern");
+    ASSERT_STR_EQ("^/login$", ctx->string_patterns_list[0].string_pattern, "Wrong pattern conversion");
+    
+    passed_tests++;
+}
+
+// 测试带有特殊字符的 contains 操作符
+TEST_CASE(contains_special_chars) {
+    const char *rule_str = "rule 3013 http.uri contains \"user?id=[0-9]+\";";
+    sign_rule_mg_t *rule_mg = parse_rule_string(rule_str);
+    ASSERT_NOT_NULL(rule_mg, "Rule parsing failed");
+    ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
+    ASSERT_EQ(3013, rule_mg->rule_ids[0], "Wrong rule ID");
+
+    // 验证转换后的正则表达式
+    string_match_context_t *ctx = rule_mg->string_match_context_array[0];
+    ASSERT_NOT_NULL(ctx, "Pattern context is NULL");
+    ASSERT_EQ(1, ctx->string_patterns_num, "Expected one pattern");
+    ASSERT_STR_EQ("user\\?id=\\[0-9\\]\\+", ctx->string_patterns_list[0].string_pattern, "Wrong pattern conversion");
+    
+    passed_tests++;
+}
+
+// 测试带有特殊字符的 starts_with 操作符
+TEST_CASE(starts_with_special_chars) {
+    const char *rule_str = "rule 3014 http.uri starts_with \"/api/v[1-3]\";";
+    sign_rule_mg_t *rule_mg = parse_rule_string(rule_str);
+    ASSERT_NOT_NULL(rule_mg, "Rule parsing failed");
+    ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
+    ASSERT_EQ(3014, rule_mg->rule_ids[0], "Wrong rule ID");
+
+    // 验证转换后的正则表达式
+    string_match_context_t *ctx = rule_mg->string_match_context_array[0];
+    ASSERT_NOT_NULL(ctx, "Pattern context is NULL");
+    ASSERT_EQ(1, ctx->string_patterns_num, "Expected one pattern");
+    ASSERT_STR_EQ("^/api/v\\[1-3\\]", ctx->string_patterns_list[0].string_pattern, "Wrong pattern conversion");
+    
+    passed_tests++;
+}
+
+// 测试带有特殊字符的 ends_with 操作符
+TEST_CASE(ends_with_special_chars) {
+    const char *rule_str = "rule 3015 http.uri ends_with \".(php|jsp)\";";
+    sign_rule_mg_t *rule_mg = parse_rule_string(rule_str);
+    ASSERT_NOT_NULL(rule_mg, "Rule parsing failed");
+    ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
+    ASSERT_EQ(3015, rule_mg->rule_ids[0], "Wrong rule ID");
+
+    // 验证转换后的正则表达式
+    string_match_context_t *ctx = rule_mg->string_match_context_array[0];
+    ASSERT_NOT_NULL(ctx, "Pattern context is NULL");
+    ASSERT_EQ(1, ctx->string_patterns_num, "Expected one pattern");
+    ASSERT_STR_EQ("\\.\\(php\\|jsp\\)$", ctx->string_patterns_list[0].string_pattern, "Wrong pattern conversion");
+    
+    passed_tests++;
+}
+
 int main() {
     TEST_SUITE_BEGIN();
     
-    // 运行基本测试
+    // 运行已有的测试...
     RUN_TEST(single_contains);
-    
-    // 运行正则表达式测试
     RUN_TEST(regex_basic_path);
     RUN_TEST(regex_groups_and_choices);
     RUN_TEST(regex_file_extensions);
@@ -320,8 +420,6 @@ int main() {
     RUN_TEST(regex_multiple_conditions);
     RUN_TEST(regex_nested_parentheses);
     RUN_TEST(regex_file_types);
-    
-    // 运行HTML和嵌套结构测试
     RUN_TEST(regex_html_basic_tags);
     RUN_TEST(regex_html_attributes);
     RUN_TEST(regex_html_script_tags);
@@ -330,6 +428,14 @@ int main() {
     RUN_TEST(regex_nested_parentheses_complex);
     RUN_TEST(regex_nested_json);
     RUN_TEST(regex_html_forms);
+    
+    // 运行新添加的测试
+    RUN_TEST(starts_with_basic);
+    RUN_TEST(ends_with_basic);
+    RUN_TEST(equals_basic);
+    RUN_TEST(contains_special_chars);
+    RUN_TEST(starts_with_special_chars);
+    RUN_TEST(ends_with_special_chars);
     
     TEST_SUITE_END();
     return 0;
