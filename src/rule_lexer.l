@@ -6,6 +6,7 @@
 #include "rule_parser.tab.h"
 
 extern int yylineno;
+extern YYSTYPE yylval;
 %}
 
 %option noyywrap
@@ -18,28 +19,34 @@ extern int yylineno;
 [ \t\n]+        ; /* 忽略空白字符 */
 #[^\n]*         ; /* 忽略以#开头的单行注释 */
 "rule"          { return RULE; }
-"contains"      { return CONTAINS; }
-"matches"       { return MATCHES; }
 "http.uri"      { return HTTP_URI; }
 "http.header"   { return HTTP_HEADER; }
 "http.body"     { return HTTP_BODY; }
+"contains"      { return CONTAINS; }
+"matches"       { return MATCHES; }
 "and"           { return AND; }
 "or"            { return OR; }
-"not"           { return NOT; }  /* 添加NOT关键字支持 */
-"("             { return LPAREN; }
-")"             { return RPAREN; }
+"not"           { return NOT; }
 ";"             { return SEMICOLON; }
 "/i"            { return NOCASE; }      /* 忽略大小写 */
 "/m"            { return MULTILINE; }   /* 多行模式 */
 "/s"            { return DOTALL; }      /* 点号匹配换行 */
 "/f"            { return SINGLEMATCH; } /* 单次匹配 */
-[0-9]+          { yylval.number = atoi(yytext); return NUMBER; }
-[a-zA-Z][a-zA-Z0-9_]*  { yylval.string = strdup(yytext); return IDENTIFIER; }
-\"[^\"]*\"      { 
-    yylval.string = strdup(yytext + 1);
-    yylval.string[strlen(yylval.string)-1] = 0;
-    return STRING; 
-}
-.               { printf("Unknown character: %s\n", yytext); }
+[0-9]+          { 
+                    yylval.number = atoi(yytext);
+                    return NUMBER;
+                }
+
+\"[^\"]*\"      {
+                    // 去掉引号并复制字符串
+                    int len = strlen(yytext) - 2;  // 减去两个引号
+                    char* str = malloc(len + 1);   // +1 用于 null 终止符
+                    strncpy(str, yytext + 1, len);
+                    str[len] = '\0';
+                    yylval.string = str;
+                    return STRING;
+                }
+
+.               { printf("Unexpected character: %s\n", yytext); }
 
 %%

@@ -179,11 +179,11 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
 }
 
 %token <number> NUMBER
-%token <string> STRING IDENTIFIER
+%token <string> STRING
 %token RULE CONTAINS MATCHES
 %token HTTP_URI HTTP_HEADER HTTP_BODY
 %token AND OR NOT
-%token LPAREN RPAREN SEMICOLON
+%token SEMICOLON
 %token NOCASE MULTILINE DOTALL SINGLEMATCH  // 新增的选项token
 
 %type <match_info> match_expr
@@ -198,6 +198,7 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
 %%
 
 rules:
+    /* empty */
     | rules rule
     ;
 
@@ -370,10 +371,6 @@ rule_expr:
         }
         $$.proto_var = NULL;
         $$.pattern = NULL;
-    }
-    | LPAREN rule_expr RPAREN {
-        printf("Processing parenthesized expression\n");
-        $$ = $2;
     }
     ;
 
