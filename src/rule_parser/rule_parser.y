@@ -118,6 +118,11 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
     rule_mask_array_t* rule_mask = &current_rule_mg->rule_masks[rule_id];
     rule_mask->and_masks[sub_id - 1] |= and_bit;
     rule_mask->not_masks[sub_id - 1] |= (current_not_mask & and_bit);
+    
+    // 更新子规则数量
+    if (sub_id > rule_mask->sub_rules_count) {
+        rule_mask->sub_rules_count = sub_id;
+    }
 
     // 查找或创建对应的context
     string_match_context_t* ctx = NULL;

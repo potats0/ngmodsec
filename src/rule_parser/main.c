@@ -33,10 +33,35 @@ void print_rule_info(sign_rule_mg_t *rule_mg) {
     printf("Rule %u:\n", rule_id);
     printf("  Sub-rules count: %u\n", rule_mask->sub_rules_count);
 
+    // 遍历所有匹配上下文，找到与当前规则相关的andbit
+    if (rule_mg->string_match_context_array) {
+      printf("  Rule AndBits:\n");
+      for (int ctx_idx = 0; rule_mg->string_match_context_array[ctx_idx] != NULL; ctx_idx++) {
+        string_match_context_t *ctx = rule_mg->string_match_context_array[ctx_idx];
+        for (int pat_idx = 0; pat_idx < ctx->string_patterns_num; pat_idx++) {
+          string_pattern_t *pattern = &ctx->string_patterns_list[pat_idx];
+          for (int rel_idx = 0; rel_idx < pattern->relation_count; rel_idx++) {
+            rule_relation_t *rel = &pattern->relations[rel_idx];
+            if ((rel->threat_id >> 8) == rule_id) {
+              uint8_t sub_id = rel->threat_id & 0xFF;
+              printf("    Context %d, Pattern %d (Sub-rule %u): AndBit=0x%x (", 
+                     ctx_idx, pat_idx, sub_id, rel->and_bit);
+              print_binary16(rel->and_bit);
+              printf(")\n");
+            }
+          }
+        }
+      }
+    }
+
     for (uint8_t sub_id = 0; sub_id < rule_mask->sub_rules_count; sub_id++) {
       printf("  Sub-rule %u:\n", sub_id);
-      printf("    AND mask: 0x%x\n", rule_mask->and_masks[sub_id]);
-      printf("    NOT mask: 0x%x\n", rule_mask->not_masks[sub_id]);
+      printf("    AND mask: 0x%x (", rule_mask->and_masks[sub_id]);
+      print_binary16(rule_mask->and_masks[sub_id]);
+      printf(")\n");
+      printf("    NOT mask: 0x%x (", rule_mask->not_masks[sub_id]);
+      print_binary16(rule_mask->not_masks[sub_id]);
+      printf(")\n");
     }
     printf("\n");
   }
