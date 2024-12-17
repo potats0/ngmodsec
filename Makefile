@@ -2,17 +2,22 @@ NGINX_PATH ?= $(shell pwd)/../nginx
 MODULE_PATH = $(shell pwd)
 MODULE_NAME = ngx_http_waf_rule_match_engine_module
 
+# 编译器和标志
+CC = cc
 CORE_INCS = -I$(NGINX_PATH)/src/core \
             -I$(NGINX_PATH)/src/event \
             -I$(NGINX_PATH)/src/http \
-            -I$(NGINX_PATH)/src/os/unix
+            -I$(NGINX_PATH)/src/os/unix \
+            -I$(shell pwd)/src
 
-CC = cc
+# 编译标志
 CFLAGS = -g -O0 -Wall $(CORE_INCS) -D_GNU_SOURCE
 
 # 源文件和目标文件
-PARSER_SRCS = src/rule_parser.tab.c src/lex.yy.c
-PARSER_OBJS = src/rule_parser.tab.o src/lex.yy.o
+PARSER_DIR = src/rule_parser
+PARSER_SRCS = $(PARSER_DIR)/rule_parser.tab.c $(PARSER_DIR)/lex.yy.c
+PARSER_OBJS = $(PARSER_SRCS:.c=.o)
+MAIN_OBJS = $(PARSER_DIR)/main.o $(PARSER_DIR)/main_test.o
 MODULE_SRCS = $(wildcard src/*.c)
 MODULE_OBJS = $(MODULE_SRCS:.c=.o)
 
@@ -20,31 +25,34 @@ MODULE_OBJS = $(MODULE_SRCS:.c=.o)
 all: prepare build verify
 
 # 解析器目标
-rule_parser: $(PARSER_OBJS) src/main.o
-	$(CC) $(CFLAGS) $(CORE_INCS) $^ -o $@ -lhs -lfl
+rule_parser: $(PARSER_OBJS) $(PARSER_DIR)/main.o
+	$(CC) $(CFLAGS) $^ -o $@ -lhs -lfl
 
 # 测试程序目标
-test_parser: $(PARSER_OBJS) src/main_test.o tests/test_parser.o
+test_parser: $(PARSER_OBJS) $(PARSER_DIR)/main_test.o tests/test_parser.o
 	$(CC) $(CFLAGS) $^ -o $@ -lhs -lfl
 
 # 编译规则
-src/rule_parser.tab.c src/rule_parser.tab.h: src/rule_parser.y
-	cd src && bison -d rule_parser.y
+$(PARSER_DIR)/rule_parser.tab.c $(PARSER_DIR)/rule_parser.tab.h: $(PARSER_DIR)/rule_parser.y
+	cd $(PARSER_DIR) && bison -d rule_parser.y
 
-src/lex.yy.c: src/rule_lexer.l src/rule_parser.tab.h
-	cd src && flex rule_lexer.l
+$(PARSER_DIR)/lex.yy.c: $(PARSER_DIR)/rule_lexer.l $(PARSER_DIR)/rule_parser.tab.h
+	cd $(PARSER_DIR) && flex rule_lexer.l
 
-src/main.o: src/main.c
-	$(CC) $(CFLAGS) $(CORE_INCS) -c $< -o $@
+$(PARSER_DIR)/main.o: $(PARSER_DIR)/main.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-src/main_test.o: src/main.c
-	$(CC) $(CFLAGS) $(CORE_INCS) -DTEST_PARSER -c $< -o $@
+$(PARSER_DIR)/main_test.o: $(PARSER_DIR)/main.c
+	$(CC) $(CFLAGS) -DTEST_PARSER -c $< -o $@
+
+$(PARSER_DIR)/%.o: $(PARSER_DIR)/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 tests/test_parser.o: tests/test_parser.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 %.o: %.c
-	$(CC) $(CFLAGS) $(CORE_INCS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # Nginx 模块相关目标
 prepare:
@@ -96,9 +104,9 @@ run: rule_parser
 clean: clean-parser clean-module
 
 clean-parser:
-	rm -f $(PARSER_OBJS) src/main.o src/main_test.o tests/test_parser.o \
-		rule_parser test_parser src/rule_parser.o \
-		src/rule_parser.tab.c src/rule_parser.tab.h src/lex.yy.c
+	rm -f $(PARSER_OBJS) $(MAIN_OBJS) tests/test_parser.o \
+		rule_parser test_parser \
+		$(PARSER_DIR)/rule_parser.tab.c $(PARSER_DIR)/rule_parser.tab.h $(PARSER_DIR)/lex.yy.c
 
 clean-module:
 	cd $(NGINX_PATH) && make clean 2>/dev/null || true
