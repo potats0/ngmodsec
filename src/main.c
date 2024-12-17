@@ -109,7 +109,7 @@ uint16_t find_rule_mask(sign_rule_mg_t *rule_mg, uint32_t threat_id) {
   uint32_t rule_id = threat_id >> 8;
   uint8_t sub_id = threat_id & 0xFF;
 
-  if (rule_id >= MAX_RULES_NUM || sub_id == 0 || sub_id > MAX_SUB_RULES_NUM) {
+  if (!rule_mg || rule_id >= rule_mg->max_rules || sub_id == 0 || sub_id > MAX_SUB_RULES_NUM) {
     return 0;
   }
 
@@ -140,10 +140,14 @@ void cleanup_rule_mg(sign_rule_mg_t *rule_mg) {
         }
         free(ctx->string_patterns_list);
       }
-      // proto_var_name 是一个字符数组，不需要释放
       free(ctx);
     }
     free(rule_mg->string_match_context_array);
+  }
+
+  // 清理规则掩码数组
+  if (rule_mg->rule_masks) {
+    free(rule_mg->rule_masks);
   }
 
   // 清理规则ID数组

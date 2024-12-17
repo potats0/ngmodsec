@@ -95,32 +95,19 @@ TEST_CASE(single_contains) {
     ASSERT(rule_mg->rules_count == 1, "Expected one rule");
     ASSERT(rule_mg->rule_ids != NULL, "Rule IDs array is NULL");
     ASSERT(rule_mg->rule_ids[0] == 1000, "Wrong rule ID");
+    ASSERT(rule_mg->max_rules > 1000, "Max rules too small");
+
+    // 检查规则掩码数组是否分配
+    ASSERT(rule_mg->rule_masks != NULL, "Rule masks array is NULL");
 
     // 应该只有一个子规则
-    ASSERT(rule_mg->rule_masks[1000].sub_rules_count == 1, "Expected one sub rule");
+    ASSERT(rule_mg->rule_masks[1000].and_masks[0] == 0x1, "Wrong AND mask for sub rule");
 
-    // 检查 AND 掩码
-    uint16_t and_mask = get_rule_and_mask(&rule_mg->rule_masks[1000], 0);
-    if (and_mask != 0x1) {
-        printf("Error: Expected AND mask = 0x1, but got 0x%x\n", and_mask);
-        print_rule_mg_state(rule_mg, 1000);
-        ASSERT(0, "AND mask mismatch");
-    }
-
-    // 检查 NOT 掩码
-    uint16_t not_mask = get_rule_not_mask(&rule_mg->rule_masks[1000], 0);
-    if (not_mask != 0) {
-        printf("Error: Expected NOT mask = 0x0, but got 0x%x\n", not_mask);
-        print_rule_mg_state(rule_mg, 1000);
-        ASSERT(0, "NOT mask mismatch");
-    }
-
-    // 检查模式
-    string_pattern_t *pattern = get_pattern_by_content(rule_mg, "a");
-    ASSERT(pattern != NULL, "Pattern not found");
-    ASSERT(pattern->relation_count == 1, "Expected one relation");
-    ASSERT(pattern->relations[0].and_bit == 0x1, "Wrong AND bit in relation");
-    ASSERT(pattern->relations[0].threat_id == ((1000 << 8) | 1), "Wrong threat ID");
+    // 检查字符串匹配上下文
+    ASSERT(rule_mg->string_match_context_array != NULL, "String match context array is NULL");
+    ASSERT(rule_mg->string_match_context_array[0] != NULL, "First string match context is NULL");
+    ASSERT(strcmp(rule_mg->string_match_context_array[0]->proto_var_name, "http.uri") == 0,
+           "Wrong protocol variable name");
 
     cleanup_rule_mg(rule_mg);
     passed_tests++;

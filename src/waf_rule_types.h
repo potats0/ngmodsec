@@ -26,8 +26,7 @@
 #define MAX_PROTOVAR_NAME_LEN 32
 #define MAX_STRINGS_NUM 4096
 #define MAX_STRING_LEN 1024
-#define MAX_RULES_NUM 1024   // 最大规则数
-#define MAX_SUB_RULES_NUM 16 // 每个规则的最大子规则数
+#define MAX_SUB_RULES_NUM 8 // 每个规则的最大子规则数
 
 /** 规则掩码存储结构 **/
 typedef struct rule_mask_array_s {
@@ -71,7 +70,8 @@ typedef struct string_match_context_s {
 /** 全局规则管理结构mg, 目前只实现字符串 **/
 typedef struct sign_rule_mg_s {
   string_match_context_t **string_match_context_array;  // 字符串匹配上下文数组
-  rule_mask_array_t rule_masks[MAX_RULES_NUM];         // 规则掩码数组
+  rule_mask_array_t *rule_masks;                        // 规则掩码数组（动态分配）
+  uint32_t max_rules;                                   // 当前分配的最大规则数
   uint32_t rules_count;                                // 实际规则数量
   uint32_t *rule_ids;                                  // 有效规则ID数组
 } sign_rule_mg_t;

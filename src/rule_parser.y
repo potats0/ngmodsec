@@ -28,7 +28,7 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
     uint8_t sub_id = current_sub_id;
     
     // 检查当前规则和子规则的掩码是否已包含此and_bit
-    if (current_rule_mg && rule_id < MAX_RULES_NUM) {
+    if (current_rule_mg && rule_id < current_rule_mg->max_rules) {
         uint16_t current_mask = current_rule_mg->rule_masks[rule_id].and_masks[sub_id - 1];
         if (current_mask & and_bit) {
             // 如果当前and_bit已存在于掩码中，生成新的未使用的and_bit
@@ -53,6 +53,8 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
             fprintf(stderr, "Failed to allocate rule_mg\n");
             return;
         }
+
+        // 初始化字符串匹配上下文数组
         current_rule_mg->string_match_context_array = calloc(4, sizeof(string_match_context_t*));
         if (!current_rule_mg->string_match_context_array) {
             fprintf(stderr, "Failed to allocate context array\n");
@@ -60,14 +62,37 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
             current_rule_mg = NULL;
             return;
         }
+
+        // 初始化规则掩码数组，初始大小为128
+        current_rule_mg->max_rules = 128;
+        current_rule_mg->rule_masks = calloc(current_rule_mg->max_rules, sizeof(rule_mask_array_t));
+        if (!current_rule_mg->rule_masks) {
+            fprintf(stderr, "Failed to allocate rule masks array\n");
+            free(current_rule_mg->string_match_context_array);
+            free(current_rule_mg);
+            current_rule_mg = NULL;
+            return;
+        }
+
         current_rule_mg->rules_count = 0;
         current_rule_mg->rule_ids = NULL;
     }
 
-    // 检查规则ID是否有效
-    if (rule_id >= MAX_RULES_NUM) {
-        fprintf(stderr, "Rule ID %u exceeds maximum allowed (%d)\n", rule_id, MAX_RULES_NUM);
-        return;
+    // 检查规则ID是否有效，如果需要扩展规则掩码数组
+    if (rule_id >= current_rule_mg->max_rules) {
+        uint32_t new_size = rule_id + 128; // 每次多分配一些空间
+        rule_mask_array_t *new_masks = realloc(current_rule_mg->rule_masks, 
+                                             new_size * sizeof(rule_mask_array_t));
+        if (!new_masks) {
+            fprintf(stderr, "Failed to reallocate rule masks array\n");
+            return;
+        }
+        // 将新分配的内存初始化为0
+        memset(new_masks + current_rule_mg->max_rules, 0, 
+               (new_size - current_rule_mg->max_rules) * sizeof(rule_mask_array_t));
+        
+        current_rule_mg->rule_masks = new_masks;
+        current_rule_mg->max_rules = new_size;
     }
 
     // 检查规则ID是否已存在
@@ -92,9 +117,6 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
 
     // 更新规则掩码
     rule_mask_array_t* rule_mask = &current_rule_mg->rule_masks[rule_id];
-    if (sub_id > rule_mask->sub_rules_count) {
-        rule_mask->sub_rules_count = sub_id;
-    }
     rule_mask->and_masks[sub_id - 1] |= and_bit;
     rule_mask->not_masks[sub_id - 1] |= (current_not_mask & and_bit);
 
