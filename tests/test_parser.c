@@ -93,8 +93,8 @@ TEST_CASE(simple_and) {
     
     // 检查规则掩码
     ASSERT(rule_mg->rule_masks[1000].sub_rules_count == 1, "Sub rules count mismatch");
-    ASSERT(rule_mg->rule_masks[1000].and_masks[0] == 0x3, "AND mask mismatch");
-    ASSERT(rule_mg->rule_masks[1000].not_masks[0] == 0, "NOT mask mismatch");
+    ASSERT(get_rule_and_mask(&rule_mg->rule_masks[1000], 0) == 0x3, "AND mask mismatch");
+    ASSERT(get_rule_not_mask(&rule_mg->rule_masks[1000], 0) == 0, "NOT mask mismatch");
     
     cleanup_rule_mg(rule_mg);
     passed_tests++;
@@ -110,8 +110,8 @@ TEST_CASE(complex_and_or) {
     
     // 检查规则掩码
     ASSERT(rule_mg->rule_masks[1000].sub_rules_count == 1, "Sub rules count mismatch");
-    ASSERT(rule_mg->rule_masks[1000].and_masks[0] == 0xF, "First sub-rule AND mask mismatch");  
-    ASSERT(rule_mg->rule_masks[1000].not_masks[0] == 0, "NOT mask mismatch");
+    ASSERT(get_rule_and_mask(&rule_mg->rule_masks[1000], 0) == 0xF, "First sub-rule AND mask mismatch");  
+    ASSERT(get_rule_not_mask(&rule_mg->rule_masks[1000], 0) == 0, "NOT mask mismatch");
     
     cleanup_rule_mg(rule_mg);
     passed_tests++;
@@ -126,8 +126,8 @@ TEST_CASE(not_condition) {
     
     // 检查规则掩码
     ASSERT(rule_mg->rule_masks[1000].sub_rules_count == 1, "Sub rules count mismatch");
-    ASSERT(rule_mg->rule_masks[1000].and_masks[0] == 0x3, "AND mask mismatch");
-    ASSERT(rule_mg->rule_masks[1000].not_masks[0] == 0x2, "NOT mask mismatch");
+    ASSERT(get_rule_and_mask(&rule_mg->rule_masks[1000], 0) == 0x3, "AND mask mismatch");
+    ASSERT(get_rule_not_mask(&rule_mg->rule_masks[1000], 0) == 0x2, "NOT mask mismatch");
     
     cleanup_rule_mg(rule_mg);
     passed_tests++;

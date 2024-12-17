@@ -90,4 +90,22 @@ extern int32_t protovar_2_ngxid(char *vname);
 vs_proto_var_t *get_protovar(ngx_http_request_t *r, int proto_id);
 vs_url_vars_t *get_url_vars(ngx_http_request_t *r);
 #endif
-#endif
+
+/** 规则掩码访问辅助函数 **/
+static inline u_int16_t get_rule_and_mask(rule_mask_array_t* masks, int sub_rule_index) {
+    return masks->and_masks[sub_rule_index];
+}
+
+static inline u_int16_t get_rule_not_mask(rule_mask_array_t* masks, int sub_rule_index) {
+    return masks->not_masks[sub_rule_index];
+}
+
+static inline void set_rule_and_mask(rule_mask_array_t* masks, int sub_rule_index, u_int16_t value) {
+    masks->and_masks[sub_rule_index] = value;
+}
+
+static inline void set_rule_not_mask(rule_mask_array_t* masks, int sub_rule_index, u_int16_t value) {
+    masks->not_masks[sub_rule_index] = value;
+}
+
+#endif // __NEW_SIGN_PUB_H__
