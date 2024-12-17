@@ -307,16 +307,6 @@ rule_expr:
         $$ = $2;
         $$.is_not = 1;  // 标记为NOT操作
     }
-    | NOT LPAREN rule_expr RPAREN {
-        printf("Processing NOT group expression\n");
-        $$ = $3;
-        $$.is_not = 1;  // 标记整个组为NOT操作
-        
-        // 对于复合NOT，我们需要设置组内所有条件的NOT标记
-        if ($3.proto_var && $3.pattern) {
-            current_not_mask |= $3.and_bit;
-        }
-    }
     | rule_expr AND rule_expr {
         printf("Processing AND expression (sub_id: %d)\n", current_sub_id);
         uint8_t max_sub_id = current_sub_id;
