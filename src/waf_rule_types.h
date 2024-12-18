@@ -21,11 +21,9 @@
   "relation_dir"
 #define CONF1_NEW_SIGN_ENGINE 1
 
-#define MAX_FILE_NAME_LEN 512
-#define MAX_PROTOVAR_NAME_LEN 32
-#define MAX_RULES_NUM 10000 // 默认最大规则数量
+#define MAX_RULES_NUM 10000 // 默认最大规则数量，如果不够，那就每次增长128
 // 单个协议变量中允许的最大字符串模式数量，用于限制字符串匹配上下文数组和模式列表的大小
-#define MAX_RULE_PATTERNS_LEN 4096
+#define MAX_RULE_PATTERNS 4096
 #define MAX_SUB_RULES_NUM 8 // 每个规则的最大子规则数
 
 /** HTTP协议变量类型枚举 **/
@@ -49,7 +47,6 @@ typedef struct rule_relation_s {
   u_int32_t threat_id;  // 规则子式id (rule_id<<8|sub_id)
   u_int32_t pattern_id; // 规则子式在string_patterns_list中的索引
   u_int16_t and_bit;    // 命中的子式条件
-  u_int8_t operator_type;
 } rule_relation_t;
 
 /** 字符串类型规则子式结构 **/
@@ -58,7 +55,6 @@ typedef struct string_pattern_s {
   rule_relation_t *relations; // 引用这个模式的规则关系数组
   int relation_count;         // 引用这个模式的规则关系数量
   uint32_t hs_flags;          // Hyperscan标志位
-  uint8_t is_pcre;            // 是否为PCRE模式
 } string_pattern_t;
 
 /** 模式字符串规则匹配上下文，以每协议变量分配 **/

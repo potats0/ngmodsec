@@ -22,7 +22,7 @@ static uint8_t current_sub_id = 0;      // 当前子规则ID
 static uint16_t current_and_bit = 1;    // 当前and_bit，每个子式左移一位
 static uint16_t current_not_mask = 0;   // 当前NOT掩码
 
-static void add_pattern_to_context(http_var_type_t proto_var, const char* pattern, int is_pcre, uint16_t and_bit, uint32_t flags) {
+static void add_pattern_to_context(http_var_type_t proto_var, const char* pattern, uint16_t and_bit, uint32_t flags) {
     uint32_t rule_id = current_rule_id;
     uint8_t sub_id = current_sub_id;
     
@@ -43,8 +43,8 @@ static void add_pattern_to_context(http_var_type_t proto_var, const char* patter
         }
     }
     
-    printf("Adding pattern: %s to %d (is_pcre: %d, flags: 0x%x) for rule ID: %u (sub_id: %u, and_bit: 0x%x, not_mask: 0x%x)\n", 
-           pattern, proto_var, is_pcre, flags, rule_id, sub_id, and_bit, current_not_mask);
+    printf("Adding pattern: %s to %d (flags: 0x%x) for rule ID: %u (sub_id: %u, and_bit: 0x%x, not_mask: 0x%x)\n", 
+           pattern, proto_var, flags, rule_id, sub_id, and_bit, current_not_mask);
     
     if (!current_rule_mg) {
         fprintf(stderr, "Failed to allocate rule_mg\n");
@@ -86,13 +86,13 @@ static void add_pattern_to_context(http_var_type_t proto_var, const char* patter
             return;
         }
         memset(ctx, 0, sizeof(string_match_context_t));
-        ctx->string_patterns_list = g_waf_rule_malloc(MAX_RULE_PATTERNS_LEN * sizeof(string_pattern_t));
+        ctx->string_patterns_list = g_waf_rule_malloc(MAX_RULE_PATTERNS * sizeof(string_pattern_t));
         if (!ctx->string_patterns_list) {
             fprintf(stderr, "Failed to allocate patterns list\n");
             g_waf_rule_free(ctx);
             return;
         }
-        memset(ctx->string_patterns_list, 0, MAX_RULE_PATTERNS_LEN * sizeof(string_pattern_t));
+        memset(ctx->string_patterns_list, 0, MAX_RULE_PATTERNS * sizeof(string_pattern_t));
         ctx->string_patterns_num = 0;
         current_rule_mg->string_match_context_array[proto_var] = ctx;
         printf("Created new context at index %d\n", proto_var);
@@ -109,7 +109,7 @@ static void add_pattern_to_context(http_var_type_t proto_var, const char* patter
     }
 
     if (!pattern_entry) {
-        if (ctx->string_patterns_num >= MAX_RULE_PATTERNS_LEN) {
+        if (ctx->string_patterns_num >= MAX_RULE_PATTERNS) {
             fprintf(stderr, "Too many patterns\n");
             return;
         }
@@ -122,7 +122,6 @@ static void add_pattern_to_context(http_var_type_t proto_var, const char* patter
         strcpy(pattern_entry->string_pattern, pattern);
         pattern_entry->relations = NULL;
         pattern_entry->relation_count = 0;
-        pattern_entry->is_pcre = is_pcre;
         pattern_entry->hs_flags = flags;
         ctx->string_patterns_num++;
         printf("Created new pattern at index %d\n", ctx->string_patterns_num - 1);
@@ -240,7 +239,7 @@ match_expr:
             yyerror("Failed to convert pattern");
             YYERROR;
         }
-        add_pattern_to_context($1, converted_pattern, 0, current_and_bit, $4);
+        add_pattern_to_context($1, converted_pattern, current_and_bit, $4);
         g_waf_rule_free(converted_pattern);
     }
     | HTTP_VAR MATCHES STRING pattern_flags {
@@ -250,7 +249,7 @@ match_expr:
             yyerror("Failed to convert pattern");
             YYERROR;
         }
-        add_pattern_to_context($1, converted_pattern, 1, current_and_bit, $4);
+        add_pattern_to_context($1, converted_pattern, current_and_bit, $4);
         g_waf_rule_free(converted_pattern);
     }
     | HTTP_VAR STARTS_WITH STRING pattern_flags {
@@ -260,7 +259,7 @@ match_expr:
             yyerror("Failed to convert pattern");
             YYERROR;
         }
-        add_pattern_to_context($1, converted_pattern, 0, current_and_bit, $4);
+        add_pattern_to_context($1, converted_pattern, current_and_bit, $4);
         g_waf_rule_free(converted_pattern);
     }
     | HTTP_VAR ENDS_WITH STRING pattern_flags {
@@ -270,7 +269,7 @@ match_expr:
             yyerror("Failed to convert pattern");
             YYERROR;
         }
-        add_pattern_to_context($1, converted_pattern, 0, current_and_bit, $4);
+        add_pattern_to_context($1, converted_pattern, current_and_bit, $4);
         g_waf_rule_free(converted_pattern);
     }
     | HTTP_VAR EQUALS STRING pattern_flags {
@@ -280,7 +279,7 @@ match_expr:
             yyerror("Failed to convert pattern");
             YYERROR;
         }
-        add_pattern_to_context($1, converted_pattern, 0, current_and_bit, $4);
+        add_pattern_to_context($1, converted_pattern, current_and_bit, $4);
         g_waf_rule_free(converted_pattern);
     }
     ;

@@ -80,7 +80,6 @@ void print_rule_info(sign_rule_mg_t *rule_mg) {
         string_pattern_t *pattern = &ctx->string_patterns_list[j];
         printf("  Pattern %d:\n", j);
         printf("    Content: %s\n", pattern->string_pattern);
-        printf("    Is PCRE: %s\n", pattern->is_pcre ? "Yes" : "No");
         printf("    HS Flags: 0x%x\n", pattern->hs_flags);
         printf("    Relations Count: %d\n", pattern->relation_count);
 
@@ -90,7 +89,6 @@ void print_rule_info(sign_rule_mg_t *rule_mg) {
           printf("      Threat ID: %u\n", rel->threat_id);
           printf("      Pattern ID: %u\n", rel->pattern_id);
           printf("      AND Bit: 0x%x\n", rel->and_bit);
-          printf("      Operator Type: %u\n", rel->operator_type);
         }
       }
       printf("\n");
