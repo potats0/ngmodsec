@@ -15,6 +15,14 @@ extern void yy_switch_to_buffer(void* buffer);
 extern void* yy_scan_string(const char* str);
 extern void yy_delete_buffer(void* buffer);
 
+// 函数声明
+void yyerror(const char *s);
+int yylex(void);
+int yyparse(void);
+int parse_rule_input(const char* rule_str, const char* filename, sign_rule_mg_t* rule_mg);
+int parse_rule_string(const char* rule_str, sign_rule_mg_t* rule_mg);
+int parse_rule_file(const char* filename, sign_rule_mg_t* rule_mg);
+
 void yyerror(const char* s);
 static sign_rule_mg_t* current_rule_mg = NULL;
 static uint32_t current_rule_id = 0;    // 当前规则ID
@@ -147,6 +155,22 @@ static void add_pattern_to_context(http_var_type_t proto_var, const char* patter
     
     printf("Successfully added relation to pattern. Total relations: %d\n", pattern_entry->relation_count);
 }
+
+// 辅助函数：处理模式匹配表达式
+static int handle_match_expr(http_var_type_t var_type, const char* pattern_str, 
+                           operator_type_t op_type, uint32_t flags) {
+    
+    char* converted_pattern = convert_to_hyperscan_pattern(pattern_str, op_type);
+    if (!converted_pattern) {
+        yyerror("Failed to convert pattern");
+        return -1;
+    }
+    
+    add_pattern_to_context(var_type, converted_pattern, current_and_bit, flags);
+    g_waf_rule_free(converted_pattern);
+    g_waf_rule_free((char*)pattern_str);  // 释放 STRING token 的内存
+    return 0;
+}
 %}
 
 %union {
@@ -233,54 +257,34 @@ rule_expr:
 
 match_expr:
     HTTP_VAR CONTAINS STRING pattern_flags {
-        printf("Matched HTTP variable type %d CONTAINS: %s with flags: 0x%x\n", $1, $3, $4);
-        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_CONTAINS);
-        if (!converted_pattern) {
-            yyerror("Failed to convert pattern");
+        printf("Matched HTTP variable type %d contains: %s with flags: 0x%x\n", $1, $3, $4);
+        if (handle_match_expr($1, $3, OP_CONTAINS, $4) != 0) {
             YYERROR;
         }
-        add_pattern_to_context($1, converted_pattern, current_and_bit, $4);
-        g_waf_rule_free(converted_pattern);
     }
     | HTTP_VAR MATCHES STRING pattern_flags {
-        printf("Matched HTTP variable type %d MATCHES: %s with flags: 0x%x\n", $1, $3, $4);
-        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_MATCHES);
-        if (!converted_pattern) {
-            yyerror("Failed to convert pattern");
+        printf("Matched HTTP variable type %d matches: %s with flags: 0x%x\n", $1, $3, $4);
+        if (handle_match_expr($1, $3, OP_MATCHES, $4) != 0) {
             YYERROR;
         }
-        add_pattern_to_context($1, converted_pattern, current_and_bit, $4);
-        g_waf_rule_free(converted_pattern);
     }
     | HTTP_VAR STARTS_WITH STRING pattern_flags {
-        printf("Matched HTTP variable type %d STARTS_WITH: %s with flags: 0x%x\n", $1, $3, $4);
-        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_STARTS_WITH);
-        if (!converted_pattern) {
-            yyerror("Failed to convert pattern");
+        printf("Matched HTTP variable type %d starts_with: %s with flags: 0x%x\n", $1, $3, $4);
+        if (handle_match_expr($1, $3, OP_STARTS_WITH, $4) != 0) {
             YYERROR;
         }
-        add_pattern_to_context($1, converted_pattern, current_and_bit, $4);
-        g_waf_rule_free(converted_pattern);
     }
     | HTTP_VAR ENDS_WITH STRING pattern_flags {
-        printf("Matched HTTP variable type %d ENDS_WITH: %s with flags: 0x%x\n", $1, $3, $4);
-        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_ENDS_WITH);
-        if (!converted_pattern) {
-            yyerror("Failed to convert pattern");
+        printf("Matched HTTP variable type %d ends_with: %s with flags: 0x%x\n", $1, $3, $4);
+        if (handle_match_expr($1, $3, OP_ENDS_WITH, $4) != 0) {
             YYERROR;
         }
-        add_pattern_to_context($1, converted_pattern, current_and_bit, $4);
-        g_waf_rule_free(converted_pattern);
     }
     | HTTP_VAR EQUALS STRING pattern_flags {
-        printf("Matched HTTP variable type %d EQUALS: %s with flags: 0x%x\n", $1, $3, $4);
-        char* converted_pattern = convert_to_hyperscan_pattern($3, OP_EQUALS);
-        if (!converted_pattern) {
-            yyerror("Failed to convert pattern");
+        printf("Matched HTTP variable type %d equal: %s with flags: 0x%x\n", $1, $3, $4);
+        if (handle_match_expr($1, $3, OP_EQUALS, $4) != 0) {
             YYERROR;
         }
-        add_pattern_to_context($1, converted_pattern, current_and_bit, $4);
-        g_waf_rule_free(converted_pattern);
     }
     ;
 
@@ -304,59 +308,22 @@ void yyerror(const char* s) {
 }
 
 int parse_rule_string(const char* rule_str, sign_rule_mg_t* rule_mg) {
-    if (!rule_str) {
-        fprintf(stderr, "Error: NULL rule string provided\n");
-        return -1;
-    }
-
-    if (!rule_mg) {
-        fprintf(stderr, "Error: NULL rule_mg provided\n");
-        return -1;
-    }
-
-    // 设置全局变量
-    current_rule_mg = rule_mg;
-    current_rule_id = rule_mg->rules_count;  // 从当前规则数开始，这样可以追加新规则
-    current_sub_id = 0;
-    current_and_bit = 1;
-    current_not_mask = 0;
-
-    printf("Starting rule parsing from string\n");
-    void* buffer = yy_scan_string(rule_str);
-    if (!buffer) {
-        fprintf(stderr, "Error: Failed to create scan buffer\n");
-        return -1;
-    }
-
-    int result = yyparse();
-    yy_delete_buffer(buffer);
-
-    // 重置全局变量
-    current_rule_mg = NULL;
-    
-    if (result != 0) {
-        fprintf(stderr, "Error: Parsing failed with code %d\n", result);
-        return -1;
-    }
-
-    printf("Successfully parsed rules, total count: %u\n", rule_mg->rules_count);
-    return 0;
+    return parse_rule_input(rule_str, NULL, rule_mg);
 }
 
 int parse_rule_file(const char* filename, sign_rule_mg_t* rule_mg) {
-    if (!filename) {
-        fprintf(stderr, "Error: NULL filename provided\n");
-        return -1;
-    }
+    return parse_rule_input(NULL, filename, rule_mg);
+}
 
+// 通用的规则解析函数
+int parse_rule_input(const char* rule_str, const char* filename, sign_rule_mg_t* rule_mg) {
     if (!rule_mg) {
         fprintf(stderr, "Error: NULL rule_mg provided\n");
         return -1;
     }
 
-    FILE* file = fopen(filename, "r");
-    if (!file) {
-        fprintf(stderr, "Error: Cannot open file: %s\n", filename);
+    if (!rule_str && !filename) {
+        fprintf(stderr, "Error: Both rule_str and filename are NULL\n");
         return -1;
     }
 
@@ -366,12 +333,30 @@ int parse_rule_file(const char* filename, sign_rule_mg_t* rule_mg) {
     current_sub_id = 0;
     current_and_bit = 1;
     current_not_mask = 0;
-    
-    printf("Starting rule parsing from file: %s\n", filename);
-    yyin = file;
-    int result = yyparse();
-    fclose(file);
 
+    int result = -1;
+    if (rule_str) {
+        printf("Starting rule parsing from string\n");
+        void* buffer = yy_scan_string(rule_str);
+        if (!buffer) {
+            fprintf(stderr, "Error: Failed to create scan buffer\n");
+            goto cleanup;
+        }
+        result = yyparse();
+        yy_delete_buffer(buffer);
+    } else {
+        printf("Starting rule parsing from file: %s\n", filename);
+        FILE* file = fopen(filename, "r");
+        if (!file) {
+            fprintf(stderr, "Error: Cannot open file: %s\n", filename);
+            goto cleanup;
+        }
+        yyin = file;
+        result = yyparse();
+        fclose(file);
+    }
+
+cleanup:
     // 重置全局变量
     current_rule_mg = NULL;
     
@@ -382,5 +367,4 @@ int parse_rule_file(const char* filename, sign_rule_mg_t* rule_mg) {
 
     printf("Successfully parsed rules, total count: %u\n", rule_mg->rules_count);
     return 0;
-
 }
