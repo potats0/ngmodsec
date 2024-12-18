@@ -95,8 +95,12 @@ int init_rule_mg(sign_rule_mg_t *rule_mg);
  */
 void destroy_rule_mg(sign_rule_mg_t *rule_mg);
 
-typedef void *(*waf_rule_malloc_fn)(uint64_t size);
-typedef void (*waf_rule_free_fn)(void *memp);
+/**
+ * @brief 复制一个规则管理器
+ * @param src 源规则管理器
+ * @return 成功返回新的规则管理器指针，失败返回NULL
+ */
+sign_rule_mg_t* dup_rule_mg(const sign_rule_mg_t* src);
 
 /**
  * @brief 设置自定义内存分配函数

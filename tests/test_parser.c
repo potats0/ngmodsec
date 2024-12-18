@@ -106,13 +106,17 @@ TEST_CASE(single_contains) {
   ASSERT(rule_mg->rule_masks != NULL, "Rule masks array is NULL");
 
   // 检查 HTTP_VAR_URI 上下文
-  string_match_context_t* uri_ctx = rule_mg->string_match_context_array[HTTP_VAR_URI];
+  string_match_context_t *uri_ctx =
+      rule_mg->string_match_context_array[HTTP_VAR_URI];
   ASSERT(uri_ctx != NULL, "URI string match context is NULL");
   ASSERT(uri_ctx->string_patterns_list != NULL, "String patterns list is NULL");
   ASSERT(uri_ctx->string_patterns_num == 1, "Expected one pattern");
-  ASSERT(uri_ctx->string_patterns_list[0].string_pattern != NULL, "Pattern string is NULL");
-  ASSERT_STR_EQ("a", uri_ctx->string_patterns_list[0].string_pattern, "Wrong pattern string");
-  ASSERT(uri_ctx->string_patterns_list[0].relation_count == 1, "Expected one relation");
+  ASSERT(uri_ctx->string_patterns_list[0].string_pattern != NULL,
+         "Pattern string is NULL");
+  ASSERT_STR_EQ("a", uri_ctx->string_patterns_list[0].string_pattern,
+                "Wrong pattern string");
+  ASSERT(uri_ctx->string_patterns_list[0].relation_count == 1,
+         "Expected one relation");
 
   destroy_rule_mg(rule_mg);
   passed_tests++;
@@ -507,6 +511,72 @@ TEST_CASE(multi_pattern_hyperscan) {
   passed_tests++;
 }
 
+// 测试规则管理器复制功能
+TEST_CASE(rule_mg_duplication) {
+  const char *rule_str =
+      "rule 1001 http.uri contains \"admin\" and http.header contains \"evil\" "
+      "or http.body contains \"hack\";";
+  sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
+  ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
+
+  // 解析原始规则
+  ASSERT_EQ(0, parse_rule_string(rule_str, rule_mg), "Failed to parse rule");
+
+  // 复制规则管理器
+  sign_rule_mg_t *dup_mg = dup_rule_mg(rule_mg);
+  ASSERT_NOT_NULL(dup_mg, "Failed to duplicate rule_mg");
+
+  // 验证基本属性
+  ASSERT_EQ(rule_mg->rules_count, dup_mg->rules_count, "Rules count mismatch");
+  ASSERT_EQ(rule_mg->rule_ids[0], dup_mg->rule_ids[0], "Rule ID mismatch");
+
+  // 验证规则掩码
+  for (size_t i = 0; i < rule_mg->rules_count; i++) {
+    ASSERT_EQ(rule_mg->rule_masks[i].sub_rules_count,
+              dup_mg->rule_masks[i].sub_rules_count,
+              "Sub rules count mismatch");
+
+    for (size_t j = 0; j < rule_mg->rule_masks[i].sub_rules_count; j++) {
+      ASSERT_EQ(rule_mg->rule_masks[i].and_masks[j],
+                dup_mg->rule_masks[i].and_masks[j], "AND mask mismatch");
+      ASSERT_EQ(rule_mg->rule_masks[i].not_masks[j],
+                dup_mg->rule_masks[i].not_masks[j], "NOT mask mismatch");
+    }
+  }
+
+  // 验证字符串匹配上下文
+  for (int i = 0; i < HTTP_VAR_MAX; i++) {
+    if (rule_mg->string_match_context_array[i] != NULL) {
+      ASSERT_NOT_NULL(dup_mg->string_match_context_array[i],
+                      "String match context not duplicated");
+
+      string_match_context_t *src_ctx = rule_mg->string_match_context_array[i];
+      string_match_context_t *dup_ctx = dup_mg->string_match_context_array[i];
+
+      ASSERT_EQ(src_ctx->string_patterns_num, dup_ctx->string_patterns_num,
+                "Pattern count mismatch");
+
+      // 验证模式字符串
+      for (int j = 0; j < src_ctx->string_patterns_num; j++) {
+        ASSERT_STR_EQ(src_ctx->string_patterns_list[j].string_pattern,
+                      dup_ctx->string_patterns_list[j].string_pattern,
+                      "Pattern string mismatch");
+
+        // 验证规则关系
+        ASSERT_EQ(src_ctx->string_patterns_list[j].relation_count,
+                  dup_ctx->string_patterns_list[j].relation_count,
+                  "Relation count mismatch");
+      }
+    }
+  }
+
+  // 清理资源
+  destroy_rule_mg(rule_mg);
+  destroy_rule_mg(dup_mg);
+  passed_tests++;
+}
+
 int main() {
   TEST_SUITE_BEGIN();
 
@@ -528,6 +598,7 @@ int main() {
   RUN_TEST(starts_with_special_chars);
   RUN_TEST(ends_with_special_chars);
   RUN_TEST(multi_pattern_hyperscan);
+  RUN_TEST(rule_mg_duplication); // 添加新的测试用例
 
   TEST_SUITE_END();
   return 0;
