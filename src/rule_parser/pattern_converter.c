@@ -1,5 +1,6 @@
 #include "pattern_converter.h"
 #include <stdio.h>
+#include <string.h>
 
 // 需要转义的正则表达式特殊字符
 static const char *SPECIAL_CHARS = "[](){}.*+?^$|\\";
@@ -36,20 +37,20 @@ char *escape_regex_special_chars(const char *str) {
 }
 
 unsigned int get_hyperscan_flags(operator_type_t op_type) {
-    unsigned int flags = 0;
-    switch (op_type) {
-        case OP_CONTAINS:
-            // 对于 contains，我们设置 HS_FLAG_SOM_LEFTMOST 来获取实际的匹配起始位置
-            flags = HS_FLAG_SOM_LEFTMOST;
-            break;
-        case OP_MATCHES:
-            // 对于正则表达式匹配，我们也需要 SOM
-            flags = HS_FLAG_SOM_LEFTMOST;
-            break;
-        default:
-            break;
-    }
-    return flags;
+  unsigned int flags = 0;
+  switch (op_type) {
+  case OP_CONTAINS:
+    // 对于 contains，我们设置 HS_FLAG_SOM_LEFTMOST 来获取实际的匹配起始位置
+    flags = HS_FLAG_SOM_LEFTMOST;
+    break;
+  case OP_MATCHES:
+    // 对于正则表达式匹配，我们也需要 SOM
+    flags = HS_FLAG_SOM_LEFTMOST;
+    break;
+  default:
+    break;
+  }
+  return flags;
 }
 
 char *convert_to_hyperscan_pattern(const char *pattern,
