@@ -19,9 +19,9 @@ extern YYSTYPE yylval;
 [ \t\n]+        ; /* 忽略空白字符 */
 #[^\n]*         ; /* 忽略以#开头的单行注释 */
 "rule"          { return RULE; }
-"http.uri"      { return HTTP_URI; }
-"http.header"   { return HTTP_HEADER; }
-"http.body"     { return HTTP_BODY; }
+"http.uri"      { yylval.var_type = HTTP_VAR_URI; return HTTP_VAR; }
+"http.header"   { yylval.var_type = HTTP_VAR_HEADER; return HTTP_VAR; }
+"http.body"     { yylval.var_type = HTTP_VAR_BODY; return HTTP_VAR; }
 "contains"      { return CONTAINS; }
 "matches"       { return MATCHES; }
 "starts_with"   { return STARTS_WITH; }

@@ -23,9 +23,19 @@
 
 #define MAX_FILE_NAME_LEN 512
 #define MAX_PROTOVAR_NAME_LEN 32
-// 单个规则中允许的最大字符串模式数量，用于限制字符串匹配上下文数组和模式列表的大小
+#define MAX_RULES_NUM 10000 // 默认最大规则数量
+// 单个协议变量中允许的最大字符串模式数量，用于限制字符串匹配上下文数组和模式列表的大小
 #define MAX_RULE_PATTERNS_LEN 4096
 #define MAX_SUB_RULES_NUM 8 // 每个规则的最大子规则数
+
+/** HTTP协议变量类型枚举 **/
+typedef enum {
+  HTTP_VAR_UNKNOWN = 0,
+  HTTP_VAR_URI,    // http.uri
+  HTTP_VAR_HEADER, // http.header
+  HTTP_VAR_BODY,   // http.body
+  HTTP_VAR_MAX
+} http_var_type_t;
 
 /** 规则掩码存储结构 **/
 typedef struct rule_mask_array_s {

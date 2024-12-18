@@ -79,8 +79,8 @@ char *convert_to_hyperscan_pattern(const char *pattern,
 
   case OP_MATCHES:
     // 已经是正则表达式，直接使用
-    snprintf(result, result_len, "%s", pattern);
-    free(result);
+    free(escaped_pattern);  // 释放不需要的escaped_pattern
+    free(result);          // 释放不需要的result
     return strdup(pattern);
 
   case OP_STARTS_WITH:

@@ -67,7 +67,7 @@ int compile_all_hyperscan_databases(sign_rule_mg_t *rule_mg) {
     return -1;
   }
 
-  for (int i = 0; i < MAX_RULE_PATTERNS_LEN; i++) {
+  for (int i = 0; i < HTTP_VAR_MAX; i++) {
     string_match_context_t *ctx = rule_mg->string_match_context_array[i];
     if (ctx) {
       if (compile_hyperscan_database(ctx) != 0) {

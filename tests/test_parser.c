@@ -450,7 +450,7 @@ TEST_CASE(multi_pattern_hyperscan) {
 
   // 创建 Hyperscan scratch
   hs_scratch_t *scratch = NULL;
-  for (int i = 0; i < MAX_RULE_PATTERNS_LEN; i++) {
+  for (int i = 0; i < HTTP_VAR_MAX; i++) {
     string_match_context_t *ctx = rule_mg->string_match_context_array[i];
     if (ctx && ctx->db) {
       ret = hs_alloc_scratch(ctx->db, &scratch);
@@ -462,7 +462,7 @@ TEST_CASE(multi_pattern_hyperscan) {
   // 测试匹配
   const char *test_url = "/admin/users.php?id=123";
   printf("\nTesting URL: %s\n", test_url);
-  for (int i = 0; i < MAX_RULE_PATTERNS_LEN; i++) {
+  for (int i = 0; i < HTTP_VAR_MAX; i++) {
     string_match_context_t *ctx = rule_mg->string_match_context_array[i];
     if (ctx && ctx->db) {
       ret = hs_scan(ctx->db, test_url, strlen(test_url), 0, scratch, on_match,
