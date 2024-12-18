@@ -177,4 +177,18 @@ static inline void set_rule_not_mask(rule_mask_array_t *masks,
   masks->not_masks[sub_rule_index] = value;
 }
 
+/**
+ * @brief 编译指定上下文的 Hyperscan 数据库
+ * @param ctx 要编译的字符串匹配上下文
+ * @return 成功返回0，失败返回-1
+ */
+int compile_hyperscan_database(string_match_context_t *ctx);
+
+/**
+ * @brief 编译所有规则上下文的 Hyperscan 数据库
+ * @param rule_mg 规则管理器
+ * @return 成功返回0，失败返回-1
+ */
+int compile_all_hyperscan_databases(sign_rule_mg_t *rule_mg);
+
 #endif // __NEW_SIGN_PUB_H__

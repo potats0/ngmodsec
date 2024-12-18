@@ -38,7 +38,7 @@ rule_parser: $(PARSER_OBJS) $(PARSER_DIR)/main.o
 	$(CC) $(CFLAGS) $^ -o $@ -lhs -lfl
 
 # 测试程序目标
-test_parser: $(PARSER_OBJS) tests/test_parser.o
+test_parser: $(PARSER_OBJS) tests/test_parser.o src/rule_parser/hyperscan_utils.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 # 编译规则
