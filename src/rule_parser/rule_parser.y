@@ -30,19 +30,129 @@ static uint8_t current_sub_id = 0;      // 当前子规则ID
 static uint16_t current_and_bit = 1;    // 当前and_bit，每个子式左移一位
 static uint16_t current_not_mask = 0;   // 当前NOT掩码
 
-static void add_pattern_to_context(http_var_type_t proto_var, const char* pattern, uint16_t and_bit, uint32_t flags) {
+// 生成新的未使用的and_bit
+static uint16_t generate_new_and_bit(uint16_t current_mask) {
+    uint16_t new_bit = 1;
+    while ((current_mask & new_bit) && new_bit) {
+        new_bit <<= 1;
+    }
+    return new_bit;
+}
+
+// 确保规则掩码数组有足够空间
+static int ensure_rule_mask_capacity(sign_rule_mg_t* rule_mg, uint32_t rule_id) {
+    if (rule_id < rule_mg->max_rules) {
+        return 0;  // 空间足够
+    }
+
+    uint32_t new_size = rule_id + 128;  // 每次多分配一些空间
+    rule_mask_array_t* new_masks = g_waf_rule_malloc(new_size * sizeof(rule_mask_array_t));
+    if (!new_masks) {
+        fprintf(stderr, "Failed to reallocate rule masks array\n");
+        return -1;
+    }
+
+    memset(new_masks, 0, new_size * sizeof(rule_mask_array_t));
+    memcpy(new_masks, rule_mg->rule_masks, rule_mg->max_rules * sizeof(rule_mask_array_t));
+    g_waf_rule_free(rule_mg->rule_masks);
+    rule_mg->rule_masks = new_masks;
+    rule_mg->max_rules = new_size;
+    return 0;
+}
+
+// 查找或创建匹配上下文
+static string_match_context_t* get_or_create_context(sign_rule_mg_t* rule_mg, http_var_type_t proto_var) {
+    string_match_context_t* ctx = rule_mg->string_match_context_array[proto_var];
+    if (ctx) {
+        return ctx;
+    }
+
+    ctx = g_waf_rule_malloc(sizeof(string_match_context_t));
+    if (!ctx) {
+        fprintf(stderr, "Failed to allocate context\n");
+        return NULL;
+    }
+    memset(ctx, 0, sizeof(string_match_context_t));
+
+    ctx->string_patterns_list = g_waf_rule_malloc(MAX_RULE_PATTERNS * sizeof(string_pattern_t));
+    if (!ctx->string_patterns_list) {
+        fprintf(stderr, "Failed to allocate patterns list\n");
+        g_waf_rule_free(ctx);
+        return NULL;
+    }
+    memset(ctx->string_patterns_list, 0, MAX_RULE_PATTERNS * sizeof(string_pattern_t));
+    ctx->string_patterns_num = 0;
+    rule_mg->string_match_context_array[proto_var] = ctx;
+    printf("Created new context at index %d\n", proto_var);
+    return ctx;
+}
+
+// 查找或创建模式条目
+static string_pattern_t* get_or_create_pattern(string_match_context_t* ctx, char* pattern, uint32_t flags) {
+    // 查找现有模式
+    for (int i = 0; i < ctx->string_patterns_num; i++) {
+        if (strcmp(ctx->string_patterns_list[i].string_pattern, pattern) == 0) {
+            printf("Found existing pattern at index %d\n", i);
+            return &ctx->string_patterns_list[i];
+        }
+    }
+
+    // 创建新模式
+    if (ctx->string_patterns_num >= MAX_RULE_PATTERNS) {
+        fprintf(stderr, "Too many patterns\n");
+        return NULL;
+    }
+
+    string_pattern_t* pattern_entry = &ctx->string_patterns_list[ctx->string_patterns_num];
+
+    pattern_entry->string_pattern = pattern;
+    pattern_entry->relations = NULL;
+    pattern_entry->relation_count = 0;
+    pattern_entry->hs_flags = flags;
+    ctx->string_patterns_num++;
+    printf("Created new pattern at index %d\n", ctx->string_patterns_num - 1);
+    return pattern_entry;
+}
+
+// 添加规则关系
+static int add_rule_relation(string_pattern_t* pattern_entry, uint32_t rule_id, uint8_t sub_id, uint16_t and_bit) {
+    rule_relation_t* new_relations = g_waf_rule_malloc((pattern_entry->relation_count + 1) * sizeof(rule_relation_t));
+    if (!new_relations) {
+        fprintf(stderr, "Failed to allocate relation\n");
+        return -1;
+    }
+
+    if (pattern_entry->relations) {
+        memcpy(new_relations, pattern_entry->relations, pattern_entry->relation_count * sizeof(rule_relation_t));
+        g_waf_rule_free(pattern_entry->relations);
+    }
+    pattern_entry->relations = new_relations;
+
+    // 添加新的relation
+    pattern_entry->relations[pattern_entry->relation_count].threat_id = (rule_id << 8) | (sub_id + 1);
+    pattern_entry->relations[pattern_entry->relation_count].pattern_id = pattern_entry->relation_count;
+    pattern_entry->relations[pattern_entry->relation_count].and_bit = and_bit;
+    pattern_entry->relation_count++;
+    
+    printf("Successfully added relation to pattern. Total relations: %d\n", pattern_entry->relation_count);
+    return 0;
+}
+
+// 主函数：添加模式到上下文
+static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uint16_t and_bit, uint32_t flags) {
     uint32_t rule_id = current_rule_id;
     uint8_t sub_id = current_sub_id;
     
-    // 检查当前规则和子规则的掩码是否已包含此and_bit
-    if (current_rule_mg && rule_id < current_rule_mg->max_rules) {
+    if (!current_rule_mg) {
+        fprintf(stderr, "Failed to allocate rule_mg\n");
+        return;
+    }
+
+    // 检查并调整and_bit
+    if (rule_id < current_rule_mg->max_rules) {
         uint16_t current_mask = current_rule_mg->rule_masks[rule_id].and_masks[sub_id - 1];
         if (current_mask & and_bit) {
-            // 如果当前and_bit已存在于掩码中，生成新的未使用的and_bit
-            uint16_t new_bit = 1;
-            while ((current_mask & new_bit) && new_bit) {
-                new_bit <<= 1;
-            }
+            uint16_t new_bit = generate_new_and_bit(current_mask);
             if (!new_bit) {
                 fprintf(stderr, "Error: No available and_bit for rule %u sub_rule %u\n", rule_id, sub_id);
                 return;
@@ -53,111 +163,39 @@ static void add_pattern_to_context(http_var_type_t proto_var, const char* patter
     
     printf("Adding pattern: %s to %d (flags: 0x%x) for rule ID: %u (sub_id: %u, and_bit: 0x%x, not_mask: 0x%x)\n", 
            pattern, proto_var, flags, rule_id, sub_id, and_bit, current_not_mask);
-    
-    if (!current_rule_mg) {
-        fprintf(stderr, "Failed to allocate rule_mg\n");
-        return;
-    }
 
-    // 检查规则ID是否有效，如果需要扩展规则掩码数组
-    if (rule_id >= current_rule_mg->max_rules) {
-        uint32_t new_size = rule_id + 128; // 每次多分配一些空间
-        rule_mask_array_t *new_masks = g_waf_rule_malloc(new_size * sizeof(rule_mask_array_t));
-        if (!new_masks) {
-            fprintf(stderr, "Failed to reallocate rule masks array\n");
-            return;
-        }
-        // 将新分配的内存初始化为0
-        memset(new_masks, 0, new_size * sizeof(rule_mask_array_t));
-        memcpy(new_masks, current_rule_mg->rule_masks, current_rule_mg->max_rules * sizeof(rule_mask_array_t));
-        g_waf_rule_free(current_rule_mg->rule_masks);
-        current_rule_mg->rule_masks = new_masks;
-        current_rule_mg->max_rules = new_size;
+    // 确保规则掩码数组容量足够
+    if (ensure_rule_mask_capacity(current_rule_mg, rule_id) != 0) {
+        return;
     }
 
     // 更新规则掩码
     rule_mask_array_t* rule_mask = &current_rule_mg->rule_masks[rule_id];
-    rule_mask->and_masks[sub_id] |= and_bit;  // 注意：sub_id从0开始
+    rule_mask->and_masks[sub_id] |= and_bit;
     rule_mask->not_masks[sub_id] |= (current_not_mask & and_bit);
     
-    // 更新子规则数量
     if (sub_id >= rule_mask->sub_rules_count) {
         rule_mask->sub_rules_count = sub_id + 1;
     }
 
-    // 查找或创建对应的context
-    string_match_context_t* ctx = current_rule_mg->string_match_context_array[proto_var];
+    // 获取或创建上下文
+    string_match_context_t* ctx = get_or_create_context(current_rule_mg, proto_var);
     if (!ctx) {
-        ctx = g_waf_rule_malloc(sizeof(string_match_context_t));
-        if (!ctx) {
-            fprintf(stderr, "Failed to allocate context\n");
-            return;
-        }
-        memset(ctx, 0, sizeof(string_match_context_t));
-        ctx->string_patterns_list = g_waf_rule_malloc(MAX_RULE_PATTERNS * sizeof(string_pattern_t));
-        if (!ctx->string_patterns_list) {
-            fprintf(stderr, "Failed to allocate patterns list\n");
-            g_waf_rule_free(ctx);
-            return;
-        }
-        memset(ctx->string_patterns_list, 0, MAX_RULE_PATTERNS * sizeof(string_pattern_t));
-        ctx->string_patterns_num = 0;
-        current_rule_mg->string_match_context_array[proto_var] = ctx;
-        printf("Created new context at index %d\n", proto_var);
-    }
-
-    // 查找是否已存在相同的pattern
-    string_pattern_t* pattern_entry = NULL;
-    for (int i = 0; i < ctx->string_patterns_num; i++) {
-        if (strcmp(ctx->string_patterns_list[i].string_pattern, pattern) == 0) {
-            pattern_entry = &ctx->string_patterns_list[i];
-            printf("Found existing pattern at index %d\n", i);
-            break;
-        }
-    }
-
-    if (!pattern_entry) {
-        if (ctx->string_patterns_num >= MAX_RULE_PATTERNS) {
-            fprintf(stderr, "Too many patterns\n");
-            return;
-        }
-        pattern_entry = &ctx->string_patterns_list[ctx->string_patterns_num];
-        pattern_entry->string_pattern = g_waf_rule_malloc(strlen(pattern) + 1);
-        if (!pattern_entry->string_pattern) {
-            fprintf(stderr, "Failed to allocate pattern string\n");
-            return;
-        }
-        strcpy(pattern_entry->string_pattern, pattern);
-        pattern_entry->relations = NULL;
-        pattern_entry->relation_count = 0;
-        pattern_entry->hs_flags = flags;
-        ctx->string_patterns_num++;
-        printf("Created new pattern at index %d\n", ctx->string_patterns_num - 1);
-    }
-
-    // 添加或更新relation
-    rule_relation_t* new_relations = g_waf_rule_malloc((pattern_entry->relation_count + 1) * sizeof(rule_relation_t));
-    if (!new_relations) {
-        fprintf(stderr, "Failed to allocate relation\n");
         return;
     }
-    if (pattern_entry->relations) {
-        memcpy(new_relations, pattern_entry->relations, pattern_entry->relation_count * sizeof(rule_relation_t));
-        g_waf_rule_free(pattern_entry->relations);
+
+    // 获取或创建模式
+    string_pattern_t* pattern_entry = get_or_create_pattern(ctx, pattern, flags);
+    if (!pattern_entry) {
+        return;
     }
-    pattern_entry->relations = new_relations;
-    
-    // 添加新的relation
-    pattern_entry->relations[pattern_entry->relation_count].threat_id = (rule_id << 8) | (sub_id + 1);
-    pattern_entry->relations[pattern_entry->relation_count].pattern_id = pattern_entry->relation_count;
-    pattern_entry->relations[pattern_entry->relation_count].and_bit = and_bit;
-    pattern_entry->relation_count++;
-    
-    printf("Successfully added relation to pattern. Total relations: %d\n", pattern_entry->relation_count);
+
+    // 添加规则关系
+    add_rule_relation(pattern_entry, rule_id, sub_id, and_bit);
 }
 
 // 辅助函数：处理模式匹配表达式
-static int handle_match_expr(http_var_type_t var_type, const char* pattern_str, 
+static int handle_match_expr(http_var_type_t var_type, char* pattern_str, 
                            operator_type_t op_type, uint32_t flags) {
     
     char* converted_pattern = convert_to_hyperscan_pattern(pattern_str, op_type);
@@ -167,8 +205,7 @@ static int handle_match_expr(http_var_type_t var_type, const char* pattern_str,
     }
     
     add_pattern_to_context(var_type, converted_pattern, current_and_bit, flags);
-    g_waf_rule_free(converted_pattern);
-    g_waf_rule_free((char*)pattern_str);  // 释放 STRING token 的内存
+    free(pattern_str);
     return 0;
 }
 %}
@@ -187,7 +224,6 @@ static int handle_match_expr(http_var_type_t var_type, const char* pattern_str,
 
 %token CONTAINS MATCHES STARTS_WITH ENDS_WITH EQUALS
 %token AND OR NOT
-%token LPAREN RPAREN
 %token RULE SEMICOLON
 %token NOCASE MULTILINE DOTALL SINGLEMATCH
 
@@ -249,9 +285,6 @@ rule_expr:
     | rule_expr OR rule_expr {
         printf("OR operation\n");
         current_and_bit <<= 1;  // 为OR操作准备新的and_bit
-    }
-    | LPAREN rule_expr RPAREN {
-        printf("Parentheses expression\n");
     }
     ;
 
