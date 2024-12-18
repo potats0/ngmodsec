@@ -55,7 +55,7 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
         }
 
         // 初始化字符串匹配上下文数组
-        current_rule_mg->string_match_context_array = calloc(4, sizeof(string_match_context_t*));
+        current_rule_mg->string_match_context_array = calloc(MAX_RULE_PATTERNS_LEN, sizeof(string_match_context_t*));
         if (!current_rule_mg->string_match_context_array) {
             fprintf(stderr, "Failed to allocate context array\n");
             free(current_rule_mg);
@@ -142,7 +142,7 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
             return;
         }
         strncpy(ctx->proto_var_name, proto_var, sizeof(ctx->proto_var_name) - 1);
-        ctx->string_patterns_list = calloc(MAX_STRINGS_NUM, sizeof(string_pattern_t));
+        ctx->string_patterns_list = calloc(MAX_RULE_PATTERNS_LEN, sizeof(string_pattern_t));
         if (!ctx->string_patterns_list) {
             fprintf(stderr, "Failed to allocate patterns list\n");
             free(ctx);
@@ -163,7 +163,7 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
     }
 
     if (!pattern_entry) {
-        if (ctx->string_patterns_num >= MAX_STRINGS_NUM) {
+        if (ctx->string_patterns_num >= MAX_RULE_PATTERNS_LEN) {
             fprintf(stderr, "Too many patterns for %s\n", proto_var);
             return;
         }
@@ -197,6 +197,58 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
     pattern_entry->relation_count++;
     
     printf("Successfully added relation to pattern. Total relations: %d\n", pattern_entry->relation_count);
+}
+
+// 编译 Hyperscan 数据库
+static int compile_hyperscan_database(string_match_context_t *ctx) {
+    if (!ctx || ctx->string_patterns_num == 0 || !ctx->string_patterns_list) {
+        return -1;
+    }
+
+    // 分配内存
+    ctx->string_ids = calloc(ctx->string_patterns_num, sizeof(unsigned int));
+    if (!ctx->string_ids) {
+        fprintf(stderr, "Failed to allocate memory for string_ids\n");
+        return -1;
+    }
+
+    // 准备 Hyperscan 编译参数
+    const char **patterns = calloc(ctx->string_patterns_num, sizeof(char*));
+    unsigned int *flags = calloc(ctx->string_patterns_num, sizeof(unsigned int));
+    unsigned int *ids = calloc(ctx->string_patterns_num, sizeof(unsigned int));
+    if (!patterns || !flags || !ids) {
+        fprintf(stderr, "Failed to allocate memory for Hyperscan compilation\n");
+        free(patterns);
+        free(flags);
+        free(ids);
+        return -1;
+    }
+
+    // 设置模式和标志
+    for (int i = 0; i < ctx->string_patterns_num; i++) {
+        patterns[i] = ctx->string_patterns_list[i].string_pattern;
+        flags[i] = ctx->string_patterns_list[i].hs_flags;
+        ids[i] = i;  // 使用索引作为模式ID
+        ctx->string_ids[i] = i;
+    }
+
+    // 编译数据库
+    hs_compile_error_t *compile_err = NULL;
+    int ret = hs_compile_multi(patterns, flags, ids, ctx->string_patterns_num, HS_MODE_BLOCK, NULL, &ctx->db, &compile_err);
+    
+    // 清理临时数组
+    free(patterns);
+    free(flags);
+    free(ids);
+
+    if (ret != HS_SUCCESS) {
+        fprintf(stderr, "Failed to compile patterns: %s\n", compile_err ? compile_err->message : "unknown error");
+        hs_free_compile_error(compile_err);
+        return -1;
+    }
+
+    printf("Successfully compiled %d patterns into Hyperscan database\n", ctx->string_patterns_num);
+    return 0;
 }
 
 %}
@@ -666,6 +718,20 @@ int parse_rule_file(const char* filename, sign_rule_mg_t* rule_mg) {
     yyin = file;
     int result = yyparse();
     fclose(file);
+
+    // 编译每个上下文的 Hyperscan 数据库
+    if (result == 0 && rule_mg->string_match_context_array) {
+        for (int i = 0; i < MAX_RULE_PATTERNS_LEN; i++) {  // 使用 MAX_RULE_PATTERNS_LEN 作为上限
+            string_match_context_t *ctx = rule_mg->string_match_context_array[i];
+            if (ctx) {
+                if (compile_hyperscan_database(ctx) != 0) {
+                    fprintf(stderr, "Failed to compile Hyperscan database for context %d\n", i);
+                    result = -1;
+                    break;
+                }
+            }
+        }
+    }
 
     // 重置全局变量
     current_rule_mg = NULL;
