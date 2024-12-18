@@ -11,6 +11,7 @@ __DATA__
 === TEST 1: module initialization
 --- config
     location /test {
+    rule "rule 1001 http.uri contains \"admin\" ;"
         return 200 "ok";
     }
 --- request

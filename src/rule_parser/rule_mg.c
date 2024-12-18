@@ -1,6 +1,7 @@
 #include "waf_rule_types.h"
 #include <hs/hs.h>
 #include <string.h>
+#include <stdio.h>
 
 // 默认的内存分配函数
 waf_rule_malloc_fn g_waf_rule_malloc = malloc;
@@ -12,6 +13,23 @@ void sign_rule_set_alloc(waf_rule_malloc_fn f_malloc, waf_rule_free_fn f_free) {
     g_waf_rule_malloc = f_malloc;
     g_waf_rule_free = f_free;
   }
+}
+
+// 声明解析函数
+int parse_rule_input(const char* rule_str, const char* filename, sign_rule_mg_t* rule_mg);
+
+int parse_rule_string(const char* rule_str, sign_rule_mg_t* rule_mg) {
+    if (!rule_str || !rule_mg) {
+        return -1;
+    }
+    return parse_rule_input(rule_str, NULL, rule_mg);
+}
+
+int parse_rule_file(const char* filename, sign_rule_mg_t* rule_mg) {
+    if (!filename || !rule_mg) {
+        return -1;
+    }
+    return parse_rule_input(NULL, filename, rule_mg);
 }
 
 int init_rule_mg(sign_rule_mg_t *rule_mg) {

@@ -5,7 +5,11 @@
  *
  */
 #include "ngx_http_waf_rule_runtime.h"
+#include "waf_rule_types.h"
 #include <hs/hs_runtime.h>
+#include <ngx_config.h>
+#include <ngx_core.h>
+#include <ngx_http.h>
 #ifdef WAF
 #include "ngx_http_anti_crawler_module.h"
 #include "ngx_http_is_bypass.h"
@@ -95,11 +99,6 @@ ngx_http_waf_rule_match_engine_process_exit(ngx_cycle_t *cycle) {
   LOGN(cycle->log, "waf rule match engine process exit");
 }
 
-static ngx_int_t
-ngx_http_waf_rule_match_engine_module_init(ngx_cycle_t *cycle) {
-  LOGN(cycle->log, "enter ngx_http_waf_rule_match_engine_module_init");
-  return NGX_OK;
-}
 /**
  * @brief 获取或创建请求上下文中的用户数据
  * @details
@@ -332,6 +331,83 @@ static ngx_int_t new_sign_response_body_filter(ngx_http_request_t *r,
   return ngx_http_next_body_filter(r, in);
 }
 
+// 配置结构体
+typedef struct {
+  sign_rule_mg_t *rule_mg; // 规则管理器
+} ngx_http_waf_rule_match_engine_loc_conf_t;
+
+// 创建location配置
+static void *ngx_http_waf_rule_match_engine_create_loc_conf(ngx_conf_t *cf) {
+  ngx_http_waf_rule_match_engine_loc_conf_t *conf;
+
+  conf =
+      ngx_pcalloc(cf->pool, sizeof(ngx_http_waf_rule_match_engine_loc_conf_t));
+  if (conf == NULL) {
+    return NULL;
+  }
+
+  return conf;
+}
+
+// 合并location配置
+static char *ngx_http_waf_rule_match_engine_merge_loc_conf(ngx_conf_t *cf,
+                                                           void *parent,
+                                                           void *child) {
+  ngx_http_waf_rule_match_engine_loc_conf_t *prev = parent;
+  ngx_http_waf_rule_match_engine_loc_conf_t *conf = child;
+
+  if (prev->rule_mg != NULL && conf->rule_mg == NULL) {
+    // 如果父配置有规则管理器但子配置没有，复制父配置的规则管理器
+    conf->rule_mg = dup_rule_mg(prev->rule_mg);
+    if (conf->rule_mg == NULL) {
+      return NGX_CONF_ERROR;
+    }
+  }
+
+  return NGX_CONF_OK;
+}
+
+// rule指令处理函数
+static char *ngx_http_waf_rule_match_engine_rule(ngx_conf_t *cf,
+                                                 ngx_command_t *cmd,
+                                                 void *conf) {
+  ngx_http_waf_rule_match_engine_loc_conf_t *rmconf = conf;
+  ngx_str_t *args = cf->args->elts;
+
+  if (cf->args->nelts != 3) {
+    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                       "invalid number of arguments in rule directive");
+    return NGX_CONF_ERROR;
+  }
+
+  // 如果规则管理器未初始化，先初始化
+  if (rmconf->rule_mg == NULL) {
+    rmconf->rule_mg = ngx_pcalloc(cf->pool, sizeof(sign_rule_mg_t));
+    if (rmconf->rule_mg == NULL) {
+      return NGX_CONF_ERROR;
+    }
+
+    if (init_rule_mg(rmconf->rule_mg) != 0) {
+      return NGX_CONF_ERROR;
+    }
+  }
+
+  // 解析规则字符串
+  if (parse_rule_string((char *)args[2].data, rmconf->rule_mg) != 0) {
+    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "failed to parse rule: %*s",
+                       args[2].len, args[2].data);
+    return NGX_CONF_ERROR;
+  }
+
+  return NGX_CONF_OK;
+}
+
+// 模块指令定义
+static ngx_command_t ngx_http_waf_rule_match_engine_commands[] = {
+    {ngx_string("rule"), NGX_HTTP_LOC_CONF | NGX_CONF_TAKE2,
+     ngx_http_waf_rule_match_engine_rule, NGX_HTTP_LOC_CONF_OFFSET, 0, NULL},
+    ngx_null_command};
+
 static ngx_int_t ngx_http_waf_rule_engine_init(ngx_conf_t *cf) {
   ngx_http_handler_pt *h;
   ngx_http_core_main_conf_t *cmcf;
@@ -354,9 +430,7 @@ static ngx_int_t ngx_http_waf_rule_engine_init(ngx_conf_t *cf) {
   return NGX_OK;
 }
 
-static ngx_command_t ngx_http_waf_rule_match_engine_commands[] = {
-    ngx_null_command};
-
+// 模块上下文
 static ngx_http_module_t ngx_http_waf_rule_match_engine_module_ctx = {
     NULL,                          /* preconfiguration */
     ngx_http_waf_rule_engine_init, /* postconfiguration */
@@ -364,20 +438,22 @@ static ngx_http_module_t ngx_http_waf_rule_match_engine_module_ctx = {
     NULL,                          /* init main configuration */
     NULL,                          /* create server configuration */
     NULL,                          /* merge server configuration */
-    NULL,                          /* create location configuration */
-    NULL                           /* merge location configuration */
+    ngx_http_waf_rule_match_engine_create_loc_conf, /* create location
+                                                       configuration */
+    ngx_http_waf_rule_match_engine_merge_loc_conf   /* merge location
+                                                       configuration */
 };
 
 ngx_module_t ngx_http_waf_rule_match_engine_module = {
     NGX_MODULE_V1,
-    &ngx_http_waf_rule_match_engine_module_ctx,  /* module context */
-    ngx_http_waf_rule_match_engine_commands,     /* module directives */
-    NGX_HTTP_MODULE,                             /* module type */
-    NULL,                                        /* init master */
-    ngx_http_waf_rule_match_engine_module_init,  /* init module */
-    ngx_http_waf_rule_match_engine_process_init, /* init process */
-    NULL,                                        /* init thread */
-    NULL,                                        /* exit thread */
-    ngx_http_waf_rule_match_engine_process_exit, /* exit process */
-    NULL,                                        /* exit master */
+    &ngx_http_waf_rule_match_engine_module_ctx, /* module context */
+    ngx_http_waf_rule_match_engine_commands,    /* module directives */
+    NGX_HTTP_MODULE,                            /* module type */
+    NULL,                                       /* init master */
+    NULL,                                       /* init module */
+    NULL,                                       /* init process */
+    NULL,                                       /* init thread */
+    NULL,                                       /* exit thread */
+    NULL,                                       /* exit process */
+    NULL,                                       /* exit master */
     NGX_MODULE_V1_PADDING};

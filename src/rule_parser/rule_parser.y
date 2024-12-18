@@ -340,14 +340,6 @@ void yyerror(const char* s) {
             yylineno, s, yytext);
 }
 
-int parse_rule_string(const char* rule_str, sign_rule_mg_t* rule_mg) {
-    return parse_rule_input(rule_str, NULL, rule_mg);
-}
-
-int parse_rule_file(const char* filename, sign_rule_mg_t* rule_mg) {
-    return parse_rule_input(NULL, filename, rule_mg);
-}
-
 // 通用的规则解析函数
 int parse_rule_input(const char* rule_str, const char* filename, sign_rule_mg_t* rule_mg) {
     if (!rule_mg) {
