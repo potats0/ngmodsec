@@ -4,13 +4,7 @@
 #include <hs/hs_common.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/types.h>
-#ifdef WAF
-#include "ngx_proto_varid.h"
-#include "vs_list.h"
-#endif
 
 /** 规则文件加载路径 **/
 #define RULE_FILE_PATH                                                         \

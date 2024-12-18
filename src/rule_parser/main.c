@@ -1,9 +1,8 @@
 #include "waf_rule_types.h"
-#include "rule_parser/rule_parser.tab.h"
+#include <hs/hs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <hs/hs.h>
 
 // 函数声明
 void print_binary16(uint16_t num);
@@ -38,15 +37,17 @@ void print_rule_info(sign_rule_mg_t *rule_mg) {
     // 遍历所有匹配上下文，找到与当前规则相关的andbit
     if (rule_mg->string_match_context_array) {
       printf("  Rule AndBits:\n");
-      for (int ctx_idx = 0; rule_mg->string_match_context_array[ctx_idx] != NULL; ctx_idx++) {
-        string_match_context_t *ctx = rule_mg->string_match_context_array[ctx_idx];
+      for (int ctx_idx = 0;
+           rule_mg->string_match_context_array[ctx_idx] != NULL; ctx_idx++) {
+        string_match_context_t *ctx =
+            rule_mg->string_match_context_array[ctx_idx];
         for (int pat_idx = 0; pat_idx < ctx->string_patterns_num; pat_idx++) {
           string_pattern_t *pattern = &ctx->string_patterns_list[pat_idx];
           for (int rel_idx = 0; rel_idx < pattern->relation_count; rel_idx++) {
             rule_relation_t *rel = &pattern->relations[rel_idx];
             if ((rel->threat_id >> 8) == rule_id) {
               uint8_t sub_id = rel->threat_id & 0xFF;
-              printf("    Context %d, Pattern %d (Sub-rule %u): AndBit=0x%x (", 
+              printf("    Context %d, Pattern %d (Sub-rule %u): AndBit=0x%x (",
                      ctx_idx, pat_idx, sub_id, rel->and_bit);
               print_binary16(rel->and_bit);
               printf(")\n");
@@ -135,7 +136,8 @@ uint16_t find_rule_mask(sign_rule_mg_t *rule_mg, uint32_t threat_id) {
   uint32_t rule_id = threat_id >> 8;
   uint8_t sub_id = threat_id & 0xFF;
 
-  if (!rule_mg || rule_id >= rule_mg->max_rules || sub_id == 0 || sub_id > MAX_SUB_RULES_NUM) {
+  if (!rule_mg || rule_id >= rule_mg->max_rules || sub_id == 0 ||
+      sub_id > MAX_SUB_RULES_NUM) {
     return 0;
   }
 
@@ -149,18 +151,19 @@ uint16_t find_rule_mask(sign_rule_mg_t *rule_mg, uint32_t threat_id) {
 
 // 检查规则是否匹配
 int match_rule_mg(sign_rule_mg_t *rule_mg) {
-  if (!rule_mg) return 0;
+  if (!rule_mg)
+    return 0;
 
   // 遍历所有有效规则
   for (uint32_t i = 0; i < rule_mg->rules_count; i++) {
     uint32_t rule_id = rule_mg->rule_ids[i];
     rule_mask_array_t *rule_mask = &rule_mg->rule_masks[rule_id];
-    
+
     // 检查每个子规则
     for (uint8_t sub_id = 0; sub_id < rule_mask->sub_rules_count; sub_id++) {
       uint16_t and_mask = rule_mask->and_masks[sub_id];
       uint16_t not_mask = rule_mask->not_masks[sub_id];
-      
+
       // 在这里添加规则匹配逻辑
       printf("Checking rule %u sub-rule %u (and_mask: 0x%x, not_mask: 0x%x)\n",
              rule_id, sub_id, and_mask, not_mask);
@@ -211,7 +214,5 @@ int parse_main(int argc, char *argv[]) {
   return 0;
 }
 
-int main(int argc, char *argv[]) { 
-    return parse_main(argc, argv); 
-}
+int main(int argc, char *argv[]) { return parse_main(argc, argv); }
 #endif
