@@ -91,18 +91,7 @@ TEST_CASE(single_contains) {
   const char *rule_str = "rule 1000 http.uri contains \"a\";";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
@@ -123,7 +112,7 @@ TEST_CASE(single_contains) {
                 "http.uri") == 0,
          "Wrong protocol variable name");
 
-  cleanup_rule_mg(rule_mg);
+  destroy_rule_mg(rule_mg);
   passed_tests++;
 }
 
@@ -133,24 +122,13 @@ TEST_CASE(regex_basic_path) {
       "rule 2001 http.uri matches \"^/api/v[0-9]+/users/[0-9]+$\";";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
   ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
   ASSERT_EQ(2001, rule_mg->rule_ids[0], "Wrong rule ID");
-  cleanup_rule_mg(rule_mg);
+  destroy_rule_mg(rule_mg);
   passed_tests++;
 }
 
@@ -161,24 +139,13 @@ TEST_CASE(regex_groups_and_choices) {
       "\"^/(?:admin|manager)/[a-zA-Z0-9_-]+/(?:edit|delete|view)$\" /i;";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
   ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
   ASSERT_EQ(2002, rule_mg->rule_ids[0], "Wrong rule ID");
-  cleanup_rule_mg(rule_mg);
+  destroy_rule_mg(rule_mg);
   passed_tests++;
 }
 
@@ -188,24 +155,13 @@ TEST_CASE(regex_file_extensions) {
       "rule 2003 http.uri matches \"/download/.*\\.(?:exe|dll)$\" /i;";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
   ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
   ASSERT_EQ(2003, rule_mg->rule_ids[0], "Wrong rule ID");
-  cleanup_rule_mg(rule_mg);
+  destroy_rule_mg(rule_mg);
   passed_tests++;
 }
 
@@ -215,24 +171,13 @@ TEST_CASE(regex_unicode_classes) {
                          "\"[\\p{Han}\\p{Hiragana}\\p{Katakana}]+\" /i;";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
   ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
   ASSERT_EQ(2004, rule_mg->rule_ids[0], "Wrong rule ID");
-  cleanup_rule_mg(rule_mg);
+  destroy_rule_mg(rule_mg);
   passed_tests++;
 }
 
@@ -243,24 +188,13 @@ TEST_CASE(regex_complex_path) {
       "\"^/(en|zh|ja)/blog/([0-9]{4})/([0-9]{2})/([^/]+)(?:\\.html)?$\" /i;";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
   ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
   ASSERT_EQ(2005, rule_mg->rule_ids[0], "Wrong rule ID");
-  cleanup_rule_mg(rule_mg);
+  destroy_rule_mg(rule_mg);
   passed_tests++;
 }
 
@@ -270,24 +204,13 @@ TEST_CASE(regex_backreferences) {
       "rule 2007 http.uri matches \"<([a-z]+)>.*?</\\1>\" /i /s;";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
   ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
   ASSERT_EQ(2007, rule_mg->rule_ids[0], "Wrong rule ID");
-  cleanup_rule_mg(rule_mg);
+  destroy_rule_mg(rule_mg);
   passed_tests++;
 }
 
@@ -298,24 +221,13 @@ TEST_CASE(regex_email) {
       "\"[\\w.-]+@[\\w-]+(?:\\.[\\w-]+)*\\.[A-Za-z]{2,6}\" /i;";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
   ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
   ASSERT_EQ(2008, rule_mg->rule_ids[0], "Wrong rule ID");
-  cleanup_rule_mg(rule_mg);
+  destroy_rule_mg(rule_mg);
   passed_tests++;
 }
 
@@ -328,24 +240,13 @@ TEST_CASE(regex_multiple_conditions) {
       "/i;";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
   ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
   ASSERT_EQ(2010, rule_mg->rule_ids[0], "Wrong rule ID");
-  cleanup_rule_mg(rule_mg);
+  destroy_rule_mg(rule_mg);
   passed_tests++;
 }
 
@@ -355,24 +256,13 @@ TEST_CASE(regex_nested_parentheses) {
                          "\"^(?:[^()]*(?:\\([^()]*\\)[^()]*)*){0,100}$\" /s;";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
   ASSERT_EQ(1, rule_mg->rules_count, "Expected one rule");
   ASSERT_EQ(2011, rule_mg->rule_ids[0], "Wrong rule ID");
-  cleanup_rule_mg(rule_mg);
+  destroy_rule_mg(rule_mg);
   passed_tests++;
 }
 
@@ -383,18 +273,7 @@ TEST_CASE(multiple_rules_merge) {
 
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   // 解析第一条规则
   int result = parse_rule_string(rule_str1, rule_mg);
@@ -408,7 +287,7 @@ TEST_CASE(multiple_rules_merge) {
   ASSERT_EQ(2, rule_mg->rules_count, "Expected two rules after second parse");
   ASSERT_EQ(3002, rule_mg->rule_ids[1], "Wrong second rule ID");
 
-  cleanup_rule_mg(rule_mg);
+  destroy_rule_mg(rule_mg);
   passed_tests++;
 }
 
@@ -417,18 +296,7 @@ TEST_CASE(starts_with_basic) {
   const char *rule_str = "rule 3010 http.uri starts_with \"/api\";";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
@@ -443,6 +311,7 @@ TEST_CASE(starts_with_basic) {
                 "Wrong pattern conversion");
 
   passed_tests++;
+  destroy_rule_mg(rule_mg);
 }
 
 // 测试 ends_with 操作符
@@ -450,18 +319,7 @@ TEST_CASE(ends_with_basic) {
   const char *rule_str = "rule 3011 http.uri ends_with \".php\";";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
@@ -476,6 +334,7 @@ TEST_CASE(ends_with_basic) {
                 "Wrong pattern conversion");
 
   passed_tests++;
+  destroy_rule_mg(rule_mg);
 }
 
 // 测试 equals 操作符
@@ -483,18 +342,7 @@ TEST_CASE(equals_basic) {
   const char *rule_str = "rule 3012 http.uri equals \"/login\";";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
@@ -509,6 +357,7 @@ TEST_CASE(equals_basic) {
                 "Wrong pattern conversion");
 
   passed_tests++;
+  destroy_rule_mg(rule_mg);
 }
 
 // 测试带有特殊字符的 contains 操作符
@@ -516,18 +365,7 @@ TEST_CASE(contains_special_chars) {
   const char *rule_str = "rule 3013 http.uri contains \"user?id=[0-9]+\";";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
@@ -543,6 +381,7 @@ TEST_CASE(contains_special_chars) {
                 "Wrong pattern conversion");
 
   passed_tests++;
+  destroy_rule_mg(rule_mg);
 }
 
 // 测试带有特殊字符的 starts_with 操作符
@@ -550,18 +389,7 @@ TEST_CASE(starts_with_special_chars) {
   const char *rule_str = "rule 3014 http.uri starts_with \"/api/v[1-3]\";";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
@@ -576,6 +404,7 @@ TEST_CASE(starts_with_special_chars) {
                 "Wrong pattern conversion");
 
   passed_tests++;
+  destroy_rule_mg(rule_mg);
 }
 
 // 测试带有特殊字符的 ends_with 操作符
@@ -583,18 +412,7 @@ TEST_CASE(ends_with_special_chars) {
   const char *rule_str = "rule 3015 http.uri ends_with \".(php|jsp)\";";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000; // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-  rule_mg->string_match_context_array =
-      calloc(rule_mg->max_rules, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   int result = parse_rule_string(rule_str, rule_mg);
   ASSERT_EQ(0, result, "Rule parsing failed");
@@ -610,6 +428,7 @@ TEST_CASE(ends_with_special_chars) {
                 "Wrong pattern conversion");
 
   passed_tests++;
+  destroy_rule_mg(rule_mg);
 }
 
 // 测试多模式匹配
@@ -619,12 +438,7 @@ TEST_CASE(multi_pattern_hyperscan) {
       "rule 4001 http.uri contains \"admin\" and http.uri contains \"php\";";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-
-  // 初始化规则管理器
-  rule_mg->string_match_context_array =
-      calloc(MAX_RULE_PATTERNS_LEN, sizeof(string_match_context_t *));
-  ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate context array");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
 
   // 解析规则
   int ret = parse_rule_string(rule_str, rule_mg);
@@ -659,7 +473,7 @@ TEST_CASE(multi_pattern_hyperscan) {
 
   // 清理
   hs_free_scratch(scratch);
-  cleanup_rule_mg(rule_mg);
+  destroy_rule_mg(rule_mg);
   passed_tests++;
 }
 

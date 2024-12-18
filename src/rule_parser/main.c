@@ -187,27 +187,8 @@ int parse_main(int argc, char *argv[]) {
   }
 
   // 初始化 rule_mg
-  rule_mg->max_rules = 10000;  // 设置一个合理的最大规则数
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  if (!rule_mg->rule_ids) {
-    fprintf(stderr, "Failed to allocate rule_ids\n");
-    free(rule_mg);
-    return 1;
-  }
-
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(rule_mask_array_t));
-  if (!rule_mg->rule_masks) {
-    fprintf(stderr, "Failed to allocate rule_masks\n");
-    free(rule_mg->rule_ids);
-    free(rule_mg);
-    return 1;
-  }
-
-  rule_mg->string_match_context_array = calloc(rule_mg->max_rules, sizeof(string_match_context_t*));
-  if (!rule_mg->string_match_context_array) {
-    fprintf(stderr, "Failed to allocate string_match_context_array\n");
-    free(rule_mg->rule_masks);
-    free(rule_mg->rule_ids);
+  if (init_rule_mg(rule_mg) != 0) {
+    fprintf(stderr, "Failed to initialize rule_mg\n");
     free(rule_mg);
     return 1;
   }
@@ -216,7 +197,7 @@ int parse_main(int argc, char *argv[]) {
   int result = parse_rule_file(argv[1], rule_mg);
   if (result != 0) {
     fprintf(stderr, "Failed to parse rules\n");
-    cleanup_rule_mg(rule_mg);
+    destroy_rule_mg(rule_mg);
     return 1;
   }
 
@@ -224,7 +205,7 @@ int parse_main(int argc, char *argv[]) {
   print_rule_info(rule_mg);
 
   printf("\nCleaning up resources...\n");
-  cleanup_rule_mg(rule_mg);
+  destroy_rule_mg(rule_mg);
   printf("Done.\n");
 
   return 0;

@@ -82,6 +82,19 @@ typedef struct sign_rule_mg_s {
   uint32_t *rule_ids;            // 有效规则ID数组
 } sign_rule_mg_t;
 
+/**
+ * @brief 初始化规则管理器
+ * @param rule_mg 要初始化的规则管理器
+ * @return 成功返回0，失败返回-1
+ */
+int init_rule_mg(sign_rule_mg_t *rule_mg);
+
+/**
+ * @brief 销毁规则管理器及其所有资源
+ * @param rule_mg 要销毁的规则管理器
+ */
+void destroy_rule_mg(sign_rule_mg_t *rule_mg);
+
 typedef void *(*waf_rule_malloc_fn)(uint64_t size);
 typedef void (*waf_rule_free_fn)(void *memp);
 
@@ -115,46 +128,18 @@ int parse_rule_file(const char *filename, sign_rule_mg_t *rule_mg);
 int parse_rule_string(const char *rule_str, sign_rule_mg_t *rule_mg);
 
 /**
- * @brief 清理规则管理器及其所有资源
- * @param rule_mg 要清理的规则管理器
+ * @brief 编译指定上下文的 Hyperscan 数据库
+ * @param ctx 要编译的字符串匹配上下文
+ * @return 成功返回0，失败返回-1
  */
-static inline void cleanup_rule_mg(sign_rule_mg_t *rule_mg) {
-  if (!rule_mg)
-    return;
+int compile_hyperscan_database(string_match_context_t *ctx);
 
-  // 清理每个规则的上下文
-  if (rule_mg->string_match_context_array) {
-    for (int i = 0; rule_mg->string_match_context_array[i] != NULL; i++) {
-      string_match_context_t *ctx = rule_mg->string_match_context_array[i];
-      if (ctx->string_patterns_list) {
-        for (int j = 0; j < ctx->string_patterns_num; j++) {
-          if (ctx->string_patterns_list[j].string_pattern) {
-            free(ctx->string_patterns_list[j].string_pattern);
-          }
-          if (ctx->string_patterns_list[j].relations) {
-            free(ctx->string_patterns_list[j].relations);
-          }
-        }
-        free(ctx->string_patterns_list);
-      }
-      free(ctx);
-    }
-    free(rule_mg->string_match_context_array);
-  }
-
-  // 清理规则掩码数组
-  if (rule_mg->rule_masks) {
-    free(rule_mg->rule_masks);
-  }
-
-  // 清理规则ID数组
-  if (rule_mg->rule_ids) {
-    free(rule_mg->rule_ids);
-  }
-
-  // 清理规则管理器
-  free(rule_mg);
-}
+/**
+ * @brief 编译所有规则上下文的 Hyperscan 数据库
+ * @param rule_mg 规则管理器
+ * @return 成功返回0，失败返回-1
+ */
+int compile_all_hyperscan_databases(sign_rule_mg_t *rule_mg);
 
 /** 规则掩码访问辅助函数 **/
 static inline u_int16_t get_rule_and_mask(rule_mask_array_t *masks,
@@ -176,19 +161,5 @@ static inline void set_rule_not_mask(rule_mask_array_t *masks,
                                      int sub_rule_index, u_int16_t value) {
   masks->not_masks[sub_rule_index] = value;
 }
-
-/**
- * @brief 编译指定上下文的 Hyperscan 数据库
- * @param ctx 要编译的字符串匹配上下文
- * @return 成功返回0，失败返回-1
- */
-int compile_hyperscan_database(string_match_context_t *ctx);
-
-/**
- * @brief 编译所有规则上下文的 Hyperscan 数据库
- * @param rule_mg 规则管理器
- * @return 成功返回0，失败返回-1
- */
-int compile_all_hyperscan_databases(sign_rule_mg_t *rule_mg);
 
 #endif // __NEW_SIGN_PUB_H__

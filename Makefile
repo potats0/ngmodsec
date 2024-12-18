@@ -24,7 +24,8 @@ PARSER_DIR = src/rule_parser
 PARSER_SRCS = src/rule_parser/rule_parser.tab.c \
               src/rule_parser/lex.yy.c \
               src/rule_parser/main_test.c \
-              src/rule_parser/pattern_converter.c
+              src/rule_parser/pattern_converter.c \
+              src/rule_parser/rule_mg.c
 PARSER_OBJS = $(PARSER_SRCS:.c=.o)
 MAIN_OBJS = $(PARSER_DIR)/main.o 
 MODULE_SRCS = $(wildcard src/*.c)
