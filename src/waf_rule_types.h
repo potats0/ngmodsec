@@ -95,18 +95,20 @@ vs_url_vars_t *get_url_vars(ngx_http_request_t *r);
 #endif
 
 /**
- * @brief 从文件中解析规则
+ * @brief 解析规则文件，返回规则管理结构
  * @param filename 规则文件的路径
- * @return 解析后的规则管理器结构，失败时返回NULL
+ * @param rule_mg 解析后的规则管理结构
+ * @return 0表示成功，非0表示失败
  */
-sign_rule_mg_t* parse_rule_file(const char* filename);
+int parse_rule_file(const char* filename, sign_rule_mg_t* rule_mg);
 
 /**
- * @brief 从字符串中解析规则
+ * @brief 解析规则字符串，返回规则管理结构
  * @param rule_str 包含规则的字符串
- * @return 解析后的规则管理器结构，失败时返回NULL
+ * @param rule_mg 解析后的规则管理结构
+ * @return 0表示成功，非0表示失败
  */
-sign_rule_mg_t* parse_rule_string(const char* rule_str);
+int parse_rule_string(const char* rule_str, sign_rule_mg_t* rule_mg);
 
 /**
  * @brief 清理规则管理器及其所有资源

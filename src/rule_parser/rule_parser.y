@@ -16,11 +16,11 @@ extern void* yy_scan_string(const char* str);
 extern void yy_delete_buffer(void* buffer);
 
 void yyerror(const char* s);
-sign_rule_mg_t* current_rule_mg = NULL;
-uint32_t current_rule_id = 0;    // 当前规则ID
-uint8_t current_sub_id = 0;      // 当前子规则ID
-uint16_t current_and_bit = 1;    // 当前and_bit，每个子式左移一位
-uint16_t current_not_mask = 0;   // 当前NOT掩码
+static sign_rule_mg_t* current_rule_mg = NULL;
+static uint32_t current_rule_id = 0;    // 当前规则ID
+static uint8_t current_sub_id = 0;      // 当前子规则ID
+static uint16_t current_and_bit = 1;    // 当前and_bit，每个子式左移一位
+static uint16_t current_not_mask = 0;   // 当前NOT掩码
 
 // 用于构建规则管理结构
 static void add_pattern_to_context(const char* proto_var, const char* pattern, int is_pcre, uint16_t and_bit, uint32_t flags) {
@@ -598,66 +598,20 @@ void yyerror(const char* s) {
             yylineno, s, yytext);
 }
 
-sign_rule_mg_t* parse_rule_file(const char* filename) {
-    if (!filename) {
-        fprintf(stderr, "Error: NULL filename provided\n");
-        return NULL;
-    }
-
-    FILE* file = fopen(filename, "r");
-    if (!file) {
-        fprintf(stderr, "Error: Cannot open file: %s\n", filename);
-        return NULL;
-    }
-
-    // 确保全局变量被重置
-    if (current_rule_mg) {
-        fprintf(stderr, "Warning: current_rule_mg not NULL at start of parsing, freeing old structure\n");
-        // TODO: 添加释放 current_rule_mg 的函数
-        current_rule_mg = NULL;
-    }
-    current_rule_id = 0;
-    current_sub_id = 0;
-    current_and_bit = 1;
-    current_not_mask = 0;
-    
-    printf("Starting rule parsing from file: %s\n", filename);
-    yyin = file;
-    int result = yyparse();
-    
-    fclose(file);
-    
-    if (result != 0) {
-        fprintf(stderr, "Error: Parsing failed with code %d\n", result);
-        if (current_rule_mg) {
-            // TODO: 添加释放 current_rule_mg 的函数
-            current_rule_mg = NULL;
-        }
-        return NULL;
-    }
-
-    if (!current_rule_mg) {
-        fprintf(stderr, "Error: No rules were parsed successfully\n");
-        return NULL;
-    }
-
-    printf("Successfully parsed %u rules\n", current_rule_mg->rules_count);
-    return current_rule_mg;
-}
-
-sign_rule_mg_t* parse_rule_string(const char* rule_str) {
+int parse_rule_string(const char* rule_str, sign_rule_mg_t* rule_mg) {
     if (!rule_str) {
         fprintf(stderr, "Error: NULL rule string provided\n");
-        return NULL;
+        return -1;
     }
 
-    // 确保全局变量被重置
-    if (current_rule_mg) {
-        fprintf(stderr, "Warning: current_rule_mg not NULL at start of parsing, freeing old structure\n");
-        // TODO: 添加释放 current_rule_mg 的函数
-        current_rule_mg = NULL;
+    if (!rule_mg) {
+        fprintf(stderr, "Error: NULL rule_mg provided\n");
+        return -1;
     }
-    current_rule_id = 0;
+
+    // 设置全局变量
+    current_rule_mg = rule_mg;
+    current_rule_id = rule_mg->rules_count;  // 从当前规则数开始，这样可以追加新规则
     current_sub_id = 0;
     current_and_bit = 1;
     current_not_mask = 0;
@@ -666,26 +620,61 @@ sign_rule_mg_t* parse_rule_string(const char* rule_str) {
     void* buffer = yy_scan_string(rule_str);
     if (!buffer) {
         fprintf(stderr, "Error: Failed to create scan buffer\n");
-        return NULL;
+        return -1;
     }
 
     int result = yyparse();
     yy_delete_buffer(buffer);
 
+    // 重置全局变量
+    current_rule_mg = NULL;
+    
     if (result != 0) {
         fprintf(stderr, "Error: Parsing failed with code %d\n", result);
-        if (current_rule_mg) {
-            // TODO: 添加释放 current_rule_mg 的函数
-            current_rule_mg = NULL;
-        }
-        return NULL;
+        return -1;
     }
 
-    if (!current_rule_mg) {
-        fprintf(stderr, "Error: No rules were parsed successfully\n");
-        return NULL;
+    printf("Successfully parsed rules, total count: %u\n", rule_mg->rules_count);
+    return 0;
+}
+
+int parse_rule_file(const char* filename, sign_rule_mg_t* rule_mg) {
+    if (!filename) {
+        fprintf(stderr, "Error: NULL filename provided\n");
+        return -1;
     }
 
-    printf("Successfully parsed %u rules\n", current_rule_mg->rules_count);
-    return current_rule_mg;
+    if (!rule_mg) {
+        fprintf(stderr, "Error: NULL rule_mg provided\n");
+        return -1;
+    }
+
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        fprintf(stderr, "Error: Cannot open file: %s\n", filename);
+        return -1;
+    }
+
+    // 设置全局变量
+    current_rule_mg = rule_mg;
+    current_rule_id = rule_mg->rules_count;  // 从当前规则数开始，这样可以追加新规则
+    current_sub_id = 0;
+    current_and_bit = 1;
+    current_not_mask = 0;
+    
+    printf("Starting rule parsing from file: %s\n", filename);
+    yyin = file;
+    int result = yyparse();
+    fclose(file);
+
+    // 重置全局变量
+    current_rule_mg = NULL;
+    
+    if (result != 0) {
+        fprintf(stderr, "Error: Parsing failed with code %d\n", result);
+        return -1;
+    }
+
+    printf("Successfully parsed rules, total count: %u\n", rule_mg->rules_count);
+    return 0;
 }
