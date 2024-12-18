@@ -22,12 +22,7 @@ static uint8_t current_sub_id = 0;      // 当前子规则ID
 static uint16_t current_and_bit = 1;    // 当前and_bit，每个子式左移一位
 static uint16_t current_not_mask = 0;   // 当前NOT掩码
 
-// 辅助函数声明
-static const char* get_var_name(http_var_type_t type);
-static void add_pattern_to_context(const char* proto_var, const char* pattern, int is_pcre, uint16_t and_bit, uint32_t flags);
-
-// 函数定义
-static void add_pattern_to_context(const char* proto_var, const char* pattern, int is_pcre, uint16_t and_bit, uint32_t flags) {
+static void add_pattern_to_context(http_var_type_t proto_var, const char* pattern, int is_pcre, uint16_t and_bit, uint32_t flags) {
     uint32_t rule_id = current_rule_id;
     uint8_t sub_id = current_sub_id;
     
@@ -48,7 +43,7 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
         }
     }
     
-    printf("Adding pattern: %s to %s (is_pcre: %d, flags: 0x%x) for rule ID: %u (sub_id: %u, and_bit: 0x%x, not_mask: 0x%x)\n", 
+    printf("Adding pattern: %s to %d (is_pcre: %d, flags: 0x%x) for rule ID: %u (sub_id: %u, and_bit: 0x%x, not_mask: 0x%x)\n", 
            pattern, proto_var, is_pcre, flags, rule_id, sub_id, and_bit, current_not_mask);
     
     if (!current_rule_mg) {
@@ -84,30 +79,22 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
     }
 
     // 查找或创建对应的context
-    string_match_context_t* ctx = NULL;
-    int ctx_index;
-    for (ctx_index = 0; current_rule_mg->string_match_context_array[ctx_index] != NULL; ctx_index++) {
-        if (strcmp(current_rule_mg->string_match_context_array[ctx_index]->proto_var_name, proto_var) == 0) {
-            ctx = current_rule_mg->string_match_context_array[ctx_index];
-            break;
-        }
-    }
-
+    string_match_context_t* ctx = current_rule_mg->string_match_context_array[proto_var];
     if (!ctx) {
         ctx = calloc(1, sizeof(string_match_context_t));
         if (!ctx) {
             fprintf(stderr, "Failed to allocate context\n");
             return;
         }
-        strncpy(ctx->proto_var_name, proto_var, sizeof(ctx->proto_var_name) - 1);
         ctx->string_patterns_list = calloc(MAX_RULE_PATTERNS_LEN, sizeof(string_pattern_t));
         if (!ctx->string_patterns_list) {
             fprintf(stderr, "Failed to allocate patterns list\n");
             free(ctx);
             return;
         }
-        current_rule_mg->string_match_context_array[ctx_index] = ctx;
-        printf("Created new context for %s at index %d\n", proto_var, ctx_index);
+        ctx->string_patterns_num = 0;
+        current_rule_mg->string_match_context_array[proto_var] = ctx;
+        printf("Created new context at index %d\n", proto_var);
     }
 
     // 查找是否已存在相同的pattern
@@ -122,7 +109,7 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
 
     if (!pattern_entry) {
         if (ctx->string_patterns_num >= MAX_RULE_PATTERNS_LEN) {
-            fprintf(stderr, "Too many patterns for %s\n", proto_var);
+            fprintf(stderr, "Too many patterns\n");
             return;
         }
         pattern_entry = &ctx->string_patterns_list[ctx->string_patterns_num];
@@ -156,7 +143,6 @@ static void add_pattern_to_context(const char* proto_var, const char* pattern, i
     
     printf("Successfully added relation to pattern. Total relations: %d\n", pattern_entry->relation_count);
 }
-
 %}
 
 %union {
@@ -248,7 +234,7 @@ match_expr:
             yyerror("Failed to convert pattern");
             YYERROR;
         }
-        add_pattern_to_context(get_var_name($1), converted_pattern, 0, current_and_bit, $4);
+        add_pattern_to_context($1, converted_pattern, 0, current_and_bit, $4);
         free(converted_pattern);
     }
     | HTTP_VAR MATCHES STRING pattern_flags {
@@ -258,7 +244,7 @@ match_expr:
             yyerror("Failed to convert pattern");
             YYERROR;
         }
-        add_pattern_to_context(get_var_name($1), converted_pattern, 1, current_and_bit, $4);
+        add_pattern_to_context($1, converted_pattern, 1, current_and_bit, $4);
         free(converted_pattern);
     }
     | HTTP_VAR STARTS_WITH STRING pattern_flags {
@@ -268,7 +254,7 @@ match_expr:
             yyerror("Failed to convert pattern");
             YYERROR;
         }
-        add_pattern_to_context(get_var_name($1), converted_pattern, 0, current_and_bit, $4);
+        add_pattern_to_context($1, converted_pattern, 0, current_and_bit, $4);
         free(converted_pattern);
     }
     | HTTP_VAR ENDS_WITH STRING pattern_flags {
@@ -278,7 +264,7 @@ match_expr:
             yyerror("Failed to convert pattern");
             YYERROR;
         }
-        add_pattern_to_context(get_var_name($1), converted_pattern, 0, current_and_bit, $4);
+        add_pattern_to_context($1, converted_pattern, 0, current_and_bit, $4);
         free(converted_pattern);
     }
     | HTTP_VAR EQUALS STRING pattern_flags {
@@ -288,7 +274,7 @@ match_expr:
             yyerror("Failed to convert pattern");
             YYERROR;
         }
-        add_pattern_to_context(get_var_name($1), converted_pattern, 0, current_and_bit, $4);
+        add_pattern_to_context($1, converted_pattern, 0, current_and_bit, $4);
         free(converted_pattern);
     }
     ;
@@ -391,18 +377,5 @@ int parse_rule_file(const char* filename, sign_rule_mg_t* rule_mg) {
 
     printf("Successfully parsed rules, total count: %u\n", rule_mg->rules_count);
     return 0;
-}
 
-// 添加辅助函数，用于获取变量名
-static const char* get_var_name(http_var_type_t type) {
-    switch(type) {
-        case HTTP_VAR_URI:
-            return "http.uri";
-        case HTTP_VAR_HEADER:
-            return "http.header";
-        case HTTP_VAR_BODY:
-            return "http.body";
-        default:
-            return "unknown";
-    }
 }

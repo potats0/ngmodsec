@@ -63,7 +63,6 @@ typedef struct string_pattern_s {
 
 /** 模式字符串规则匹配上下文，以每协议变量分配 **/
 typedef struct string_match_context_s {
-  char proto_var_name[32];                // 所属协议变量名
   string_pattern_t *string_patterns_list; // 模式字符串list
   int string_patterns_num;                // 模式字符串规则数量
   unsigned int *string_ids; // 编译hs用，对应string_patterns_list的索引

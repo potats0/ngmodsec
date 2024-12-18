@@ -74,7 +74,6 @@ void print_rule_info(sign_rule_mg_t *rule_mg) {
     for (int i = 0; rule_mg->string_match_context_array[i] != NULL; i++) {
       string_match_context_t *ctx = rule_mg->string_match_context_array[i];
       printf("Match Context %d:\n", i);
-      printf("  Protocol Variable: %s\n", ctx->proto_var_name);
       printf("  Pattern Count: %d\n", ctx->string_patterns_num);
 
       for (int j = 0; j < ctx->string_patterns_num; j++) {

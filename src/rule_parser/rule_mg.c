@@ -16,36 +16,32 @@ void sign_rule_set_alloc(waf_rule_malloc_fn f_malloc, waf_rule_free_fn f_free) {
     }
 }
 
-int init_rule_mg(sign_rule_mg_t *rule_mg) {
+int init_rule_mg(sign_rule_mg_t* rule_mg) {
     if (!rule_mg) {
         return -1;
     }
 
-    // 初始化基本字段
+    // 初始化规则相关的字段
     rule_mg->max_rules = MAX_RULES_NUM;
     rule_mg->rules_count = 0;
-
-    // 分配规则ID数组
-    rule_mg->rule_ids = g_waf_rule_malloc(MAX_RULES_NUM * sizeof(uint32_t));
+    rule_mg->rule_ids = g_waf_rule_malloc(rule_mg->max_rules * sizeof(uint32_t));
     if (!rule_mg->rule_ids) {
         return -1;
     }
-    memset(rule_mg->rule_ids, 0, MAX_RULES_NUM * sizeof(uint32_t));
+    memset(rule_mg->rule_ids, 0, rule_mg->max_rules * sizeof(uint32_t));
 
-    // 分配规则掩码数组
-    rule_mg->rule_masks = g_waf_rule_malloc((MAX_RULES_NUM + 1) * sizeof(rule_mask_array_t));
+    rule_mg->rule_masks = g_waf_rule_malloc(rule_mg->max_rules * sizeof(rule_mask_array_t));
     if (!rule_mg->rule_masks) {
         g_waf_rule_free(rule_mg->rule_ids);
         return -1;
     }
 
     // 初始化掩码数组为0
-    for (int i = 0; i <= MAX_RULES_NUM; i++) {
-        memset(rule_mg->rule_masks[i].and_masks, 0, sizeof(rule_mg->rule_masks[i].and_masks));
-        memset(rule_mg->rule_masks[i].not_masks, 0, sizeof(rule_mg->rule_masks[i].not_masks));
+    for (uint32_t i = 0; i < rule_mg->max_rules; i++) {
+        memset(&rule_mg->rule_masks[i], 0, sizeof(rule_mask_array_t));
     }
 
-    // 分配字符串匹配上下文数组，大小为协议变量类型的数量
+    // 分配字符串匹配上下文数组
     rule_mg->string_match_context_array = g_waf_rule_malloc(HTTP_VAR_MAX * sizeof(string_match_context_t*));
     if (!rule_mg->string_match_context_array) {
         g_waf_rule_free(rule_mg->rule_masks);
