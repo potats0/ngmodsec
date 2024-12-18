@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <hs/hs.h>
 
 // 操作符类型枚举
 typedef enum {
@@ -27,5 +28,12 @@ char* convert_to_hyperscan_pattern(const char* pattern, operator_type_t op_type)
  * @return 转义后的字符串，调用者负责释放内存
  */
 char* escape_regex_special_chars(const char* str);
+
+/**
+ * @brief 获取操作符对应的 Hyperscan 标志位
+ * @param op_type 操作符类型
+ * @return Hyperscan 标志位
+ */
+unsigned int get_hyperscan_flags(operator_type_t op_type);
 
 #endif // __PATTERN_CONVERTER_H__

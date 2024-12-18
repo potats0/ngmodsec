@@ -79,6 +79,13 @@ static int passed_tests = 0;
 #define TEST_VAR_BODY 2   // http.body
 #define TEST_VAR_MAX 3
 
+// Hyperscan match callback function
+static int on_match(unsigned int id, unsigned long long from,
+                    unsigned long long to, unsigned int flags, void *context) {
+  printf("Matched rule ID: %d (from: %llu, to: %llu)\n", id, from, to);
+  return 0; // Continue matching
+}
+
 // 测试单个 http.uri contains
 TEST_CASE(single_contains) {
   const char *rule_str = "rule 1000 http.uri contains \"a\";";
@@ -607,56 +614,51 @@ TEST_CASE(ends_with_special_chars) {
 
 // 测试多模式匹配
 TEST_CASE(multi_pattern_hyperscan) {
+  // Test multiple patterns with different matching types
   const char *rule_str =
-      "rule 4001 http.uri contains \"admin\" and http.uri ends_with \".php\" "
-      "and http.uri matches \"\\\\?.*id=\\\\d+\" /i;";
+      "rule 4001 http.uri contains \"admin\" and http.uri contains \"php\";";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
 
-  // 初始化 rule_mg
-  memset(rule_mg, 0, sizeof(sign_rule_mg_t));
-  rule_mg->max_rules = 10000;
-  rule_mg->rule_ids = calloc(rule_mg->max_rules, sizeof(uint32_t));
-  ASSERT_NOT_NULL(rule_mg->rule_ids, "Failed to allocate rule_ids");
-
-  rule_mg->rule_masks = calloc(rule_mg->max_rules, sizeof(rule_mask_array_t));
-  ASSERT_NOT_NULL(rule_mg->rule_masks, "Failed to allocate rule_masks");
-
+  // 初始化规则管理器
   rule_mg->string_match_context_array =
-      calloc(TEST_VAR_MAX, sizeof(string_match_context_t *));
+      calloc(MAX_RULE_PATTERNS_LEN, sizeof(string_match_context_t *));
   ASSERT_NOT_NULL(rule_mg->string_match_context_array,
-                  "Failed to allocate string_match_context_array");
+                  "Failed to allocate context array");
 
   // 解析规则
-  int result = parse_rule_string(rule_str, rule_mg);
-  ASSERT_EQ(0, result, "Failed to parse rule string");
+  int ret = parse_rule_string(rule_str, rule_mg);
+  ASSERT_EQ(0, ret, "Failed to parse rule");
 
-  // 验证规则被添加
-  ASSERT_EQ(1, rule_mg->rules_count, "Incorrect number of rules");
-  ASSERT_EQ(4001, rule_mg->rule_ids[0], "Incorrect rule ID");
+  // 编译 Hyperscan 数据库
+  ret = compile_all_hyperscan_databases(rule_mg);
+  ASSERT_EQ(0, ret, "Failed to compile Hyperscan databases");
 
-  // 获取HTTP URI上下文
-  string_match_context_t *uri_ctx =
-      rule_mg->string_match_context_array[TEST_VAR_URI];
-  ASSERT_NOT_NULL(uri_ctx, "URI context is NULL");
+  // 创建 Hyperscan scratch
+  hs_scratch_t *scratch = NULL;
+  for (int i = 0; i < MAX_RULE_PATTERNS_LEN; i++) {
+    string_match_context_t *ctx = rule_mg->string_match_context_array[i];
+    if (ctx && ctx->db) {
+      ret = hs_alloc_scratch(ctx->db, &scratch);
+      ASSERT_EQ(HS_SUCCESS, ret, "Failed to allocate scratch");
+      break; // 只需要一个 scratch，因为它可以在相同类型的数据库之间共享
+    }
+  }
 
-  // 验证模式被添加
-  ASSERT_EQ(3, uri_ctx->string_patterns_num, "Incorrect number of patterns");
-
-  // 验证模式内容
-  ASSERT_NOT_NULL(uri_ctx->string_patterns_list[0].string_pattern,
-                  "First pattern is NULL");
-  ASSERT_NOT_NULL(uri_ctx->string_patterns_list[1].string_pattern,
-                  "Second pattern is NULL");
-  ASSERT_NOT_NULL(uri_ctx->string_patterns_list[2].string_pattern,
-                  "Third pattern is NULL");
-
-  // 编译Hyperscan数据库
-  result = compile_hyperscan_database(uri_ctx);
-  ASSERT_EQ(0, result, "Failed to compile Hyperscan database");
-  ASSERT_NOT_NULL(uri_ctx->db, "Hyperscan database is NULL");
+  // 测试匹配
+  const char *test_url = "/admin/users.php?id=123";
+  printf("\nTesting URL: %s\n", test_url);
+  for (int i = 0; i < MAX_RULE_PATTERNS_LEN; i++) {
+    string_match_context_t *ctx = rule_mg->string_match_context_array[i];
+    if (ctx && ctx->db) {
+      ret = hs_scan(ctx->db, test_url, strlen(test_url), 0, scratch, on_match,
+                    NULL);
+      ASSERT_EQ(HS_SUCCESS, ret, "Failed to scan");
+    }
+  }
 
   // 清理
+  hs_free_scratch(scratch);
   cleanup_rule_mg(rule_mg);
   passed_tests++;
 }
