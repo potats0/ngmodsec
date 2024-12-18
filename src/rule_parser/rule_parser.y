@@ -54,16 +54,15 @@ static void add_pattern_to_context(http_var_type_t proto_var, const char* patter
     // 检查规则ID是否有效，如果需要扩展规则掩码数组
     if (rule_id >= current_rule_mg->max_rules) {
         uint32_t new_size = rule_id + 128; // 每次多分配一些空间
-        rule_mask_array_t *new_masks = realloc(current_rule_mg->rule_masks, 
-                                             new_size * sizeof(rule_mask_array_t));
+        rule_mask_array_t *new_masks = g_waf_rule_malloc(new_size * sizeof(rule_mask_array_t));
         if (!new_masks) {
             fprintf(stderr, "Failed to reallocate rule masks array\n");
             return;
         }
         // 将新分配的内存初始化为0
-        memset(new_masks + current_rule_mg->max_rules, 0, 
-               (new_size - current_rule_mg->max_rules) * sizeof(rule_mask_array_t));
-        
+        memset(new_masks, 0, new_size * sizeof(rule_mask_array_t));
+        memcpy(new_masks, current_rule_mg->rule_masks, current_rule_mg->max_rules * sizeof(rule_mask_array_t));
+        g_waf_rule_free(current_rule_mg->rule_masks);
         current_rule_mg->rule_masks = new_masks;
         current_rule_mg->max_rules = new_size;
     }
@@ -81,17 +80,19 @@ static void add_pattern_to_context(http_var_type_t proto_var, const char* patter
     // 查找或创建对应的context
     string_match_context_t* ctx = current_rule_mg->string_match_context_array[proto_var];
     if (!ctx) {
-        ctx = calloc(1, sizeof(string_match_context_t));
+        ctx = g_waf_rule_malloc(sizeof(string_match_context_t));
         if (!ctx) {
             fprintf(stderr, "Failed to allocate context\n");
             return;
         }
-        ctx->string_patterns_list = calloc(MAX_RULE_PATTERNS_LEN, sizeof(string_pattern_t));
+        memset(ctx, 0, sizeof(string_match_context_t));
+        ctx->string_patterns_list = g_waf_rule_malloc(MAX_RULE_PATTERNS_LEN * sizeof(string_pattern_t));
         if (!ctx->string_patterns_list) {
             fprintf(stderr, "Failed to allocate patterns list\n");
-            free(ctx);
+            g_waf_rule_free(ctx);
             return;
         }
+        memset(ctx->string_patterns_list, 0, MAX_RULE_PATTERNS_LEN * sizeof(string_pattern_t));
         ctx->string_patterns_num = 0;
         current_rule_mg->string_match_context_array[proto_var] = ctx;
         printf("Created new context at index %d\n", proto_var);
@@ -113,11 +114,12 @@ static void add_pattern_to_context(http_var_type_t proto_var, const char* patter
             return;
         }
         pattern_entry = &ctx->string_patterns_list[ctx->string_patterns_num];
-        pattern_entry->string_pattern = strdup(pattern);
+        pattern_entry->string_pattern = g_waf_rule_malloc(strlen(pattern) + 1);
         if (!pattern_entry->string_pattern) {
             fprintf(stderr, "Failed to allocate pattern string\n");
             return;
         }
+        strcpy(pattern_entry->string_pattern, pattern);
         pattern_entry->relations = NULL;
         pattern_entry->relation_count = 0;
         pattern_entry->is_pcre = is_pcre;
@@ -127,11 +129,14 @@ static void add_pattern_to_context(http_var_type_t proto_var, const char* patter
     }
 
     // 添加或更新relation
-    rule_relation_t* new_relations = realloc(pattern_entry->relations, 
-                                           (pattern_entry->relation_count + 1) * sizeof(rule_relation_t));
+    rule_relation_t* new_relations = g_waf_rule_malloc((pattern_entry->relation_count + 1) * sizeof(rule_relation_t));
     if (!new_relations) {
         fprintf(stderr, "Failed to allocate relation\n");
         return;
+    }
+    if (pattern_entry->relations) {
+        memcpy(new_relations, pattern_entry->relations, pattern_entry->relation_count * sizeof(rule_relation_t));
+        g_waf_rule_free(pattern_entry->relations);
     }
     pattern_entry->relations = new_relations;
     
@@ -195,12 +200,13 @@ rule:
         }
     } rule_expr SEMICOLON {
         // 添加规则ID到列表中
-        uint32_t* new_ids = realloc(current_rule_mg->rule_ids, 
-                                   (current_rule_mg->rules_count + 1) * sizeof(uint32_t));
+        uint32_t* new_ids = g_waf_rule_malloc((current_rule_mg->rules_count + 1) * sizeof(uint32_t));
         if (!new_ids) {
             yyerror("Failed to allocate memory for rule IDs");
             YYERROR;
         }
+        memcpy(new_ids, current_rule_mg->rule_ids, current_rule_mg->rules_count * sizeof(uint32_t));
+        g_waf_rule_free(current_rule_mg->rule_ids);
         current_rule_mg->rule_ids = new_ids;
         current_rule_mg->rule_ids[current_rule_mg->rules_count++] = current_rule_id;
     }
@@ -235,7 +241,7 @@ match_expr:
             YYERROR;
         }
         add_pattern_to_context($1, converted_pattern, 0, current_and_bit, $4);
-        free(converted_pattern);
+        g_waf_rule_free(converted_pattern);
     }
     | HTTP_VAR MATCHES STRING pattern_flags {
         printf("Matched HTTP variable type %d MATCHES: %s with flags: 0x%x\n", $1, $3, $4);
@@ -245,7 +251,7 @@ match_expr:
             YYERROR;
         }
         add_pattern_to_context($1, converted_pattern, 1, current_and_bit, $4);
-        free(converted_pattern);
+        g_waf_rule_free(converted_pattern);
     }
     | HTTP_VAR STARTS_WITH STRING pattern_flags {
         printf("Matched HTTP variable type %d STARTS_WITH: %s with flags: 0x%x\n", $1, $3, $4);
@@ -255,7 +261,7 @@ match_expr:
             YYERROR;
         }
         add_pattern_to_context($1, converted_pattern, 0, current_and_bit, $4);
-        free(converted_pattern);
+        g_waf_rule_free(converted_pattern);
     }
     | HTTP_VAR ENDS_WITH STRING pattern_flags {
         printf("Matched HTTP variable type %d ENDS_WITH: %s with flags: 0x%x\n", $1, $3, $4);
@@ -265,7 +271,7 @@ match_expr:
             YYERROR;
         }
         add_pattern_to_context($1, converted_pattern, 0, current_and_bit, $4);
-        free(converted_pattern);
+        g_waf_rule_free(converted_pattern);
     }
     | HTTP_VAR EQUALS STRING pattern_flags {
         printf("Matched HTTP variable type %d EQUALS: %s with flags: 0x%x\n", $1, $3, $4);
@@ -275,7 +281,7 @@ match_expr:
             YYERROR;
         }
         add_pattern_to_context($1, converted_pattern, 0, current_and_bit, $4);
-        free(converted_pattern);
+        g_waf_rule_free(converted_pattern);
     }
     ;
 

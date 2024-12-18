@@ -78,6 +78,14 @@ typedef struct sign_rule_mg_s {
   uint32_t *rule_ids;            // 有效规则ID数组
 } sign_rule_mg_t;
 
+// 内存分配函数类型定义
+typedef void *(*waf_rule_malloc_fn)(uint64_t size);
+typedef void (*waf_rule_free_fn)(void *memp);
+
+// 默认的内存分配函数
+extern waf_rule_malloc_fn g_waf_rule_malloc;
+extern waf_rule_free_fn g_waf_rule_free;
+
 /**
  * @brief 初始化规则管理器
  * @param rule_mg 要初始化的规则管理器
