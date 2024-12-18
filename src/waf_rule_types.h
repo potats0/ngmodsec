@@ -31,7 +31,6 @@
 #define MAX_PROTOVAR_NAME_LEN 32
 // 单个规则中允许的最大字符串模式数量，用于限制字符串匹配上下文数组和模式列表的大小
 #define MAX_RULE_PATTERNS_LEN 4096
-#define MAX_STRING_LEN 1024
 #define MAX_SUB_RULES_NUM 8 // 每个规则的最大子规则数
 
 /** 规则掩码存储结构 **/
@@ -40,12 +39,6 @@ typedef struct rule_mask_array_s {
   u_int16_t not_masks[MAX_SUB_RULES_NUM]; // 每个子规则的NOT条件掩码
   u_int8_t sub_rules_count;               // 实际子规则数量
 } rule_mask_array_t;
-
-/** NGINX协议变量ID和字符串映射 **/
-typedef struct proto_var_desc_s {
-  char name[MAX_PROTOVAR_NAME_LEN]; // 对应字符串
-  int type;                         // nginx协议变量类型
-} proto_var_desc;
 
 /** 规则命中子式的逻辑关系 **/
 typedef struct rule_relation_s {
@@ -98,18 +91,25 @@ void destroy_rule_mg(sign_rule_mg_t *rule_mg);
 typedef void *(*waf_rule_malloc_fn)(uint64_t size);
 typedef void (*waf_rule_free_fn)(void *memp);
 
-extern void sign_rule_set_alloc(waf_rule_malloc_fn f_malloc,
-                                waf_rule_free_fn f_free);
+/**
+ * @brief 设置自定义内存分配函数
+ * @param f_malloc 自定义的内存分配函数
+ * @param f_free 自定义的内存释放函数
+ */
+void sign_rule_set_alloc(waf_rule_malloc_fn f_malloc, waf_rule_free_fn f_free);
 
-#ifdef WAF
-extern proto_var_desc g_pvar_desc[];
+/**
+ * @brief 初始化规则管理器
+ * @param rule_mg 要初始化的规则管理器
+ * @return 成功返回0，失败返回-1
+ */
+int init_rule_mg(sign_rule_mg_t *rule_mg);
 
-extern int32_t protovar_2_ngxid(char *vname);
-
-// Function declarations
-vs_proto_var_t *get_protovar(ngx_http_request_t *r, int proto_id);
-vs_url_vars_t *get_url_vars(ngx_http_request_t *r);
-#endif
+/**
+ * @brief 销毁规则管理器及其所有资源
+ * @param rule_mg 要销毁的规则管理器
+ */
+void destroy_rule_mg(sign_rule_mg_t *rule_mg);
 
 /**
  * @brief 解析规则文件，返回规则管理结构
