@@ -12,13 +12,14 @@ int compile_hyperscan_database(string_match_context_t *ctx) {
   // 准备模式数组和标志数组
   const char **patterns = malloc(ctx->string_patterns_num * sizeof(char *));
   unsigned int *flags = malloc(ctx->string_patterns_num * sizeof(unsigned int));
-  unsigned int *ids = malloc(ctx->string_patterns_num * sizeof(unsigned int));
+  unsigned int *ids =
+      g_waf_rule_malloc(ctx->string_patterns_num * sizeof(unsigned int));
 
   if (!patterns || !flags || !ids) {
     fprintf(stderr, "Failed to allocate memory for Hyperscan compilation\n");
     free(patterns);
     free(flags);
-    free(ids);
+    g_waf_rule_free(ids);
     return -1;
   }
 
@@ -42,13 +43,13 @@ int compile_hyperscan_database(string_match_context_t *ctx) {
     }
     free(patterns);
     free(flags);
-    free(ids);
+    g_waf_rule_free(ids);
     return -1;
   }
 
   // 保存ID数组以供后续使用
   if (ctx->string_ids) {
-    free(ctx->string_ids);
+    g_waf_rule_free(ctx->string_ids);
   }
   ctx->string_ids = ids; // 转移所有权
 
