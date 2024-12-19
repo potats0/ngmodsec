@@ -267,7 +267,19 @@ rule:
         memcpy(new_ids, current_rule_mg->rule_ids, current_rule_mg->rules_count * sizeof(uint32_t));
         g_waf_rule_free(current_rule_mg->rule_ids);
         current_rule_mg->rule_ids = new_ids;
-        current_rule_mg->rule_ids[current_rule_mg->rules_count++] = current_rule_id;
+        current_rule_mg->rule_ids[current_rule_mg->rules_count] = current_rule_id;
+        
+        // 设置子规则数量和掩码
+        rule_mask_array_t *masks = &current_rule_mg->rule_masks[current_rule_mg->rules_count];
+        masks->sub_rules_count = current_sub_id + 1;  // 因为 current_sub_id 从 0 开始
+        masks->and_masks[current_sub_id] = current_and_bit;
+        masks->not_masks[current_sub_id] = current_not_mask;
+        
+        current_rule_mg->rules_count++;
+        printf("Rule added: id=%u, sub_rules=%u, and_mask=0x%x, not_mask=0x%x\n",
+               current_rule_id, masks->sub_rules_count,
+               masks->and_masks[current_sub_id],
+               masks->not_masks[current_sub_id]);
     }
     ;
 
