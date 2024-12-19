@@ -444,6 +444,8 @@ static char *ngx_http_waf_rule_match_engine_rule(ngx_conf_t *cf,
       return NGX_CONF_ERROR;
     }
     ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "rule manager initialized");
+  } else {
+    ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "rule manager has been obtained");
   }
 
   // 解析规则字符串
@@ -453,9 +455,6 @@ static char *ngx_http_waf_rule_match_engine_rule(ngx_conf_t *cf,
     return NGX_CONF_ERROR;
   }
   ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "rule parsed successfully");
-
-  // Function moved to auxiliary.c
-  // log_rule_mg_status(cf, sign_rule_mg);
 
   return NGX_CONF_OK;
 }
@@ -484,6 +483,9 @@ static ngx_int_t ngx_http_waf_rule_engine_init(ngx_conf_t *cf) {
     return NGX_ERROR;
   }
   *h = new_sign_precontent_phase_handler;
+
+  /* 打印规则管理器状态，辅助debug */
+  log_rule_mg_status(cf, sign_rule_mg);
 
   return NGX_OK;
 }

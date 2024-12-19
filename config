@@ -22,6 +22,7 @@ ngx_module_srcs="$ngx_addon_dir/src/rule_parser/rule_mg.c \
                  $ngx_addon_dir/src/rule_parser/pattern_converter.c \
                  $ngx_addon_dir/src/rule_parser/hyperscan_utils.c \
                  $ngx_addon_dir/src/rbtree.c \
+                 $ngx_addon_dir/src/auxiliary.c \
                  $ngx_addon_dir/src/waf_rule_match_engine_core.c \
                  $ngx_addon_dir/src/ngx_http_waf_rule_match_engine_module.c"
 
