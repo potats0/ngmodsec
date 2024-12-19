@@ -48,48 +48,6 @@ void new_sign_alloc_scratch(sign_rule_mg_t *mg) {
   }
 }
 
-void ngx_http_waf_rule_match_engine_reload() {
-#ifdef WAF
-  sign_rule_mg = wafconf_conf_get_by_index(CONF1_NEW_SIGN_ENGINE, 1);
-#else
-  sign_rule_mg = NULL;
-#endif
-  if (sign_rule_mg == NULL) {
-    return;
-  }
-  for (ngx_uint_t i = 0; i < NGX_VAR_MAX; i++) {
-    if (scratch[i] != NULL) {
-      hs_free_scratch(scratch[i]);
-      scratch[i] = NULL;
-    }
-  }
-  new_sign_alloc_scratch(sign_rule_mg);
-
-  return;
-}
-
-static ngx_int_t __attribute__((unused))
-ngx_http_waf_rule_match_engine_process_init(ngx_cycle_t *cycle) {
-  // 查找共享内存 给 sign_rule_mg赋值
-  // 创建每个进程的scratch空间
-#ifdef WAF
-  sign_rule_mg = wafconf_conf_get_by_index(CONF1_NEW_SIGN_ENGINE, 1);
-#else
-  sign_rule_mg = NULL;
-#endif
-
-  if (sign_rule_mg == NULL) {
-    LOGN(cycle->log, "enter new_sign process init");
-    return NGX_OK;
-  }
-
-  new_sign_alloc_scratch(sign_rule_mg);
-
-  LOGN(cycle->log, "enter new_sign process init OK");
-
-  return NGX_OK;
-}
-
 static void __attribute__((unused))
 ngx_http_waf_rule_match_engine_process_exit(ngx_cycle_t *cycle) {
   LOGN(cycle->log, "waf rule match engine process exit");
@@ -113,6 +71,15 @@ static inline hs_search_userdata_t *
 ngx_http_waf_rule_match_get_userdata(ngx_http_request_t *r) {
   ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
                 "Attempting to get user data from request context");
+  if (sign_rule_mg != NULL) {
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
+                  "rule_mg status: max_rules=%d, rules_count=%d",
+                  sign_rule_mg->max_rules, sign_rule_mg->rules_count);
+    log_rule_mg_status(sign_rule_mg);
+  } else {
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
+                  "rule_mg status is NULL");
+  }
 
   hs_search_userdata_t *usrdata =
       ngx_http_get_module_ctx(r, ngx_http_waf_rule_match_engine_module);
@@ -174,6 +141,7 @@ static ngx_int_t ngx_http_waf_rule_checker(ngx_http_request_t *r) {
     return NGX_DECLINED;
   }
 #endif
+  log_rule_mg_status(sign_rule_mg);
   hs_search_userdata_t *usrdata = ngx_http_waf_rule_match_get_userdata(r);
   if (usrdata == NULL) {
     return NGX_DECLINED;
@@ -354,7 +322,69 @@ static ngx_int_t ngx_http_waf_rule_engine_init(ngx_conf_t *cf) {
   return NGX_OK;
 }
 
+// rule指令处理函数
+static char *ngx_http_waf_rule_match_engine_rule(ngx_conf_t *cf,
+                                                 ngx_command_t *cmd,
+                                                 void *conf) {
+  // ngx_http_waf_rule_match_engine_loc_conf_t *rmconf = conf;
+  ngx_str_t *value;
+  char *rules;
+  u_char *start, *end;
+
+  if (cf->args->nelts != 2) {
+    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                       "invalid number of arguments in rule directive: %d",
+                       cf->args->nelts);
+    return NGX_CONF_ERROR;
+  }
+
+  value = cf->args->elts;
+
+  // 获取第二个参数（规则字符串）
+  start = value[1].data;
+  end = start + value[1].len;
+
+  // 分配空间存储规则字符串
+  rules = ngx_pnalloc(cf->pool, end - start + 1);
+  if (rules == NULL) {
+    return NGX_CONF_ERROR;
+  }
+
+  // 复制规则内容（不包含单引号）并添加结束符
+  ngx_memcpy(rules, start, end - start);
+  rules[end - start] = '\0';
+
+  // 如果规则管理器未初始化，先初始化
+  if (sign_rule_mg == NULL) {
+    sign_rule_mg = ngx_pcalloc(cf->pool, sizeof(sign_rule_mg_t));
+    if (sign_rule_mg == NULL) {
+      return NGX_CONF_ERROR;
+    }
+
+    if (init_rule_mg(sign_rule_mg) != 0) {
+      MLOGN("failed to initialize rule manager");
+      return NGX_CONF_ERROR;
+    }
+    MLOGN("rule manager initialized");
+  } else {
+    MLOGN("rule manager has been obtained");
+  }
+
+  // 解析规则字符串
+  MLOGN("parsing rule: %s ", rules);
+  if (parse_rule_string(rules, sign_rule_mg) != 0) {
+    MLOGN("failed to parse rule: %s", rules);
+    return NGX_CONF_ERROR;
+  }
+  MLOGN("rule parsed successfully");
+
+  return NGX_CONF_OK;
+}
+
+// 模块指令定义
 static ngx_command_t ngx_http_waf_rule_match_engine_commands[] = {
+    {ngx_string("rule"), NGX_HTTP_LOC_CONF | NGX_CONF_ANY,
+     ngx_http_waf_rule_match_engine_rule, NGX_HTTP_LOC_CONF_OFFSET, 0, NULL},
     ngx_null_command};
 
 static ngx_http_module_t ngx_http_waf_rule_match_engine_module_ctx = {
@@ -375,7 +405,7 @@ ngx_module_t ngx_http_waf_rule_match_engine_module = {
     NGX_HTTP_MODULE,                             /* module type */
     NULL,                                        /* init master */
     ngx_http_waf_rule_match_engine_module_init,  /* init module */
-    ngx_http_waf_rule_match_engine_process_init, /* init process */
+    NULL,                                        /* init process */
     NULL,                                        /* init thread */
     NULL,                                        /* exit thread */
     ngx_http_waf_rule_match_engine_process_exit, /* exit process */
