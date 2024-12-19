@@ -71,30 +71,48 @@ void print_rule_info(sign_rule_mg_t *rule_mg) {
 
   // 打印所有的匹配上下文
   if (rule_mg->string_match_context_array) {
-    for (int i = 0; rule_mg->string_match_context_array[i] != NULL; i++) {
+    printf("String Match Contexts:\n");
+    for (int i = HTTP_VAR_UNKNOWN + 1; i < HTTP_VAR_MAX; i++) {
       string_match_context_t *ctx = rule_mg->string_match_context_array[i];
+      if (!ctx) {
+        printf("Match Context %d: <empty>\n", i);
+        continue;
+      }
+
+      if (!ctx->string_patterns_list) {
+        printf("Match Context %d: <invalid - no patterns list>\n", i);
+        continue;
+      }
+
       printf("Match Context %d:\n", i);
       printf("  Pattern Count: %d\n", ctx->string_patterns_num);
 
       for (int j = 0; j < ctx->string_patterns_num; j++) {
         string_pattern_t *pattern = &ctx->string_patterns_list[j];
+        if (!pattern || !pattern->string_pattern) {
+          printf("  Pattern %d: <invalid>\n", j);
+          continue;
+        }
+
         printf("  Pattern %d:\n", j);
         printf("    Content: %s\n", pattern->string_pattern);
         printf("    HS Flags: 0x%x\n", pattern->hs_flags);
         printf("    Relations Count: %d\n", pattern->relation_count);
 
-        for (int k = 0; k < pattern->relation_count; k++) {
-          rule_relation_t *rel = &pattern->relations[k];
-          printf("    Relation %d:\n", k);
-          printf("      Threat ID: %u\n", rel->threat_id);
-          printf("      Pattern ID: %u\n", rel->pattern_id);
-          printf("      AND Bit: 0x%x\n", rel->and_bit);
+        if (pattern->relations) {
+          for (int k = 0; k < pattern->relation_count; k++) {
+            rule_relation_t *rel = &pattern->relations[k];
+            printf("    Relation %d:\n", k);
+            printf("      Threat ID: %u\n", rel->threat_id);
+            printf("      Pattern ID: %u\n", rel->pattern_id);
+            printf("      AND Bit: 0x%x\n", rel->and_bit);
+          }
         }
       }
       printf("\n");
     }
   } else {
-    printf("No string match contexts found.\n");
+    printf("No string match contexts available\n");
   }
 }
 

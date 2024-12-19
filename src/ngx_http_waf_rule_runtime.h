@@ -119,6 +119,9 @@ extern int log_2_content(ngx_http_request_t *r, uint32_t threat_id,
                          rule_log_unit_t *log_unit, ngx_array_t *log_array,
                          char *dst);
 
+// Auxiliary functions for logging and debugging
+void log_rule_mg_status(ngx_conf_t *cf, sign_rule_mg_t *rule_mg);
+
 #endif
 
 #ifndef WAF

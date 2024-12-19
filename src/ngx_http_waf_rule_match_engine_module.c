@@ -226,6 +226,24 @@ static ngx_int_t new_sign_precontent_phase_handler(ngx_http_request_t *r) {
   return NGX_DECLINED;
 }
 
+/*
+ * ngx_string's are not null-terminated in common case, so we need to convert
+ * them into null-terminated ones before passing to ModSecurity
+ */
+ngx_inline char *ngx_str_to_char(ngx_str_t a, ngx_pool_t *p) {
+  char *str = NULL;
+
+  if (a.len == 0) {
+    return NULL;
+  }
+
+  str = ngx_pnalloc(p, a.len + 1);
+  ngx_memcpy(str, a.data, a.len);
+  str[a.len] = '\0';
+
+  return str;
+}
+
 static ngx_int_t predef_sign_response_header_checker(ngx_http_request_t *r) {
 #ifdef WAF
   if (is_bypass(r, CONF1_NEW_SIGN_ENGINE) == WAF_ENABLE) {
@@ -333,7 +351,7 @@ static ngx_int_t new_sign_response_body_filter(ngx_http_request_t *r,
 
 // 配置结构体
 typedef struct {
-  sign_rule_mg_t *rule_mg; // 规则管理器
+  // sign_rule_mg_t *rule_mg; // 规则管理器
 } ngx_http_waf_rule_match_engine_loc_conf_t;
 
 // 创建location配置
@@ -353,16 +371,16 @@ static void *ngx_http_waf_rule_match_engine_create_loc_conf(ngx_conf_t *cf) {
 static char *ngx_http_waf_rule_match_engine_merge_loc_conf(ngx_conf_t *cf,
                                                            void *parent,
                                                            void *child) {
-  ngx_http_waf_rule_match_engine_loc_conf_t *prev = parent;
-  ngx_http_waf_rule_match_engine_loc_conf_t *conf = child;
+  // ngx_http_waf_rule_match_engine_loc_conf_t *prev = parent;
+  // ngx_http_waf_rule_match_engine_loc_conf_t *conf = child;
 
-  if (prev->rule_mg != NULL && conf->rule_mg == NULL) {
-    // 如果父配置有规则管理器但子配置没有，复制父配置的规则管理器
-    conf->rule_mg = dup_rule_mg(prev->rule_mg);
-    if (conf->rule_mg == NULL) {
-      return NGX_CONF_ERROR;
-    }
-  }
+  // if (prev->rule_mg != NULL && conf->rule_mg == NULL) {
+  //   // 如果父配置有规则管理器但子配置没有，复制父配置的规则管理器
+  //   conf->rule_mg = dup_rule_mg(prev->rule_mg);
+  //   if (conf->rule_mg == NULL) {
+  //     return NGX_CONF_ERROR;
+  //   }
+  // }
 
   return NGX_CONF_OK;
 }
@@ -371,40 +389,80 @@ static char *ngx_http_waf_rule_match_engine_merge_loc_conf(ngx_conf_t *cf,
 static char *ngx_http_waf_rule_match_engine_rule(ngx_conf_t *cf,
                                                  ngx_command_t *cmd,
                                                  void *conf) {
-  ngx_http_waf_rule_match_engine_loc_conf_t *rmconf = conf;
-  ngx_str_t *args = cf->args->elts;
+  // ngx_http_waf_rule_match_engine_loc_conf_t *rmconf = conf;
+  ngx_str_t *value;
+  char *rules;
+  u_char *start, *end;
 
-  if (cf->args->nelts != 3) {
+  // 打印参数数量
+  ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "rule directive has %d arguments",
+                     cf->args->nelts);
+
+  if (cf->args->nelts != 2) {
     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                       "invalid number of arguments in rule directive");
+                       "invalid number of arguments in rule directive: %d",
+                       cf->args->nelts);
     return NGX_CONF_ERROR;
   }
 
+  value = cf->args->elts;
+
+  // 打印原始规则内容
+  ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "processing rule: '%*s'",
+                     value[1].len, value[1].data);
+
+  // 打印每个参数的内容
+  for (ngx_uint_t i = 0; i < cf->args->nelts; i++) {
+    ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "arg[%d]: '%*s'", i, value[i].len,
+                       value[i].data);
+  }
+
+  // 获取第二个参数（规则字符串）
+  start = value[1].data;
+  end = start + value[1].len;
+
+  // 分配空间存储规则字符串
+  rules = ngx_pnalloc(cf->pool, end - start + 1);
+  if (rules == NULL) {
+    return NGX_CONF_ERROR;
+  }
+
+  // 复制规则内容（不包含单引号）并添加结束符
+  ngx_memcpy(rules, start, end - start);
+  rules[end - start] = '\0';
+
   // 如果规则管理器未初始化，先初始化
-  if (rmconf->rule_mg == NULL) {
-    rmconf->rule_mg = ngx_pcalloc(cf->pool, sizeof(sign_rule_mg_t));
-    if (rmconf->rule_mg == NULL) {
+  if (sign_rule_mg == NULL) {
+    sign_rule_mg = ngx_pcalloc(cf->pool, sizeof(sign_rule_mg_t));
+    if (sign_rule_mg == NULL) {
       return NGX_CONF_ERROR;
     }
 
-    if (init_rule_mg(rmconf->rule_mg) != 0) {
+    if (init_rule_mg(sign_rule_mg) != 0) {
+      ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
+                         "failed to initialize rule manager");
       return NGX_CONF_ERROR;
     }
+    ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "rule manager initialized");
   }
 
   // 解析规则字符串
-  if (parse_rule_string((char *)args[2].data, rmconf->rule_mg) != 0) {
-    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "failed to parse rule: %*s",
-                       args[2].len, args[2].data);
+  ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "parsing rule: %s ", rules);
+  if (parse_rule_string(rules, sign_rule_mg) != 0) {
+    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "failed to parse rule: %s", rules);
     return NGX_CONF_ERROR;
   }
+  ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "rule parsed successfully");
+
+  // Function moved to auxiliary.c
+  // log_rule_mg_status(cf, sign_rule_mg);
 
   return NGX_CONF_OK;
 }
 
 // 模块指令定义
 static ngx_command_t ngx_http_waf_rule_match_engine_commands[] = {
-    {ngx_string("rule"), NGX_HTTP_LOC_CONF | NGX_CONF_TAKE2,
+    {ngx_string("rule"), NGX_HTTP_LOC_CONF | NGX_CONF_ANY,
      ngx_http_waf_rule_match_engine_rule, NGX_HTTP_LOC_CONF_OFFSET, 0, NULL},
     ngx_null_command};
 

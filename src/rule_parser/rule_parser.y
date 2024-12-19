@@ -62,8 +62,17 @@ static int ensure_rule_mask_capacity(sign_rule_mg_t* rule_mg, uint32_t rule_id) 
 
 // 查找或创建匹配上下文
 static string_match_context_t* get_or_create_context(sign_rule_mg_t* rule_mg, http_var_type_t proto_var) {
+    if (!rule_mg || !rule_mg->string_match_context_array || proto_var >= HTTP_VAR_MAX || proto_var <= HTTP_VAR_UNKNOWN) {
+        fprintf(stderr, "Invalid arguments: rule_mg=%p, proto_var=%d\n", rule_mg, proto_var);
+        return NULL;
+    }
+
     string_match_context_t* ctx = rule_mg->string_match_context_array[proto_var];
     if (ctx) {
+        if (!ctx->string_patterns_list) {
+            fprintf(stderr, "Context at index %d has NULL string_patterns_list\n", proto_var);
+            return NULL;
+        }
         return ctx;
     }
 
@@ -89,9 +98,15 @@ static string_match_context_t* get_or_create_context(sign_rule_mg_t* rule_mg, ht
 
 // 查找或创建模式条目
 static string_pattern_t* get_or_create_pattern(string_match_context_t* ctx, char* pattern, uint32_t flags) {
+    if (!ctx || !ctx->string_patterns_list || !pattern) {
+        fprintf(stderr, "Invalid arguments: ctx=%p, pattern=%p\n", ctx, pattern);
+        return NULL;
+    }
+
     // 查找现有模式
     for (int i = 0; i < ctx->string_patterns_num; i++) {
-        if (strcmp(ctx->string_patterns_list[i].string_pattern, pattern) == 0) {
+        if (ctx->string_patterns_list[i].string_pattern && 
+            strcmp(ctx->string_patterns_list[i].string_pattern, pattern) == 0) {
             printf("Found existing pattern at index %d\n", i);
             return &ctx->string_patterns_list[i];
         }
@@ -99,13 +114,20 @@ static string_pattern_t* get_or_create_pattern(string_match_context_t* ctx, char
 
     // 创建新模式
     if (ctx->string_patterns_num >= MAX_RULE_PATTERNS) {
-        fprintf(stderr, "Too many patterns\n");
+        fprintf(stderr, "Too many patterns (max: %d)\n", MAX_RULE_PATTERNS);
         return NULL;
     }
 
     string_pattern_t* pattern_entry = &ctx->string_patterns_list[ctx->string_patterns_num];
 
-    pattern_entry->string_pattern = pattern;
+    // 分配并复制模式字符串
+    pattern_entry->string_pattern = g_waf_rule_malloc(strlen(pattern) + 1);
+    if (!pattern_entry->string_pattern) {
+        fprintf(stderr, "Failed to allocate memory for pattern string\n");
+        return NULL;
+    }
+    strcpy(pattern_entry->string_pattern, pattern);
+
     pattern_entry->relations = NULL;
     pattern_entry->relation_count = 0;
     pattern_entry->hs_flags = flags;
@@ -181,17 +203,22 @@ static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uin
     // 获取或创建上下文
     string_match_context_t* ctx = get_or_create_context(current_rule_mg, proto_var);
     if (!ctx) {
+        fprintf(stderr, "Failed to get or create context for proto_var %d\n", proto_var);
         return;
     }
 
     // 获取或创建模式
     string_pattern_t* pattern_entry = get_or_create_pattern(ctx, pattern, flags);
     if (!pattern_entry) {
+        fprintf(stderr, "Failed to get or create pattern for %s\n", pattern);
         return;
     }
 
     // 添加规则关系
-    add_rule_relation(pattern_entry, rule_id, sub_id, and_bit);
+    if (add_rule_relation(pattern_entry, rule_id, sub_id, and_bit) != 0) {
+        fprintf(stderr, "Failed to add rule relation for rule %u sub_id %u\n", rule_id, sub_id);
+        return;
+    }
 }
 
 // 辅助函数：处理模式匹配表达式
