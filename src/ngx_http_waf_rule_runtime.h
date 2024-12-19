@@ -120,7 +120,7 @@ extern int log_2_content(ngx_http_request_t *r, uint32_t threat_id,
                          char *dst);
 
 // Auxiliary functions for logging and debugging
-void log_rule_mg_status(ngx_conf_t *cf, sign_rule_mg_t *rule_mg);
+void log_rule_mg_status(sign_rule_mg_t *rule_mg);
 
 #endif
 

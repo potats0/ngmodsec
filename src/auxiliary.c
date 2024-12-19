@@ -1,35 +1,32 @@
+#include "ngx_http_waf_rule_runtime.h"
+#include "waf_rule_types.h"
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
-#include "waf_rule_types.h"
-#include "ngx_http_waf_rule_runtime.h"
 
-void log_rule_mg_status(ngx_conf_t *cf, sign_rule_mg_t *rule_mg) {
+void log_rule_mg_status(sign_rule_mg_t *rule_mg) {
   if (!rule_mg) {
-    ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "rule_mg is NULL");
+    MLOGN("rule_mg is NULL");
     return;
   }
 
-  ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0,
-                     "rule_mg status: max_rules=%d, rules_count=%d",
-                     rule_mg->max_rules, rule_mg->rules_count);
+  MLOGN("rule_mg status: max_rules=%d, rules_count=%d", rule_mg->max_rules,
+        rule_mg->rules_count);
 
   // Print added rule IDs
   if (rule_mg->rules_count > 0) {
-    ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "rule IDs:");
+    MLOGN("rule IDs:");
     for (uint32_t i = 0; i < rule_mg->rules_count; i++) {
       uint32_t rule_id = rule_mg->rule_ids[i];
-      ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "  [%d] rule_id=%d", i,
-                         rule_id);
+      MLOGN("  [%d] rule_id=%d", i, rule_id);
 
       // Print rule mask information
       rule_mask_array_t *masks = &rule_mg->rule_masks[rule_id];
-      ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "    sub_rules_count=%d",
-                         masks->sub_rules_count);
+      MLOGN("    sub_rules_count=%d", masks->sub_rules_count);
 
       // Print rule-related AndBits
       if (rule_mg->string_match_context_array) {
-        ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "    Rule AndBits:");
+        MLOGN("    Rule AndBits:");
         for (int ctx_idx = HTTP_VAR_UNKNOWN + 1; ctx_idx < HTTP_VAR_MAX;
              ctx_idx++) {
           string_match_context_t *ctx =
@@ -64,10 +61,8 @@ void log_rule_mg_status(ngx_conf_t *cf, sign_rule_mg_t *rule_mg) {
                 snprintf(pattern_id_str, sizeof(pattern_id_str), "%u",
                          rel->pattern_id);
 
-                ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "      Threat ID: %s",
-                                   threat_id_str);
-                ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0,
-                                   "      Pattern ID: %s", pattern_id_str);
+                MLOGN("      Threat ID: % s ", threat_id_str);
+                MLOGN("      Pattern ID: %s ", pattern_id_str);
               }
             }
           }
@@ -83,56 +78,47 @@ void log_rule_mg_status(ngx_conf_t *cf, sign_rule_mg_t *rule_mg) {
         snprintf(not_mask_str, sizeof(not_mask_str), "0x%04x",
                  masks->not_masks[sub_id]);
 
-        ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "    Sub-rule %u:", sub_id);
-        ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "      AND mask: %s",
-                           and_mask_str);
-        ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "      NOT mask: %s",
-                           not_mask_str);
+        MLOGN("    Sub-rule %u:", sub_id);
+        MLOGN("      AND mask: %s ", and_mask_str);
+        MLOGN("      NOT mask: %s", not_mask_str);
       }
     }
   }
 
   // Print all match context information
   if (rule_mg->string_match_context_array) {
-    ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "String Match Contexts:");
+    MLOGN("String Match Contexts:");
     for (int i = HTTP_VAR_UNKNOWN + 1; i < HTTP_VAR_MAX; i++) {
       string_match_context_t *ctx = rule_mg->string_match_context_array[i];
       if (!ctx) {
-        ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "Match Context %d: <empty>",
-                           i);
+        MLOGN("Match Context %d: <empty> ", i);
         continue;
       }
 
       if (!ctx->string_patterns_list) {
-        ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0,
-                           "Match Context %d: <invalid - no patterns list>", i);
+        MLOGN("Match Context %d: <invalid - no patterns list>", i);
         continue;
       }
 
-      ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "Match Context %d:", i);
-      ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "  Pattern Count: %d",
-                         ctx->string_patterns_num);
+      MLOGN("Match Context %d:", i);
+      MLOGN("  Pattern Count: %d", ctx->string_patterns_num);
 
       for (int j = 0; j < ctx->string_patterns_num; j++) {
         string_pattern_t *pattern = &ctx->string_patterns_list[j];
         if (!pattern || !pattern->string_pattern) {
-          ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "  Pattern %d: <invalid>",
-                             j);
+          MLOGN("  Pattern %d: <invalid> ", j);
           continue;
         }
 
-        ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "  Pattern %d:", j);
-        ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "    Content: %s",
-                           pattern->string_pattern);
+        MLOGN("  Pattern %d:", j);
+        MLOGN("    Content: %s", pattern->string_pattern);
 
         char hs_flags_str[32];
         snprintf(hs_flags_str, sizeof(hs_flags_str), "0x%04x",
                  pattern->hs_flags);
-        ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "    HS Flags: %s",
-                           hs_flags_str);
+        MLOGN("    HS Flags: %s", hs_flags_str);
 
-        ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "    Relations Count: %d",
-                           pattern->relation_count);
+        MLOGN("    Relations Count: %d", pattern->relation_count);
 
         if (pattern->relations) {
           for (int k = 0; k < pattern->relation_count; k++) {
@@ -147,18 +133,14 @@ void log_rule_mg_status(ngx_conf_t *cf, sign_rule_mg_t *rule_mg) {
             snprintf(pattern_id_str, sizeof(pattern_id_str), "%u",
                      rel->pattern_id);
 
-            ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "      Threat ID: %s",
-                               threat_id_str);
-            ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "      Pattern ID: %s",
-                               pattern_id_str);
-            ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "      And bit: %s",
-                               and_bit_str);
+            MLOGN("      Threat ID: %s", threat_id_str);
+            MLOGN("      Pattern ID: %s", pattern_id_str);
+            MLOGN("      And bit: %s", and_bit_str);
           }
         }
       }
     }
   } else {
-    ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0,
-                       "No string match contexts available");
+    MLOGN("No string match contexts available");
   }
 }

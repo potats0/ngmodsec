@@ -173,12 +173,13 @@ static ngx_int_t ngx_http_waf_rule_checker(ngx_http_request_t *r) {
     return NGX_DECLINED;
   }
 #endif
+  /* 打印规则管理器状态，辅助debug */
+  log_rule_mg_status(sign_rule_mg);
   hs_search_userdata_t *usrdata = ngx_http_waf_rule_match_get_userdata(r);
   if (usrdata == NULL) {
     return NGX_DECLINED;
   }
   usrdata->r = r;
-
   // 1. http method不过hyperscan
   NGINX_CHECK_HEAD_STR(r->method_name, NGX_VAR_METHOD);
   // 2. 原始raw 包含参数部分
@@ -219,10 +220,20 @@ static ngx_int_t ngx_http_waf_rule_checker(ngx_http_request_t *r) {
 }
 
 static ngx_int_t new_sign_precontent_phase_handler(ngx_http_request_t *r) {
-  ngx_http_waf_rule_checker(r);
+  MLOGN("Entering precontent phase handler");
+
+  ngx_int_t rc = ngx_http_waf_rule_checker(r);
+  if (rc != NGX_DECLINED) {
+    MLOGN("Rule checker returned: %d", rc);
+    return rc;
+  }
+
 #ifdef WAF
+  MLOGN("Running custom sign checker");
   custom_sign_checker(r);
 #endif
+
+  MLOGN("Exiting precontent phase handler");
   return NGX_DECLINED;
 }
 
@@ -394,10 +405,6 @@ static char *ngx_http_waf_rule_match_engine_rule(ngx_conf_t *cf,
   char *rules;
   u_char *start, *end;
 
-  // 打印参数数量
-  ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "rule directive has %d arguments",
-                     cf->args->nelts);
-
   if (cf->args->nelts != 2) {
     ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
                        "invalid number of arguments in rule directive: %d",
@@ -406,16 +413,6 @@ static char *ngx_http_waf_rule_match_engine_rule(ngx_conf_t *cf,
   }
 
   value = cf->args->elts;
-
-  // 打印原始规则内容
-  ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "processing rule: '%*s'",
-                     value[1].len, value[1].data);
-
-  // 打印每个参数的内容
-  for (ngx_uint_t i = 0; i < cf->args->nelts; i++) {
-    ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "arg[%d]: '%*s'", i, value[i].len,
-                       value[i].data);
-  }
 
   // 获取第二个参数（规则字符串）
   start = value[1].data;
@@ -439,22 +436,21 @@ static char *ngx_http_waf_rule_match_engine_rule(ngx_conf_t *cf,
     }
 
     if (init_rule_mg(sign_rule_mg) != 0) {
-      ngx_conf_log_error(NGX_LOG_EMERG, cf, 0,
-                         "failed to initialize rule manager");
+      MLOGN("failed to initialize rule manager");
       return NGX_CONF_ERROR;
     }
-    ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "rule manager initialized");
+    MLOGN("rule manager initialized");
   } else {
-    ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "rule manager has been obtained");
+    MLOGN("rule manager has been obtained");
   }
 
   // 解析规则字符串
-  ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "parsing rule: %s ", rules);
+  MLOGN("parsing rule: %s ", rules);
   if (parse_rule_string(rules, sign_rule_mg) != 0) {
-    ngx_conf_log_error(NGX_LOG_EMERG, cf, 0, "failed to parse rule: %s", rules);
+    MLOGN("failed to parse rule: %s", rules);
     return NGX_CONF_ERROR;
   }
-  ngx_conf_log_error(NGX_LOG_NOTICE, cf, 0, "rule parsed successfully");
+  MLOGN("rule parsed successfully");
 
   return NGX_CONF_OK;
 }
@@ -477,15 +473,15 @@ static ngx_int_t ngx_http_waf_rule_engine_init(ngx_conf_t *cf) {
 
   cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
 
-  /* 注册 precontent phase handler */
-  h = ngx_array_push(&cmcf->phases[NGX_HTTP_PRECONTENT_PHASE].handlers);
+  /* 注册 access phase handler */
+  h = ngx_array_push(&cmcf->phases[NGX_HTTP_ACCESS_PHASE].handlers);
   if (h == NULL) {
     return NGX_ERROR;
   }
   *h = new_sign_precontent_phase_handler;
 
   /* 打印规则管理器状态，辅助debug */
-  log_rule_mg_status(cf, sign_rule_mg);
+  log_rule_mg_status(sign_rule_mg);
 
   return NGX_OK;
 }

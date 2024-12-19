@@ -19,17 +19,9 @@ __DATA__
 --- request
 GET /test
 --- error_log
-rule directive has 2 arguments
-processing rule: 'rule 1000 http.uri contains "a";'
-arg[0]: 'rule'
-arg[1]: 'rule 1000 http.uri contains "a";'
 rule manager initialized
 parsing rule: rule 1000 http.uri contains "a";
 rule parsed successfully
-rule directive has 2 arguments
-processing rule: 'rule 1002 http.uri contains "b";'
-arg[0]: 'rule'
-arg[1]: 'rule 1002 http.uri contains "b";'
 rule manager has been obtained
 parsing rule: rule 1002 http.uri contains "b";
 rule parsed successfully
