@@ -18,6 +18,16 @@ ngx_int_t ngx_http_modsecurity_precontent_init(ngx_conf_t *cf) {
   return NGX_OK;
 }
 
+static int on_match(unsigned int id, unsigned long long from,
+                    unsigned long long to, unsigned int flags, void *context) {
+  string_match_context_t *match_ctx =
+      ((ngx_http_modsecurity_ctx_t *)context)->match_context;
+  MLOGN("Matched rule ID: %d (from: %llu, to: %llu)", id, from, to);
+  MLOGN("Matched pattern: %s",
+        match_ctx->string_patterns_list[id].string_pattern);
+  return 0; // Continue matching
+}
+
 ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r) {
   MLOGD("Entering precontent phase handler");
   ngx_http_modsecurity_ctx_t *ctx = ngx_http_modsecurity_get_ctx(r);
@@ -26,7 +36,13 @@ ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r) {
     return NGX_DECLINED;
   }
   ctx->r = r;
-
+  string_match_context_t *match_ctx =
+      sign_rule_mg->string_match_context_array[HTTP_VAR_URI];
+  ctx->match_context = match_ctx;
+  if (match_ctx && match_ctx->db && scratch[HTTP_VAR_URI]) {
+    hs_scan(match_ctx->db, (const char *)r->uri.data, r->uri.len, 0,
+            scratch[HTTP_VAR_URI], on_match, ctx);
+  }
   MLOGD("Exiting precontent phase handler");
   return NGX_DECLINED;
 }

@@ -40,7 +40,7 @@ typedef struct rule_hit_context_s {
 
 /** 用于匹配过程所需的输入和输出 **/
 typedef struct ngx_http_modsecurity_ctx_s {
-  string_match_context_t string_match_context;
+  string_match_context_t *match_context;
   rule_hit_context_t rule_hit_context;
   uint32_t rsp_detect_len;
   ngx_http_request_t *r; // for hit_ctx alloc & log
