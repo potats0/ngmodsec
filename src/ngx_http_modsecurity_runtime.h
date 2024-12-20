@@ -82,6 +82,7 @@ extern void new_sign_engin_scan(void *inputData, unsigned int inputLen,
 
 /** 全局管理数据结构mg **/
 extern sign_rule_mg_t *sign_rule_mg;
+extern hs_scratch_t *scratch[HTTP_VAR_MAX];
 
 // /** hs所用到的scratch内存 进程启动时分配 **/
 // extern hs_scratch_t *scratch[NGX_VAR_MAX];

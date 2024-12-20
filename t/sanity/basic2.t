@@ -24,6 +24,11 @@ __DATA__
 --- request
 GET /test_handler
 --- error_log
+compile_all_hyperscan_databases successfully
+alloc scratch 0u failed, field is NULL
+alloc scratch 1u success
+alloc scratch 2u failed, field is NULL
+alloc scratch 3u failed, field is NULL
 Entering precontent phase handler
 Exiting precontent phase handler
 entering modsecurity header filter

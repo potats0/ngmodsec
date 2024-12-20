@@ -17,6 +17,36 @@
 sign_rule_mg_t *sign_rule_mg = NULL;
 hs_scratch_t *scratch[HTTP_VAR_MAX];
 
+/**
+ * @brief 为WAF规则匹配引擎分配hyperscan scratch空间
+ * @details 该函数负责为hyperscan规则匹配引擎分配scratch空间，scratch是hyperscan
+ *          进行模式匹配时必需的临时工作空间。每个线程都需要独立的scratch空间，
+ *          以保证线程安全。
+ *
+ * @param[in] mg WAF规则匹配引擎配置结构体指针
+ *
+ * @return void 无返回值
+ */
+void ngx_http_modsecurity_alloc_scratch(sign_rule_mg_t *mg) {
+  for (ngx_uint_t i = 0; i < HTTP_VAR_MAX; i++) {
+    if (mg->string_match_context_array && mg->string_match_context_array[i]) {
+      hs_database_t *db = mg->string_match_context_array[i]->db;
+      if (db == NULL) {
+        scratch[i] = NULL;
+        MLOGE("alloc scratch %lu failed, hyperscan db is NULL", i);
+      } else {
+        if (hs_alloc_scratch(db, &(scratch[i])) != HS_SUCCESS) {
+          MLOGE("alloc scratch %lu failed", i);
+          scratch[i] = NULL;
+        }
+        MLOGN("alloc scratch %lu success", i);
+      }
+    } else {
+      MLOGN("alloc scratch %lu failed, field is NULL", i);
+    }
+  }
+}
+
 static void ngx_http_modsecurity_process_exit(ngx_cycle_t *cycle) {
   MLOGN("waf rule match engine process exit");
 }
@@ -61,16 +91,21 @@ static ngx_int_t ngx_http_modsecurity_init(ngx_conf_t *cf) {
   if (ngx_http_modsecurity_precontent_init(cf) != NGX_OK) {
     return NGX_ERROR;
   }
-
   ngx_http_modsecurity_header_filter_init();
   ngx_http_modsecurity_body_filter_init();
+
   if (sign_rule_mg && sign_rule_mg->string_match_context_array) {
     if (compile_all_hyperscan_databases(sign_rule_mg) != 0) {
-      MLOGN("--ERROR compile_all_hyperscan_databases failed \n");
+      MLOGE("compile_all_hyperscan_databases failed ");
       return NGX_ERROR;
+    } else {
+      MLOGN("compile_all_hyperscan_databases successfully");
     }
+  } else {
+    MLOGN("sign_rule_mg is NULL , compile_all_hyperscan_databases failed");
   }
-  MLOGN("entering function");
+
+  ngx_http_modsecurity_alloc_scratch(sign_rule_mg);
   return NGX_OK;
 }
 
