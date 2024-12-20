@@ -23,7 +23,13 @@
 
 #define MAX_RULES_NUM 10000 // 默认最大规则数量，如果不够，那就每次增长128
 // 单个协议变量中允许的最大字符串模式数量，用于限制字符串匹配上下文数组和模式列表的大小
-#define MAX_RULE_PATTERNS 4096
+#ifdef TEST_PARSER
+#define INITIAL_PATTERNS_CAPACITY 1
+#else
+#define INITIAL_PATTERNS_CAPACITY 256
+#endif
+#define PATTERNS_GROWTH_SIZE 128
+
 #define MAX_SUB_RULES_NUM 8 // 每个规则的最大子规则数
 
 /** HTTP协议变量类型枚举 **/
@@ -60,8 +66,9 @@ typedef struct string_pattern_s {
 /** 模式字符串规则匹配上下文，以每协议变量分配 **/
 typedef struct string_match_context_s {
   string_pattern_t *string_patterns_list; // 模式字符串list
-  int string_patterns_num;                // 模式字符串规则数量
-  unsigned int *string_ids; // 编译hs用，对应string_patterns_list的索引
+  uint32_t string_patterns_num;                // 模式字符串规则数量
+  uint32_t string_patterns_capacity; // 模式字符串规则容量
+  uint32_t *string_ids; // 编译hs用，对应string_patterns_list的索引
   hs_database_t *db;        // hs数据库
 } string_match_context_t;
 

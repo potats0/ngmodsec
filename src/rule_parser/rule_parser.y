@@ -84,23 +84,52 @@ static string_match_context_t* get_or_create_context(sign_rule_mg_t* rule_mg, ht
     }
     memset(ctx, 0, sizeof(string_match_context_t));
 
-    ctx->string_patterns_list = g_waf_rule_malloc(MAX_RULE_PATTERNS * sizeof(string_pattern_t));
+    // 初始分配256个模式的空间
+    ctx->string_patterns_capacity = INITIAL_PATTERNS_CAPACITY;
+    ctx->string_patterns_list = g_waf_rule_malloc(ctx->string_patterns_capacity * sizeof(string_pattern_t));
     if (!ctx->string_patterns_list) {
         fprintf(stderr, "Failed to allocate patterns list\n");
         g_waf_rule_free(ctx);
         return NULL;
     }
-    memset(ctx->string_patterns_list, 0, MAX_RULE_PATTERNS * sizeof(string_pattern_t));
+
     ctx->string_patterns_num = 0;
     rule_mg->string_match_context_array[proto_var] = ctx;
     printf("Created new context at index %d\n", proto_var);
     return ctx;
 }
 
+static int ensure_patterns_capacity(string_match_context_t *ctx) {
+    if (ctx->string_patterns_num < ctx->string_patterns_capacity) {
+        return 0;  // 空间足够
+    }
+
+    uint32_t new_capacity = ctx->string_patterns_capacity + PATTERNS_GROWTH_SIZE;
+    string_pattern_t *new_list = g_waf_rule_malloc(new_capacity * sizeof(string_pattern_t));
+    if (!new_list) {
+        fprintf(stderr, "Failed to reallocate patterns list\n");
+        return -1;
+    }
+
+    memset(new_list, 0, new_capacity * sizeof(string_pattern_t));
+    memcpy(new_list, ctx->string_patterns_list, ctx->string_patterns_num * sizeof(string_pattern_t));
+    g_waf_rule_free(ctx->string_patterns_list);
+    
+    ctx->string_patterns_list = new_list;
+    ctx->string_patterns_capacity = new_capacity;
+    fprintf(stderr, "Successfully reallocated patterns list to size %d\n", new_capacity);
+    return 0;
+}
+
 // 查找或创建模式条目
 static string_pattern_t* get_or_create_pattern(string_match_context_t* ctx, char* pattern, uint32_t flags) {
     if (!ctx || !ctx->string_patterns_list || !pattern) {
         fprintf(stderr, "Invalid arguments: ctx=%p, pattern=%p\n", ctx, pattern);
+        return NULL;
+    }
+
+    // 在添加新模式前确保有足够空间
+    if (ensure_patterns_capacity(ctx) != 0) {
         return NULL;
     }
 
@@ -111,12 +140,6 @@ static string_pattern_t* get_or_create_pattern(string_match_context_t* ctx, char
             printf("Found existing pattern at index %d\n", i);
             return &ctx->string_patterns_list[i];
         }
-    }
-
-    // 创建新模式
-    if (ctx->string_patterns_num >= MAX_RULE_PATTERNS) {
-        fprintf(stderr, "Too many patterns (max: %d)\n", MAX_RULE_PATTERNS);
-        return NULL;
     }
 
     string_pattern_t* pattern_entry = &ctx->string_patterns_list[ctx->string_patterns_num];

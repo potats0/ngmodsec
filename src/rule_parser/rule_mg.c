@@ -1,5 +1,6 @@
 #include "ruleset_types.h"
 #include <hs/hs.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -86,7 +87,7 @@ void destroy_rule_mg(sign_rule_mg_t *rule_mg) {
         continue;
 
       if (ctx->string_patterns_list) {
-        for (int j = 0; j < ctx->string_patterns_num; j++) {
+        for (uint32_t j = 0; j < ctx->string_patterns_num; j++) {
           if (ctx->string_patterns_list[j].string_pattern) {
             g_waf_rule_free(ctx->string_patterns_list[j].string_pattern);
           }
@@ -185,16 +186,17 @@ sign_rule_mg_t *dup_rule_mg(const sign_rule_mg_t *src) {
     dst_ctx->db = NULL; // 数据库需要重新编译
 
     // 分配并复制模式列表
-    dst_ctx->string_patterns_list =
-        g_waf_rule_malloc(MAX_RULE_PATTERNS * sizeof(string_pattern_t));
+    dst_ctx->string_patterns_capacity = src_ctx->string_patterns_capacity;
+    dst_ctx->string_patterns_list = 
+        g_waf_rule_malloc(dst_ctx->string_patterns_capacity * sizeof(string_pattern_t));
     if (!dst_ctx->string_patterns_list) {
-      goto cleanup;
+        goto cleanup;
     }
     memset(dst_ctx->string_patterns_list, 0,
-           MAX_RULE_PATTERNS * sizeof(string_pattern_t));
+           dst_ctx->string_patterns_capacity * sizeof(string_pattern_t));
 
     // 复制每个模式
-    for (int j = 0; j < src_ctx->string_patterns_num; j++) {
+    for (uint32_t j = 0; j < src_ctx->string_patterns_num; j++) {
       string_pattern_t *src_pattern = &src_ctx->string_patterns_list[j];
       string_pattern_t *dst_pattern = &dst_ctx->string_patterns_list[j];
 
