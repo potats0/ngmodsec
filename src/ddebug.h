@@ -11,6 +11,7 @@
 #define _DDEBUG_H_INCLUDED_
 
 #include <ngx_core.h>
+#include <ngx_http.h>
 
 /*
  * #undef DDEBUG
@@ -38,19 +39,6 @@
   fprintf(stderr, "waf rule *** %s: ", __func__);                              \
   fprintf(stderr, __VA_ARGS__);                                                \
   fprintf(stderr, " at %s line %d.\n", __FILE__, __LINE__)
-
-#include <ngx_http.h>
-/* Log macro using nginx's logging function
- * log: ngx_log_t type pointer
- * args: format string and arguments
- */
-
-#define LOG(logger, level, fmt, ...)                                           \
-  ngx_log_error(level, logger, 0, fmt, ##__VA_ARGS__)
-
-#define LOGN(fmt, ...) LOG(ngx_cycle->log, NGX_LOG_NOTICE, fmt, ##__VA_ARGS__)
-
-#define MLOGN(fmt, ...) LOGN(fmt, ##__VA_ARGS__)
 
 #else
 
@@ -107,6 +95,25 @@ static void dd(const char *fmt, ...) {}
 #define dd_check_read_event_handler(r)
 #define dd_check_write_event_handler(r)
 
+#endif
+
+#ifdef NGX_DEBUG
+#define MLOG(ngx_cycle->log, level, fmt, ...)                                  \
+  ngx_log_error(level, logger, 0, "[%s:%d] " fmt, __FILE__, __LINE__,          \
+                ##__VA_ARGS__)
+#else
+#define MLOG(logger, level, fmt, ...)                                          \
+  ngx_log_error(level, logger, 0, fmt, ##__VA_ARGS__)
+#endif
+
+#define MLOGE(fmt, ...) MLOG(ngx_cycle->log, NGX_LOG_ERR, fmt, ##__VA_ARGS__)
+#define MLOGW(fmt, ...) MLOG(ngx_cycle->log, NGX_LOG_WARN, fmt, ##__VA_ARGS__)
+#define MLOGN(fmt, ...) MLOG(ngx_cycle->log, NGX_LOG_NOTICE, fmt, ##__VA_ARGS__)
+
+#ifdef NGX_DEBUG
+#define LOGD(fmt, ...) MLOG(NGX_LOG_DEBUG, fmt, ##__VA_ARGS__)
+#else
+#define LOGD(lfmt, ...) ((void)0)
 #endif
 
 #endif /* _DDEBUG_H_INCLUDED_ */

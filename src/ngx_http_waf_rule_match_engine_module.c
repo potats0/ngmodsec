@@ -22,12 +22,12 @@ static ngx_http_output_header_filter_pt ngx_http_next_header_filter;
 
 static void __attribute__((unused))
 ngx_http_waf_rule_match_engine_process_exit(ngx_cycle_t *cycle) {
-  LOGN("waf rule match engine process exit");
+  MLOGN("waf rule match engine process exit");
 }
 
 static ngx_int_t
 ngx_http_waf_rule_match_engine_module_init(ngx_cycle_t *cycle) {
-  LOGN("enter ngx_http_waf_rule_match_engine_module_init");
+  MLOGN("enter ngx_http_waf_rule_match_engine_module_init");
   return NGX_OK;
 }
 /**
