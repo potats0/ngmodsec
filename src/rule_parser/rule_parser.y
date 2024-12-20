@@ -151,7 +151,7 @@ static int add_rule_relation(string_pattern_t* pattern_entry, uint32_t rule_id, 
     pattern_entry->relations = new_relations;
 
     // 添加新的relation
-    pattern_entry->relations[pattern_entry->relation_count].threat_id = (rule_id << 8) | (sub_id + 1);
+    pattern_entry->relations[pattern_entry->relation_count].threat_id = (rule_id << 8) | sub_id;
     pattern_entry->relations[pattern_entry->relation_count].pattern_id = pattern_entry->relation_count;
     pattern_entry->relations[pattern_entry->relation_count].and_bit = and_bit;
     pattern_entry->relation_count++;
@@ -161,9 +161,7 @@ static int add_rule_relation(string_pattern_t* pattern_entry, uint32_t rule_id, 
 }
 
 // 主函数：添加模式到上下文
-static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uint16_t and_bit, uint32_t flags) {
-    uint32_t rule_id = current_rule_id;
-    uint8_t sub_id = current_sub_id;
+static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uint32_t flags) {
     
     if (!current_rule_mg) {
         fprintf(stderr, "Failed to allocate rule_mg\n");
@@ -171,33 +169,32 @@ static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uin
     }
 
     // 检查并调整and_bit
-    if (rule_id < current_rule_mg->max_rules) {
-        uint16_t current_mask = current_rule_mg->rule_masks[rule_id].and_masks[sub_id];
+    if (current_rule_id < current_rule_mg->max_rules) {
+        uint16_t current_mask = current_rule_mg->rule_masks[current_rule_id].and_masks[current_sub_id];
         if (current_mask != 0) {  // 如果已经有模式，生成新的 and_bit
             uint16_t new_bit = generate_new_and_bit(current_mask);
             if (!new_bit) {
-                fprintf(stderr, "Error: No available and_bit for rule %u sub_rule %u\n", rule_id, sub_id);
+                fprintf(stderr, "Error: No available and_bit for rule %u sub_rule %u\n", current_rule_id, current_sub_id);
                 return;
             }
-            and_bit = new_bit;
+            current_and_bit = new_bit;
         }
     }
     
-    printf("Adding pattern: %s to %d (flags: 0x%x) for rule ID: %u (sub_id: %u, and_bit: 0x%x, not_mask: 0x%x)\n", 
-           pattern, proto_var, flags, rule_id, sub_id, and_bit, current_not_mask);
+    printf("Adding pattern: %s to %d (flags: 0x%x) for rule ID: %u (current_sub_id: %u, and_bit: 0x%x, not_mask: 0x%x)\n", 
+           pattern, proto_var, flags, current_rule_id, current_sub_id, current_and_bit, current_not_mask);
 
     // 确保规则掩码数组容量足够
-    if (ensure_rule_mask_capacity(current_rule_mg, rule_id) != 0) {
+    if (ensure_rule_mask_capacity(current_rule_mg, current_rule_id) != 0) {
         return;
     }
 
     // 更新规则掩码
-    rule_mask_array_t* rule_mask = &current_rule_mg->rule_masks[rule_id];
-    rule_mask->and_masks[sub_id] |= and_bit;
-    rule_mask->not_masks[sub_id] |= (current_not_mask & and_bit);
+    rule_mask_array_t* rule_mask = &current_rule_mg->rule_masks[current_rule_id];
+    rule_mask->and_masks[current_sub_id] |= current_and_bit;
     
-    if (sub_id >= rule_mask->sub_rules_count) {
-        rule_mask->sub_rules_count = sub_id + 1;
+    if (current_sub_id >= rule_mask->sub_rules_count) {
+        rule_mask->sub_rules_count = current_sub_id + 1;
     }
 
     // 获取或创建上下文
@@ -215,8 +212,8 @@ static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uin
     }
 
     // 添加规则关系
-    if (add_rule_relation(pattern_entry, rule_id, sub_id, and_bit) != 0) {
-        fprintf(stderr, "Failed to add rule relation for rule %u sub_id %u\n", rule_id, sub_id);
+    if (add_rule_relation(pattern_entry, current_rule_id, current_sub_id, current_and_bit) != 0) {
+        fprintf(stderr, "Failed to add rule relation for rule %u current_sub_id %u\n", current_rule_id, current_sub_id);
         return;
     }
 }
@@ -231,7 +228,7 @@ static int handle_match_expr(http_var_type_t var_type, char* pattern_str,
         return -1;
     }
     
-    add_pattern_to_context(var_type, converted_pattern, current_and_bit, flags);
+    add_pattern_to_context(var_type, converted_pattern, flags);
     free(pattern_str);
     return 0;
 }
@@ -316,7 +313,10 @@ rule_expr:
     }
     | NOT rule_expr {
         printf("NOT operation\n");
-        current_not_mask |= current_and_bit;
+        printf("current_rule_id: %d subid: %d current_and_bit: 0x%x\n", current_rule_id, current_sub_id, current_and_bit);
+        rule_mask_array_t* rule_mask = &current_rule_mg->rule_masks[current_rule_id];
+        rule_mask->not_masks[current_sub_id] |= current_and_bit;
+        printf("current_not_mask: 0x%x\n", rule_mask->not_masks[current_sub_id]);
     }
     | rule_expr AND rule_expr {
         printf("AND operation\n");
