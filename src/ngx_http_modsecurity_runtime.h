@@ -5,7 +5,7 @@
 #define __NEW_SIGN_H__
 #include "ngx_http.h"
 #include "rbtree.h"
-#include "waf_rule_types.h"
+#include "ruleset_types.h"
 #include <hs/hs_runtime.h>
 #include <stdbool.h>
 #include <sys/types.h>
@@ -87,7 +87,7 @@ extern sign_rule_mg_t *sign_rule_mg;
 // extern hs_scratch_t *scratch[NGX_VAR_MAX];
 
 /** new sign 模块结构 **/
-extern ngx_module_t ngx_http_waf_rule_match_engine_module;
+extern ngx_module_t ngx_http_modsecurity_module;
 
 extern int log_2_content(ngx_http_request_t *r, uint32_t threat_id,
                          rule_log_unit_t *log_unit, ngx_array_t *log_array,

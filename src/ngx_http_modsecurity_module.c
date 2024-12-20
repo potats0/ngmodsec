@@ -5,7 +5,7 @@
  *
  */
 #include "ddebug.h"
-#include "ngx_http_waf_rule_runtime.h"
+#include "ngx_http_modsecurity_runtime.h"
 #include <hs/hs_runtime.h>
 #ifdef WAF
 #include "ngx_http_anti_crawler_module.h"
@@ -20,14 +20,12 @@ hs_scratch_t *scratch[HTTP_VAR_MAX];
 static ngx_http_output_body_filter_pt ngx_http_next_body_filter;
 static ngx_http_output_header_filter_pt ngx_http_next_header_filter;
 
-static void __attribute__((unused))
-ngx_http_waf_rule_match_engine_process_exit(ngx_cycle_t *cycle) {
+static void ngx_http_modsecurity_process_exit(ngx_cycle_t *cycle) {
   MLOGN("waf rule match engine process exit");
 }
 
-static ngx_int_t
-ngx_http_waf_rule_match_engine_module_init(ngx_cycle_t *cycle) {
-  MLOGN("enter ngx_http_waf_rule_match_engine_module_init");
+static ngx_int_t ngx_http_modsecurity_module_init(ngx_cycle_t *cycle) {
+  MLOGN("enter ngx_http_modsecurity_module_init");
   return NGX_OK;
 }
 /**
@@ -40,26 +38,22 @@ ngx_http_waf_rule_match_engine_module_init(ngx_cycle_t *cycle) {
  * @return hs_search_userdata_t* 成功返回用户数据指针，失败返回NULL
  */
 static inline hs_search_userdata_t *
-ngx_http_waf_rule_match_get_userdata(ngx_http_request_t *r) {
-  ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
-                "Attempting to get user data from request context");
+ngx_http_modsecurity_get_ctx(ngx_http_request_t *r) {
+  MLOGN("Attempting to get user data from request context");
 
   hs_search_userdata_t *usrdata =
-      ngx_http_get_module_ctx(r, ngx_http_waf_rule_match_engine_module);
+      ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
   if (usrdata == NULL) {
-    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
-                  "User data not found in context, creating new one");
+    MLOGN("User data not found in context, creating new one");
 
     usrdata = ngx_pcalloc(r->pool, sizeof(hs_search_userdata_t));
     if (usrdata == NULL) {
-      ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                    "Failed to allocate memory for user data");
+      MLOGN("Failed to allocate memory for user data");
       return NULL;
     }
 
-    ngx_http_set_ctx(r, usrdata, ngx_http_waf_rule_match_engine_module);
-    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
-                  "Successfully created and set new user data in context");
+    ngx_http_set_ctx(r, usrdata, ngx_http_modsecurity_module);
+    MLOGN("Successfully created and set new user data in context");
   }
 
   return usrdata;
@@ -80,7 +74,7 @@ new_sign_check_request_body(ngx_http_request_t *r,
 
 static ngx_int_t ngx_http_waf_rule_checker(ngx_http_request_t *r) {
 
-  hs_search_userdata_t *usrdata = ngx_http_waf_rule_match_get_userdata(r);
+  hs_search_userdata_t *usrdata = ngx_http_modsecurity_get_ctx(r);
   if (usrdata == NULL) {
     return NGX_DECLINED;
   }
@@ -133,7 +127,7 @@ static ngx_int_t new_sign_response_body_filter(ngx_http_request_t *r,
   }
 
 #endif
-  hs_search_userdata_t *usrdata = ngx_http_waf_rule_match_get_userdata(r);
+  hs_search_userdata_t *usrdata = ngx_http_modsecurity_get_ctx(r);
   if (usrdata == NULL) {
     return ngx_http_next_body_filter(r, in);
   }
@@ -159,7 +153,7 @@ static ngx_int_t new_sign_response_body_filter(ngx_http_request_t *r,
   return ngx_http_next_body_filter(r, in);
 }
 
-static ngx_int_t ngx_http_waf_rule_engine_init(ngx_conf_t *cf) {
+static ngx_int_t ngx_http_modsecurity_init(ngx_conf_t *cf) {
   ngx_http_handler_pt *h;
   ngx_http_core_main_conf_t *cmcf;
 
@@ -189,10 +183,9 @@ static ngx_int_t ngx_http_waf_rule_engine_init(ngx_conf_t *cf) {
 }
 
 // rule指令处理函数
-static char *ngx_http_waf_rule_match_engine_rule(ngx_conf_t *cf,
-                                                 ngx_command_t *cmd,
-                                                 void *conf) {
-  // ngx_http_waf_rule_match_engine_loc_conf_t *rmconf = conf;
+static char *ngx_http_modsecurity_rule(ngx_conf_t *cf, ngx_command_t *cmd,
+                                       void *conf) {
+  // ngx_http_modsecurity_loc_conf_t *rmconf = conf;
   ngx_str_t *value;
   char *rules;
   u_char *start, *end;
@@ -248,32 +241,32 @@ static char *ngx_http_waf_rule_match_engine_rule(ngx_conf_t *cf,
 }
 
 // 模块指令定义
-static ngx_command_t ngx_http_waf_rule_match_engine_commands[] = {
+static ngx_command_t ngx_http_modsecurity_commands[] = {
     {ngx_string("rule"), NGX_HTTP_LOC_CONF | NGX_CONF_ANY,
-     ngx_http_waf_rule_match_engine_rule, NGX_HTTP_LOC_CONF_OFFSET, 0, NULL},
+     ngx_http_modsecurity_rule, NGX_HTTP_LOC_CONF_OFFSET, 0, NULL},
     ngx_null_command};
 
-static ngx_http_module_t ngx_http_waf_rule_match_engine_module_ctx = {
-    NULL,                          /* preconfiguration */
-    ngx_http_waf_rule_engine_init, /* postconfiguration */
-    NULL,                          /* create main configuration */
-    NULL,                          /* init main configuration */
-    NULL,                          /* create server configuration */
-    NULL,                          /* merge server configuration */
-    NULL,                          /* create location configuration */
-    NULL                           /* merge location configuration */
+static ngx_http_module_t ngx_http_modsecurity_module_ctx = {
+    NULL,                      /* preconfiguration */
+    ngx_http_modsecurity_init, /* postconfiguration */
+    NULL,                      /* create main configuration */
+    NULL,                      /* init main configuration */
+    NULL,                      /* create server configuration */
+    NULL,                      /* merge server configuration */
+    NULL,                      /* create location configuration */
+    NULL                       /* merge location configuration */
 };
 
-ngx_module_t ngx_http_waf_rule_match_engine_module = {
+ngx_module_t ngx_http_modsecurity_module = {
     NGX_MODULE_V1,
-    &ngx_http_waf_rule_match_engine_module_ctx,  /* module context */
-    ngx_http_waf_rule_match_engine_commands,     /* module directives */
-    NGX_HTTP_MODULE,                             /* module type */
-    NULL,                                        /* init master */
-    ngx_http_waf_rule_match_engine_module_init,  /* init module */
-    NULL,                                        /* init process */
-    NULL,                                        /* init thread */
-    NULL,                                        /* exit thread */
-    ngx_http_waf_rule_match_engine_process_exit, /* exit process */
-    NULL,                                        /* exit master */
+    &ngx_http_modsecurity_module_ctx,  /* module context */
+    ngx_http_modsecurity_commands,     /* module directives */
+    NGX_HTTP_MODULE,                   /* module type */
+    NULL,                              /* init master */
+    ngx_http_modsecurity_module_init,  /* init module */
+    NULL,                              /* init process */
+    NULL,                              /* init thread */
+    NULL,                              /* exit thread */
+    ngx_http_modsecurity_process_exit, /* exit process */
+    NULL,                              /* exit master */
     NGX_MODULE_V1_PADDING};

@@ -1,5 +1,5 @@
 #include "ddebug.h"
-#include "ngx_http_waf_rule_runtime.h"
+#include "ngx_http_modsecurity_runtime.h"
 #ifdef WAF
 #include "conf1_virtual_site_module.h"
 #include "ngx_detect_log_module.h"

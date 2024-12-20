@@ -1,6 +1,6 @@
 #include "ddebug.h"
-#include "ngx_http_waf_rule_runtime.h"
-#include "waf_rule_types.h"
+#include "ngx_http_modsecurity_runtime.h"
+#include "ruleset_types.h"
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>

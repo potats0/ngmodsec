@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "waf_rule_types.h"
+#include "ruleset_types.h"
 #include "pattern_converter.h"
 #include <hs/hs.h>
 

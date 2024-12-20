@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "waf_rule_types.h"
+#include "ruleset_types.h"
 #include "rule_parser.tab.h"
 
 extern int yylineno;
