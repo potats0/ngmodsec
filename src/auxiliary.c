@@ -1,3 +1,4 @@
+#include "ddebug.h"
 #include "ngx_http_waf_rule_runtime.h"
 #include "waf_rule_types.h"
 #include <ngx_config.h>

@@ -97,19 +97,3 @@ extern int log_2_content(ngx_http_request_t *r, uint32_t threat_id,
 void log_rule_mg_status(sign_rule_mg_t *rule_mg);
 
 #endif
-
-#ifndef WAF
-#include <ngx_http.h>
-/* Log macro using nginx's logging function
- * log: ngx_log_t type pointer
- * args: format string and arguments
- */
-
-#define LOG(logger, level, fmt, ...)                                           \
-  ngx_log_error(level, logger, 0, fmt, ##__VA_ARGS__)
-
-#define LOGN(logger, fmt, ...) LOG(logger, NGX_LOG_NOTICE, fmt, ##__VA_ARGS__)
-
-#define MLOGN(fmt, ...) LOGN(ngx_cycle->log, fmt, ##__VA_ARGS__)
-
-#endif
