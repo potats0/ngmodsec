@@ -731,6 +731,33 @@ TEST_CASE(not_or_masks) {
   passed_tests++;
 }
 
+TEST_CASE(realloc_masks) {
+  const char *rule_str = "rule 10001 http.uri contains \"a\" or not http.uri contains \"password\";";
+  sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
+  ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
+
+  int result = parse_rule_string(rule_str, rule_mg);
+  ASSERT_EQ(0, result, "Rule parsing failed");
+
+  // 验证规则计数和ID
+  ASSERT(rule_mg->rules_count == 1, "Expected one rule");
+  ASSERT(rule_mg->rule_ids != NULL, "Rule IDs array is NULL");
+  ASSERT(rule_mg->rule_ids[0] == 10001, "Wrong rule ID");
+  ASSERT(rule_mg->max_rules >= 10001, "Max rules too small");
+
+  // 检查规则掩码数组是否分配
+  ASSERT(rule_mg->rule_masks != NULL, "Rule masks array is NULL");
+
+  ASSERT(rule_mg->rule_masks[10001].sub_rules_count == 1, "Rule subcount mismatch");
+
+  ASSERT(rule_mg->rule_masks[10001].and_masks[1] == 1, "sub rule 1 Wrong AND mask");
+  ASSERT(rule_mg->rule_masks[10001].not_masks[1] == 1, "sub rule 1 Wrong NOT mask");
+
+  destroy_rule_mg(rule_mg);
+  passed_tests++;
+}
+
 int main() {
   TEST_SUITE_BEGIN();
 
@@ -757,6 +784,7 @@ int main() {
   RUN_TEST(or_masks);
   RUN_TEST(complex_and_or_masks);
   RUN_TEST(not_masks);
+  RUN_TEST(realloc_masks);
 
   TEST_SUITE_END();
   return 0;

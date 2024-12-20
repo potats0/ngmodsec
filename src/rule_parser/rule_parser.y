@@ -57,6 +57,7 @@ static int ensure_rule_mask_capacity(sign_rule_mg_t* rule_mg, uint32_t rule_id) 
     g_waf_rule_free(rule_mg->rule_masks);
     rule_mg->rule_masks = new_masks;
     rule_mg->max_rules = new_size;
+    fprintf(stderr, "successfully reallocated rule masks array to size %d\n", new_size);
     return 0;
 }
 
