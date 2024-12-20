@@ -134,7 +134,7 @@ static string_pattern_t* get_or_create_pattern(string_match_context_t* ctx, char
     }
 
     // 查找现有模式
-    for (int i = 0; i < ctx->string_patterns_num; i++) {
+    for (uint32_t i = 0; i < ctx->string_patterns_num; i++) {
         if (ctx->string_patterns_list[i].string_pattern && 
             strcmp(ctx->string_patterns_list[i].string_pattern, pattern) == 0) {
             printf("Found existing pattern at index %d\n", i);

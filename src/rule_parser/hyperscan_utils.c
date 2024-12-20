@@ -1,6 +1,7 @@
 #include "rule_parser/pattern_converter.h"
 #include "ruleset_types.h"
 #include <hs/hs.h>
+#include <stdint.h>
 #include <stdio.h>
 
 int compile_hyperscan_database(string_match_context_t *ctx) {
@@ -24,7 +25,7 @@ int compile_hyperscan_database(string_match_context_t *ctx) {
   }
 
   // 填充数组
-  for (int i = 0; i < ctx->string_patterns_num; i++) {
+  for (uint32_t i = 0; i < ctx->string_patterns_num; i++) {
     patterns[i] = ctx->string_patterns_list[i].string_pattern;
     // 使用 get_hyperscan_flags 获取标志位
     flags[i] = get_hyperscan_flags(ctx->string_patterns_list[i].hs_flags) |

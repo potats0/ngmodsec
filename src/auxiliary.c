@@ -37,7 +37,7 @@ void log_rule_mg_status(sign_rule_mg_t *rule_mg) {
             continue;
           }
 
-          for (int pat_idx = 0; pat_idx < ctx->string_patterns_num; pat_idx++) {
+          for (uint32_t pat_idx = 0; pat_idx < ctx->string_patterns_num; pat_idx++) {
             string_pattern_t *pattern = &ctx->string_patterns_list[pat_idx];
             if (!pattern || !pattern->string_pattern) {
               continue;
@@ -104,7 +104,7 @@ void log_rule_mg_status(sign_rule_mg_t *rule_mg) {
       MLOGN("Match Context %d:", i);
       MLOGN("  Pattern Count: %d", ctx->string_patterns_num);
 
-      for (int j = 0; j < ctx->string_patterns_num; j++) {
+      for (uint32_t j = 0; j < ctx->string_patterns_num; j++) {
         string_pattern_t *pattern = &ctx->string_patterns_list[j];
         if (!pattern || !pattern->string_pattern) {
           MLOGN("  Pattern %d: <invalid> ", j);
