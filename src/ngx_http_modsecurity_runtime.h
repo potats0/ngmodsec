@@ -4,7 +4,6 @@
 #ifndef __NEW_SIGN_H__
 #define __NEW_SIGN_H__
 #include "ngx_http.h"
-#include "rbtree.h"
 #include "ruleset_types.h"
 #include <hs/hs_runtime.h>
 #include <stdbool.h>
@@ -22,26 +21,33 @@ typedef struct rule_log_unit_s {
   char *kv_value;       // 名值对的值
 } rule_log_unit_t;
 
-/** 每条规则的命中记录单元 **/
-typedef struct rule_hit_unit_s {
-  struct rb_node node;
-  uint32_t threat_id;
-  uint8_t save_and_bit;       // 保存记录规则命中的bit位
-  uint8_t sum_and_bit;        // 告警所需的总命中bit位
-  ngx_array_t rule_log_array; // 命中记录的始末 用于log
-} rule_hit_unit_t;
+// /** 每条规则的命中记录单元 **/
+// typedef struct rule_hit_unit_s {
+//   struct rb_node node;
+//   uint32_t threat_id;
+//   uint8_t save_and_bit;       // 保存记录规则命中的bit位
+//   uint8_t sum_and_bit;        // 告警所需的总命中bit位
+//   ngx_array_t rule_log_array; // 命中记录的始末 用于log
+// } rule_hit_unit_t;
 
-/** 每个request 记录的规则命中情况 **/
-typedef struct rule_hit_context_s {
-  struct rb_root rule_hit_root;
-  uint32_t hit_count;      // 记录的命中规则数量
-  uint32_t save_attribute; // for http 流特征， 提高性能
-} rule_hit_context_t;
+// /** 每个request 记录的规则命中情况 **/
+// typedef struct rule_hit_context_s {
+//   struct rb_root rule_hit_root;
+//   uint32_t hit_count;      // 记录的命中规则数量
+//   uint32_t save_attribute; // for http 流特征， 提高性能
+// } rule_hit_context_t;
+
+typedef struct {
+  ngx_rbtree_node_t node;
+  int threat_id;               // 命中规则ID
+  uint32_t rule_bit_mask;      // 保存记录规则命中的bit位
+  uint32_t combined_rule_mask; // 告警所需的总命中bit位
+} rule_hit_node_t;
 
 /** 用于匹配过程所需的输入和输出 **/
 typedef struct ngx_http_modsecurity_ctx_s {
   string_match_context_t *match_context;
-  rule_hit_context_t rule_hit_context;
+  ngx_rbtree_t *rule_hit_context;
   uint32_t rsp_detect_len;
   ngx_http_request_t *r; // for hit_ctx alloc & log
 } ngx_http_modsecurity_ctx_t;

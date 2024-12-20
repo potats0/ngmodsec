@@ -72,7 +72,7 @@ prepare:
 	fi
 	@if [ ! -f $(NGINX_PATH)/Makefile ]; then \
 		cd $(NGINX_PATH) && \
-		auto/configure --add-module=$(MODULE_PATH) --with-debug;\
+		auto/configure --add-module=$(MODULE_PATH) ;\
 	fi
 
 check-source:
@@ -110,7 +110,7 @@ test-nginx: check-source
 	@echo "Running Test::Nginx tests..."
 	TEST_NGINX_BINARY=$(NGINX_PATH)/objs/nginx \
 	TEST_NGINX_VERBOSE=1 \
-	prove -r t/sanity/basic2.t
+	prove -r t/sanity/basic3.t
 
 # 运行主程序
 run: rule_parser

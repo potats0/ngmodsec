@@ -1,5 +1,5 @@
 #define TEST_PARSER
-#include "../src/waf_rule_types.h"
+#include "../src/ruleset_types.h"
 #include <hs/hs.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -88,7 +88,8 @@ static int on_match(unsigned int id, unsigned long long from,
 
 // 测试单个 http.uri contains
 TEST_CASE(single_contains) {
-  const char *rule_str = "rule 1000 http.uri contains \"a\";";
+  const char *rule_str = "rule 1000 http.uri contains \"a\" and http.uri "
+                         "contains \"b\"and http.uri contains \"c\";";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
   ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");

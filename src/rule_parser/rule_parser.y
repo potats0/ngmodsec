@@ -172,8 +172,8 @@ static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uin
 
     // 检查并调整and_bit
     if (rule_id < current_rule_mg->max_rules) {
-        uint16_t current_mask = current_rule_mg->rule_masks[rule_id].and_masks[sub_id - 1];
-        if (current_mask & and_bit) {
+        uint16_t current_mask = current_rule_mg->rule_masks[rule_id].and_masks[sub_id];
+        if (current_mask != 0) {  // 如果已经有模式，生成新的 and_bit
             uint16_t new_bit = generate_new_and_bit(current_mask);
             if (!new_bit) {
                 fprintf(stderr, "Error: No available and_bit for rule %u sub_rule %u\n", rule_id, sub_id);

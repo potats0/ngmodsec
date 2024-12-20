@@ -13,8 +13,7 @@ __DATA__
 --- config
     location /test_handlerb {
         error_log logs/error.log debug;
-        rule 'rule 1000 http.uri contains "a";';
-        rule 'rule 1002 http.uri contains "b";';
+        rule 'rule 1000 http.uri contains "a" and http.uri contains "b";';
         proxy_pass http://127.0.0.1:$TEST_NGINX_SERVER_PORT/echo;
     }
     
