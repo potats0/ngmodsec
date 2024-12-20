@@ -100,7 +100,7 @@ void destroy_rule_mg(sign_rule_mg_t *rule_mg);
  * @param src 源规则管理器
  * @return 成功返回新的规则管理器指针，失败返回NULL
  */
-sign_rule_mg_t* dup_rule_mg(const sign_rule_mg_t* src);
+sign_rule_mg_t *dup_rule_mg(const sign_rule_mg_t *src);
 
 /**
  * @brief 设置自定义内存分配函数

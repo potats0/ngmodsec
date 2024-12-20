@@ -10,32 +10,6 @@
 #include <stdbool.h>
 #include <sys/types.h>
 
-// Protocol variable IDs
-#define NGX_VAR_METHOD 1
-#define NGX_VAR_REQUEST_LINE 2
-#define NGX_VAR_UNPARSED_URI 3
-#define NGX_VAR_UNPARSED_PATH 4
-#define NGX_VAR_UNPARSED_ARGS 5
-#define NGX_VAR_URL 6
-#define NGX_VAR_REQ_BODY 7
-#define NGX_VAR_MAX 8
-
-// URL variables structure
-typedef struct {
-  ngx_str_t url;
-  ngx_str_t unparse_path;
-  ngx_str_t unparse_args;
-} vs_url_vars_t;
-
-// Protocol variable structure
-typedef struct {
-  union {
-    void *p;
-    char *str;
-  } un;
-  size_t len;
-} vs_proto_var_t;
-
 /** 每个request 允许记录的最大命中规则条目  **/
 #define MAX_HIT_RESULT_NUM 512
 
@@ -109,8 +83,8 @@ extern void new_sign_engin_scan(void *inputData, unsigned int inputLen,
 /** 全局管理数据结构mg **/
 extern sign_rule_mg_t *sign_rule_mg;
 
-/** hs所用到的scratch内存 进程启动时分配 **/
-extern hs_scratch_t *scratch[NGX_VAR_MAX];
+// /** hs所用到的scratch内存 进程启动时分配 **/
+// extern hs_scratch_t *scratch[NGX_VAR_MAX];
 
 /** new sign 模块结构 **/
 extern ngx_module_t ngx_http_waf_rule_match_engine_module;

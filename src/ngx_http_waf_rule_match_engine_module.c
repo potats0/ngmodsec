@@ -14,39 +14,10 @@
 #endif
 
 sign_rule_mg_t *sign_rule_mg = NULL;
-hs_scratch_t *scratch[NGX_VAR_MAX];
+hs_scratch_t *scratch[HTTP_VAR_MAX];
 
 static ngx_http_output_body_filter_pt ngx_http_next_body_filter;
 static ngx_http_output_header_filter_pt ngx_http_next_header_filter;
-#ifdef WAF
-extern ngx_int_t custom_sign_checker(ngx_http_request_t *r);
-#endif
-
-/**
- * @brief 为WAF规则匹配引擎分配hyperscan scratch空间
- * @details 该函数负责为hyperscan规则匹配引擎分配scratch空间，scratch是hyperscan
- *          进行模式匹配时必需的临时工作空间。每个线程都需要独立的scratch空间，
- *          以保证线程安全。
- *
- * @param[in] mg WAF规则匹配引擎配置结构体指针
- *
- * @return void 无返回值
- */
-void new_sign_alloc_scratch(sign_rule_mg_t *mg) {
-  for (ngx_uint_t i = 0; i < NGX_VAR_MAX; i++) {
-    if (mg->string_match_context_array && mg->string_match_context_array[i]) {
-      hs_database_t *db = mg->string_match_context_array[i]->db;
-      if (db == NULL) {
-        scratch[i] = NULL;
-        continue;
-      }
-      if (hs_alloc_scratch(db, &(scratch[i])) != HS_SUCCESS) {
-        hs_free_scratch(scratch[i]);
-        scratch[i] = NULL;
-      }
-    }
-  }
-}
 
 static void __attribute__((unused))
 ngx_http_waf_rule_match_engine_process_exit(ngx_cycle_t *cycle) {
@@ -71,19 +42,9 @@ static inline hs_search_userdata_t *
 ngx_http_waf_rule_match_get_userdata(ngx_http_request_t *r) {
   ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
                 "Attempting to get user data from request context");
-  if (sign_rule_mg != NULL) {
-    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
-                  "rule_mg status: max_rules=%d, rules_count=%d",
-                  sign_rule_mg->max_rules, sign_rule_mg->rules_count);
-    log_rule_mg_status(sign_rule_mg);
-  } else {
-    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
-                  "rule_mg status is NULL");
-  }
 
   hs_search_userdata_t *usrdata =
       ngx_http_get_module_ctx(r, ngx_http_waf_rule_match_engine_module);
-
   if (usrdata == NULL) {
     ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0,
                   "User data not found in context, creating new one");
@@ -117,70 +78,12 @@ new_sign_check_request_body(ngx_http_request_t *r,
 }
 
 static ngx_int_t ngx_http_waf_rule_checker(ngx_http_request_t *r) {
-#ifdef WAF
-  if (is_bypass(r, CONF1_NEW_SIGN_ENGINE) == WAF_ENABLE &&
-      is_bypass(r, CONF3_ACL_SUB_ANT_CRAWLER) == WAF_ENABLE) {
-    return NGX_DECLINED;
-  }
 
-  ngx_http_core_srv_conf_t *cscf =
-      ngx_http_get_module_srv_conf(r, ngx_http_core_module);
-  ngx_uint_t ngx_server_id = cscf->server_conf_id;
-
-  waf_sign_template_t *set = NULL;
-  set = (waf_sign_template_t *)wafconf_general_conf_get_by_server_id(
-      ngx_server_id, CONF2_VIRTUAL_SITE_SUB_EVENT);
-
-  /* 云端只引用自定义模板情况 */
-  if (NULL == set) {
-    set = (waf_sign_template_t *)wafconf_general_conf_get_by_server_id(
-        ngx_server_id, CONF2_VIRTUAL_SITE_SUB_CUSTOM_EVENT);
-  }
-
-  if (NULL == set && !is_anti_crawler_enable(r)) {
-    return NGX_DECLINED;
-  }
-#endif
-  log_rule_mg_status(sign_rule_mg);
   hs_search_userdata_t *usrdata = ngx_http_waf_rule_match_get_userdata(r);
   if (usrdata == NULL) {
     return NGX_DECLINED;
   }
   usrdata->r = r;
-
-  // 1. http method不过hyperscan
-  NGINX_CHECK_HEAD_STR(r->method_name, NGX_VAR_METHOD);
-  // 2. 原始raw 包含参数部分
-  //
-
-  // NGINX_CHECK_HEAD_STR(r->unparsed_uri, NGX_VAR_UNPARSED_URI);
-
-  // vs_url_vars_t *url_vars = get_url_vars(r);
-  // if (url_vars) {
-  //   NGINX_CHECK_URL_VARS(url_vars->unparse_path, NGX_VAR_UNPARSED_PATH);
-  //   NGINX_CHECK_URL_VARS(url_vars->unparse_args, NGX_VAR_UNPARSED_ARGS);
-  //   NGINX_CHECK_URL_VARS(url_vars->url, NGX_VAR_URL);
-  //   NGINX_CHECK_URL_VARS(url_vars->url_path, NGX_VAR_URL_PATH);
-  //   NGINX_CHECK_URL_VARS(url_vars->url_args, NGX_VAR_URL_ARGS);
-  // }
-
-  // NGINX_CHECK_HEAD_ARRAY(r->headers_in.cookies, NGX_VAR_COOKIE);
-
-  // NGINX_CHECK_HEAD_VALUE(r->headers_in.host, NGX_VAR_HOST);
-  // NGINX_CHECK_HEAD_VALUE(r->headers_in.connection, NGX_VAR_CONNECTION);
-  // NGINX_CHECK_HEAD_VALUE(r->headers_in.user_agent, NGX_VAR_USERAGENT);
-  // NGINX_CHECK_HEAD_VALUE(r->headers_in.referer, NGX_VAR_REFERER);
-  // NGINX_CHECK_HEAD_VALUE(r->headers_in.content_length,
-  // NGX_VAR_CONTENT_LENGTH0); NGINX_CHECK_HEAD_VALUE(r->headers_in.accept,
-  // NGX_VAR_ACCEPT); NGINX_CHECK_HEAD_VALUE(r->headers_in.accept_encoding,
-  //                        NGX_VAR_ACCEPT_ENCODING);
-  // NGINX_CHECK_HEAD_VALUE(r->headers_in.authorization, NGX_VAR_AUTHORIZATION);
-  // NGINX_CHECK_HEAD_VALUE(r->headers_in.content_type, NGX_VAR_CONTENT_TYPE0);
-  // NGINX_CHECK_HEAD_VALUE(r->headers_in.accept_language,
-  //                        NGX_VAR_ACCEPT_LANGUAGE);
-
-  // NGINX_CHECK_HEAD_VALUE(r->headers_in.transfer_encoding,
-  //                        NGX_VAR_TRANSFER_ENCODING0);
 
   new_sign_check_request_body(r, usrdata);
 
@@ -188,63 +91,18 @@ static ngx_int_t ngx_http_waf_rule_checker(ngx_http_request_t *r) {
 }
 
 static ngx_int_t new_sign_precontent_phase_handler(ngx_http_request_t *r) {
+  MLOGN("Entering precontent phase handler");
   ngx_http_waf_rule_checker(r);
-#ifdef WAF
-  custom_sign_checker(r);
-#endif
+  MLOGN("Exiting precontent phase handler");
   return NGX_DECLINED;
 }
 
 static ngx_int_t predef_sign_response_header_checker(ngx_http_request_t *r) {
-#ifdef WAF
-  if (is_bypass(r, CONF1_NEW_SIGN_ENGINE) == WAF_ENABLE) {
-    return;
-  }
-
-  ngx_http_core_srv_conf_t *cscf =
-      ngx_http_get_module_srv_conf(r, ngx_http_core_module);
-  ngx_uint_t ngx_server_id = cscf->server_conf_id;
-
-  waf_sign_template_t *set = NULL;
-  set = (waf_sign_template_t *)wafconf_general_conf_get_by_server_id(
-      ngx_server_id, CONF2_VIRTUAL_SITE_SUB_EVENT);
-
-  /* 云端只引用自定义模板情况 */
-  if (NULL == set) {
-    set = (waf_sign_template_t *)wafconf_general_conf_get_by_server_id(
-        ngx_server_id, CONF2_VIRTUAL_SITE_SUB_CUSTOM_EVENT);
-  }
-  if (NULL == set) {
-    return;
-  }
-
-  hs_search_userdata_t *usrdata = ngx_http_waf_rule_match_get_userdata(r);
-  if (usrdata == NULL) {
-    return;
-  }
-  usrdata->r = r;
-  usrdata->rsp_detect_len = 0;
-
-  NGINX_CHECK_HEAD_STR(r->headers_out.status_line, NGX_VAR_RETCODE);
-  NGINX_CHECK_HEAD_ARRAY(r->headers_out.cache_control, NGX_VAR_CACHE_CONTROL1);
-  NGINX_CHECK_HEAD_VALUE(r->headers_out.content_encoding,
-                         NGX_VAR_CONTENT_ENCODING1);
-  NGINX_CHECK_HEAD_STR(r->headers_out.content_type, NGX_VAR_CONTENT_TYPE1);
-  NGINX_CHECK_HEAD_VALUE(r->headers_out.location, NGX_VAR_LOCATION);
-  //    NGINX_CHECK_HEAD_VALUE(r->headers_out.content_length_n,
-  //    NGX_VAR_CONTENT_LENGTH);
-  NGINX_CHECK_HEAD_STR(r->headers_out.charset, NGX_VAR_ACCEPT_CHARSET);
-  NGINX_CHECK_HEAD_VALUE(r->headers_out.server, NGX_VAR_SERVER);
-  NGINX_CHECK_HEAD_VALUE(r->headers_out.etag, NGX_VAR_ETAG);
-#endif
   return NGX_DECLINED;
 }
 
 static ngx_int_t new_sign_response_header_filter(ngx_http_request_t *r) {
   predef_sign_response_header_checker(r);
-#ifdef WAF
-  custom_sign_checker(r);
-#endif
   return ngx_http_next_header_filter(r);
 }
 
@@ -318,6 +176,13 @@ static ngx_int_t ngx_http_waf_rule_engine_init(ngx_conf_t *cf) {
     return NGX_ERROR;
   }
   *h = new_sign_precontent_phase_handler;
+
+  if (sign_rule_mg && sign_rule_mg->string_match_context_array) {
+    if (compile_all_hyperscan_databases(sign_rule_mg) != 0) {
+      MLOGN("--ERROR compile_all_hyperscan_databases failed \n");
+      return NGX_ERROR;
+    }
+  }
 
   return NGX_OK;
 }

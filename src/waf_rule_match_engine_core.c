@@ -286,14 +286,15 @@ int new_string_check(void *inputData, unsigned int inputLen,
     return -1;
   }
 
-  hs_error_t err =
-      hs_scan(sm_ctx_array[pro_var_id]->db, (const char *)inputData, inputLen,
-              0, scratch[pro_var_id], eventHandler, usrdata);
-  if (HS_SUCCESS != err && HS_SCAN_TERMINATED != err) {
-    return err;
-  }
+  // hs_error_t err =
+  //     hs_scan(sm_ctx_array[pro_var_id]->db, (const char *)inputData,
+  //     inputLen,
+  //             0, scratch[pro_var_id], eventHandler, usrdata);
+  // if (HS_SUCCESS != err && HS_SCAN_TERMINATED != err) {
+  //   return err;
+  // }
 
-  MLOGN("--%s:%d: hyperscan scan error %d \n", __FUNCTION__, __LINE__, err);
+  // MLOGN("--%s:%d: hyperscan scan error %d \n", __FUNCTION__, __LINE__, err);
 
   return 0;
 }
