@@ -106,7 +106,7 @@ static int on_match(unsigned int id, unsigned long long from,
     MLOGN("Matched threat_id: %d sub_id: %d and_bit: %d",
           relation.threat_id >> 8, relation.threat_id & 0xFF, relation.and_bit);
     uint32_t rule_bit_mask = sign_rule_mg->rule_masks[relation.threat_id >> 8]
-                                 .and_masks[(relation.threat_id & 0xFF) - 1];
+                                 .and_masks[(relation.threat_id & 0xFF) ];
     insert_rule_hit_node(tree, r->pool, relation.threat_id, relation.and_bit,
                          rule_bit_mask);
   }
