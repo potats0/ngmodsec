@@ -321,10 +321,10 @@ rule_expr:
     | rule_expr AND rule_expr {
         printf("AND operation\n");
     }
-    | rule_expr OR rule_expr {
+    | rule_expr OR  {
         printf("OR operation\n");
-        current_and_bit <<= 1;  // 为OR操作准备新的and_bit
-    }
+        current_sub_id++;  // 为OR操作准备新的and_bit
+    }rule_expr
     ;
 
 match_expr:

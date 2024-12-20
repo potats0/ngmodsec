@@ -88,8 +88,7 @@ static int on_match(unsigned int id, unsigned long long from,
 
 // 测试单个 http.uri contains
 TEST_CASE(single_contains) {
-  const char *rule_str = "rule 1000 http.uri contains \"a\" and http.uri "
-                         "contains \"b\"and http.uri contains \"c\";";
+  const char *rule_str = "rule 1000 http.uri contains \"a\" ;";
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
   ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
   ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
@@ -578,6 +577,106 @@ TEST_CASE(rule_mg_duplication) {
   passed_tests++;
 }
 
+TEST_CASE(and_masks) {
+  const char *rule_str = "rule 1000 http.uri contains \"a\" and http.uri "
+                         "contains \"b\"and http.uri contains \"c\";";
+  sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
+  ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
+
+  int result = parse_rule_string(rule_str, rule_mg);
+  ASSERT_EQ(0, result, "Rule parsing failed");
+
+  // 验证规则计数和ID
+  ASSERT(rule_mg->rules_count == 1, "Expected one rule");
+  ASSERT(rule_mg->rule_ids != NULL, "Rule IDs array is NULL");
+  ASSERT(rule_mg->rule_ids[0] == 1000, "Wrong rule ID");
+  ASSERT(rule_mg->max_rules >= 1000, "Max rules too small");
+
+  // 检查规则掩码数组是否分配
+  ASSERT(rule_mg->rule_masks != NULL, "Rule masks array is NULL");
+
+  ASSERT(rule_mg->rule_masks[1000].sub_rules_count == 1, "Rule subcount mismatch");
+
+  ASSERT(rule_mg->rule_masks[1000].and_masks[0] == 7, "Wrong AND mask");
+
+  // 检查 HTTP_VAR_URI 上下文
+  string_match_context_t *ctx =
+      rule_mg->string_match_context_array[HTTP_VAR_URI];
+  ASSERT(ctx != NULL, "Pattern context is NULL");
+  // 检查规则子式的and mask都正确，对于and关系的子式来讲，不同条件见不可冲突
+  ASSERT(ctx->string_patterns_list[0].relations[0].and_bit == 1, "Wrong sub rule 1 AND mask");
+  ASSERT(ctx->string_patterns_list[1].relations[0].and_bit == 2, "Wrong sub rule 2 AND mask");
+  ASSERT(ctx->string_patterns_list[2].relations[0].and_bit == 4, "Wrong sub rule 3 AND mask");
+
+  destroy_rule_mg(rule_mg);
+  passed_tests++;
+}
+
+TEST_CASE(or_masks) {
+  const char *rule_str = "rule 1000 http.uri contains \"a\" or http.uri "
+                         "contains \"b\" or http.uri contains \"c\";";
+  sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
+  ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
+
+  int result = parse_rule_string(rule_str, rule_mg);
+  ASSERT_EQ(0, result, "Rule parsing failed");
+
+  // 验证规则计数和ID
+  ASSERT(rule_mg->rules_count == 1, "Expected one rule");
+  ASSERT(rule_mg->rule_ids != NULL, "Rule IDs array is NULL");
+  ASSERT(rule_mg->rule_ids[0] == 1000, "Wrong rule ID");
+  ASSERT(rule_mg->max_rules >= 1000, "Max rules too small");
+
+  // 检查规则掩码数组是否分配
+  ASSERT(rule_mg->rule_masks != NULL, "Rule masks array is NULL");
+
+  ASSERT(rule_mg->rule_masks[1000].sub_rules_count == 3, "Rule subcount mismatch");
+
+  ASSERT(rule_mg->rule_masks[1000].and_masks[0] == 1, "sub rule 1 Wrong AND mask");
+
+  // 检查 HTTP_VAR_URI 上下文
+  string_match_context_t *ctx =
+      rule_mg->string_match_context_array[HTTP_VAR_URI];
+  ASSERT(ctx != NULL, "Pattern context is NULL");
+  // 检查规则子式的or mask都正确，对于or关系的子式来讲，不同条件对应不同子规则，可以冲突
+  ASSERT(ctx->string_patterns_list[0].relations[0].and_bit == 1, "Wrong sub rule 1 AND mask");
+  ASSERT(ctx->string_patterns_list[1].relations[0].and_bit == 1, "Wrong sub rule 2 AND mask");
+  ASSERT(ctx->string_patterns_list[2].relations[0].and_bit == 1, "Wrong sub rule 3 AND mask");
+
+  destroy_rule_mg(rule_mg);
+  passed_tests++;
+}
+
+TEST_CASE(complex_and_or_masks) {
+  const char *rule_str = "rule 1000 http.uri contains \"a\" or http.uri "
+                         "contains \"b\" and http.uri contains \"c\";";
+  sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
+  ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
+
+  int result = parse_rule_string(rule_str, rule_mg);
+  ASSERT_EQ(0, result, "Rule parsing failed");
+
+  // 验证规则计数和ID
+  ASSERT(rule_mg->rules_count == 1, "Expected one rule");
+  ASSERT(rule_mg->rule_ids != NULL, "Rule IDs array is NULL");
+  ASSERT(rule_mg->rule_ids[0] == 1000, "Wrong rule ID");
+  ASSERT(rule_mg->max_rules >= 1000, "Max rules too small");
+
+  // 检查规则掩码数组是否分配
+  ASSERT(rule_mg->rule_masks != NULL, "Rule masks array is NULL");
+
+  ASSERT(rule_mg->rule_masks[1000].sub_rules_count == 2, "Rule subcount mismatch");
+
+  ASSERT(rule_mg->rule_masks[1000].and_masks[0] == 1, "sub rule 1 Wrong AND mask");
+  ASSERT(rule_mg->rule_masks[1000].and_masks[1] == 3, "sub rule 2 Wrong AND mask");
+
+  destroy_rule_mg(rule_mg);
+  passed_tests++;
+}
+
 int main() {
   TEST_SUITE_BEGIN();
 
@@ -600,6 +699,9 @@ int main() {
   RUN_TEST(ends_with_special_chars);
   RUN_TEST(multi_pattern_hyperscan);
   RUN_TEST(rule_mg_duplication); // 添加新的测试用例
+  RUN_TEST(and_masks);
+  RUN_TEST(or_masks);
+  RUN_TEST(complex_and_or_masks);
 
   TEST_SUITE_END();
   return 0;
