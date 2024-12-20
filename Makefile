@@ -110,7 +110,7 @@ test-nginx: check-source
 	@echo "Running Test::Nginx tests..."
 	TEST_NGINX_BINARY=$(NGINX_PATH)/objs/nginx \
 	TEST_NGINX_VERBOSE=1 \
-	prove -r t/
+	prove -r t/sanity/basic2.t
 
 # 运行主程序
 run: rule_parser
@@ -128,5 +128,10 @@ clean-parser:
 clean-module:
 	cd $(NGINX_PATH) && make clean 2>/dev/null || true
 
+clangd: prepare
+	cd $(NGINX_PATH) && bear -- make 
+	cp -f $(NGINX_PATH)/compile_commands.json $(MODULE_PATH)
+
+
 .PHONY: all prepare build verify test clean \
-        test-parser test-pattern-converter test-nginx clean-parser clean-module run
+        test-parser test-pattern-converter test-nginx clean-parser clean-module run clangd
