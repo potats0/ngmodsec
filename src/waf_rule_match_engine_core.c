@@ -77,7 +77,7 @@ void fill_event_info(ngx_http_request_t *r, ngx_uint_t rule_id,
  *@param [in] relation_node: 当前命中子式的逻辑关系节点
  */
 int Threat_find_func(rule_hit_unit_t *unit, rule_relation_t *relation_node,
-                     hs_search_userdata_t *hs_usrdata) {
+                     ngx_http_modsecurity_ctx_t *hs_usrdata) {
 
   MLOGN("find tmp threat_id %d\n ", relation_node->threat_id);
   // 攻击特征
@@ -120,7 +120,7 @@ int Threat_find_func(rule_hit_unit_t *unit, rule_relation_t *relation_node,
  */
 rule_hit_unit_t *Threat_insert_func(rule_hit_context_t *context,
                                     rule_relation_t *relation_node,
-                                    hs_search_userdata_t *hs_usrdata) {
+                                    ngx_http_modsecurity_ctx_t *hs_usrdata) {
   unsigned int *hit_count_p = &(context->hit_count);
   if (*hit_count_p > MAX_HIT_RESULT_NUM) {
     MLOGN("insert context int totul %d  exceed MAX_HIT_RESULT_NUM  \n",
@@ -153,7 +153,7 @@ rule_hit_unit_t *Threat_insert_func(rule_hit_context_t *context,
  *@param [in] relation_node  当前命中子式所关联的逻辑关系
  */
 int rbtree_search_insert(rule_relation_t *relation_node,
-                         hs_search_userdata_t *hs_usrdata,
+                         ngx_http_modsecurity_ctx_t *hs_usrdata,
                          rule_log_unit_t *log_unit) {
   rule_hit_context_t *hit_ctx = &(hs_usrdata->rule_hit_context);
   struct rb_root *root = &(hit_ctx->rule_hit_root);
@@ -225,33 +225,33 @@ int rbtree_search_insert(rule_relation_t *relation_node,
 int eventHandler(unsigned int id, unsigned long long from,
                  unsigned long long to, unsigned int flags, void *ctx) {
   int ret = 0;
-  hs_search_userdata_t *hs_usrdata = (hs_search_userdata_t *)ctx;
-  // rule_hit_context_t *hit_context = &hs_usrdata->rule_hit_context;
-  sign_rule_mg_t *mg = sign_rule_mg;
+  // hs_search_userdata_t *hs_usrdata = (hs_search_userdata_t *)ctx;
+  // // rule_hit_context_t *hit_context = &hs_usrdata->rule_hit_context;
+  // sign_rule_mg_t *mg = sign_rule_mg;
 
   MLOGN("-------------------------success----------------------\n");
-  MLOGN("Match for pattern %30s at from %llu to  %llu\n",
-        mg->string_match_context_array[hs_usrdata->proto_var_id]
-            ->string_patterns_list[id]
-            .string_pattern,
-        from, to);
+  // MLOGN("Match for pattern %30s at from %llu to  %llu\n",
+  //       mg->string_match_context_array[hs_usrdata->proto_var_id]
+  //           ->string_patterns_list[id]
+  //           .string_pattern,
+  //       from, to);
 
-  string_pattern_t *pattern =
-      &(mg->string_match_context_array[hs_usrdata->proto_var_id]
-            ->string_patterns_list[id]);
+  // string_pattern_t *pattern =
+  //     &(mg->string_match_context_array[hs_usrdata->proto_var_id]
+  //           ->string_patterns_list[id]);
 
-  if (pattern->relation_count <= 0) {
-    return ret;
-  }
+  // if (pattern->relation_count <= 0) {
+  //   return ret;
+  // }
 
   // 每次匹配中特征串 记录 用于日志高亮显示
-  rule_log_unit_t *log_unit =
-      ngx_pcalloc(hs_usrdata->r->pool, sizeof(rule_log_unit_t));
-  if (log_unit) {
-    log_unit->proto_var_id = hs_usrdata->proto_var_id;
-    log_unit->begin = from;
-    log_unit->end = to;
-  }
+  // rule_log_unit_t *log_unit =
+  //     ngx_pcalloc(hs_usrdata->r->pool, sizeof(rule_log_unit_t));
+  // if (log_unit) {
+  //   log_unit->proto_var_id = hs_usrdata->proto_var_id;
+  //   log_unit->begin = from;
+  //   log_unit->end = to;
+  // }
 
 #ifdef WAF
   rule_relation_t *rr_node = NULL;
@@ -269,23 +269,23 @@ int eventHandler(unsigned int id, unsigned long long from,
 }
 
 int new_string_check(void *inputData, unsigned int inputLen,
-                     hs_search_userdata_t *usrdata) {
-  unsigned int pro_var_id = usrdata->proto_var_id;
-  sign_rule_mg_t *mg = sign_rule_mg;
+                     ngx_http_modsecurity_ctx_t *usrdata) {
+  // unsigned int pro_var_id = usrdata->proto_var_id;
+  // sign_rule_mg_t *mg = sign_rule_mg;
 
-  if (mg == NULL || inputData == NULL || inputLen == 0 || inputLen > 4096) {
-    MLOGN("---ERROR mg %p new sign scan data len %d ", mg, inputLen);
-    return -1;
-  }
+  // if (mg == NULL || inputData == NULL || inputLen == 0 || inputLen > 4096) {
+  //   MLOGN("---ERROR mg %p new sign scan data len %d ", mg, inputLen);
+  //   return -1;
+  // }
 
-  string_match_context_t **sm_ctx_array =
-      (string_match_context_t **)mg->string_match_context_array;
+  // string_match_context_t **sm_ctx_array =
+  //     (string_match_context_t **)mg->string_match_context_array;
 
-  if (sm_ctx_array[pro_var_id] == NULL ||
-      sm_ctx_array[pro_var_id]->db == NULL) {
-    MLOGN("--ERROR hyperscan scan proto id %d  is NULL \n", pro_var_id);
-    return -1;
-  }
+  // if (sm_ctx_array[pro_var_id] == NULL ||
+  //     sm_ctx_array[pro_var_id]->db == NULL) {
+  //   MLOGN("--ERROR hyperscan scan proto id %d  is NULL \n", pro_var_id);
+  //   return -1;
+  // }
 
   // hs_error_t err =
   //     hs_scan(sm_ctx_array[pro_var_id]->db, (const char *)inputData,
@@ -302,6 +302,6 @@ int new_string_check(void *inputData, unsigned int inputLen,
 
 void __attribute__((unused))
 new_sign_engin_scan(void *inputData, unsigned int inputLen,
-                    hs_search_userdata_t *usrdata) {
+                    ngx_http_modsecurity_ctx_t *usrdata) {
   new_string_check(inputData, inputLen, usrdata);
 }

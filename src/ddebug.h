@@ -98,7 +98,7 @@ static void dd(const char *fmt, ...) {}
 #endif
 
 #ifdef NGX_DEBUG
-#define MLOG(ngx_cycle->log, level, fmt, ...)                                  \
+#define MLOG(logger, level, fmt, ...)                                          \
   ngx_log_error(level, logger, 0, "[%s:%d] " fmt, __FILE__, __LINE__,          \
                 ##__VA_ARGS__)
 #else
@@ -111,9 +111,9 @@ static void dd(const char *fmt, ...) {}
 #define MLOGN(fmt, ...) MLOG(ngx_cycle->log, NGX_LOG_NOTICE, fmt, ##__VA_ARGS__)
 
 #ifdef NGX_DEBUG
-#define LOGD(fmt, ...) MLOG(NGX_LOG_DEBUG, fmt, ##__VA_ARGS__)
+#define MLOGD(fmt, ...) MLOG(ngx_cycle->log, NGX_LOG_DEBUG, fmt, ##__VA_ARGS__)
 #else
-#define LOGD(lfmt, ...) ((void)0)
+#define MLOGD(lfmt, ...) ((void)0)
 #endif
 
 #endif /* _DDEBUG_H_INCLUDED_ */

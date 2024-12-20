@@ -37,59 +37,26 @@ static ngx_int_t ngx_http_modsecurity_module_init(ngx_cycle_t *cycle) {
  * @param r nginx请求结构体指针
  * @return hs_search_userdata_t* 成功返回用户数据指针，失败返回NULL
  */
-static inline hs_search_userdata_t *
+ngx_http_modsecurity_ctx_t *
 ngx_http_modsecurity_get_ctx(ngx_http_request_t *r) {
-  MLOGN("Attempting to get user data from request context");
+  MLOGD("Attempting to get user data from request context");
 
-  hs_search_userdata_t *usrdata =
+  ngx_http_modsecurity_ctx_t *usrdata =
       ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
   if (usrdata == NULL) {
-    MLOGN("User data not found in context, creating new one");
+    MLOGD("User data not found in context, creating new one");
 
-    usrdata = ngx_pcalloc(r->pool, sizeof(hs_search_userdata_t));
+    usrdata = ngx_pcalloc(r->pool, sizeof(ngx_http_modsecurity_ctx_t));
     if (usrdata == NULL) {
-      MLOGN("Failed to allocate memory for user data");
+      MLOGD("Failed to allocate memory for user data");
       return NULL;
     }
 
     ngx_http_set_ctx(r, usrdata, ngx_http_modsecurity_module);
-    MLOGN("Successfully created and set new user data in context");
+    MLOGD("Successfully created and set new user data in context");
   }
 
   return usrdata;
-}
-
-static ngx_int_t __attribute__((unused))
-new_sign_check_request_body(ngx_http_request_t *r,
-                            hs_search_userdata_t *usrdata) {
-#ifdef WAF
-  vs_proto_var_t *var = get_protovar(r, NGX_VAR_REQ_BODY);
-  if (var) {
-    usrdata->proto_var_id = NGX_VAR_REQ_BODY;
-    new_sign_engin_scan((char *)(var->un.p), var->len, usrdata);
-  }
-#endif
-  return NGX_OK;
-}
-
-static ngx_int_t ngx_http_waf_rule_checker(ngx_http_request_t *r) {
-
-  hs_search_userdata_t *usrdata = ngx_http_modsecurity_get_ctx(r);
-  if (usrdata == NULL) {
-    return NGX_DECLINED;
-  }
-  usrdata->r = r;
-
-  new_sign_check_request_body(r, usrdata);
-
-  return NGX_DECLINED;
-}
-
-static ngx_int_t new_sign_precontent_phase_handler(ngx_http_request_t *r) {
-  MLOGN("Entering precontent phase handler");
-  ngx_http_waf_rule_checker(r);
-  MLOGN("Exiting precontent phase handler");
-  return NGX_DECLINED;
 }
 
 static ngx_int_t predef_sign_response_header_checker(ngx_http_request_t *r) {
@@ -127,7 +94,7 @@ static ngx_int_t new_sign_response_body_filter(ngx_http_request_t *r,
   }
 
 #endif
-  hs_search_userdata_t *usrdata = ngx_http_modsecurity_get_ctx(r);
+  ngx_http_modsecurity_ctx_t *usrdata = ngx_http_modsecurity_get_ctx(r);
   if (usrdata == NULL) {
     return ngx_http_next_body_filter(r, in);
   }
@@ -170,7 +137,7 @@ static ngx_int_t ngx_http_modsecurity_init(ngx_conf_t *cf) {
   if (h == NULL) {
     return NGX_ERROR;
   }
-  *h = new_sign_precontent_phase_handler;
+  *h = ngx_http_modsecurity_precontent_handler;
 
   if (sign_rule_mg && sign_rule_mg->string_match_context_array) {
     if (compile_all_hyperscan_databases(sign_rule_mg) != 0) {

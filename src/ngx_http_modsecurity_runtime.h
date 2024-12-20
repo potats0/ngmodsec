@@ -39,15 +39,15 @@ typedef struct rule_hit_context_s {
 } rule_hit_context_t;
 
 /** 用于匹配过程所需的输入和输出 **/
-typedef struct hs_search_userdata_s {
-  uint32_t proto_var_id;
+typedef struct ngx_http_modsecurity_ctx_s {
+  string_match_context_t string_match_context;
   rule_hit_context_t rule_hit_context;
   uint32_t rsp_detect_len;
   ngx_http_request_t *r; // for hit_ctx alloc & log
-} hs_search_userdata_t;
+} ngx_http_modsecurity_ctx_t;
 
 extern void new_sign_engin_scan(void *inputData, unsigned int inputLen,
-                                hs_search_userdata_t *usrdata);
+                                ngx_http_modsecurity_ctx_t *usrdata);
 
 #define NGINX_CHECK_URL_VARS(var, proto_id)                                    \
   do {                                                                         \
@@ -95,5 +95,8 @@ extern int log_2_content(ngx_http_request_t *r, uint32_t threat_id,
 
 // Auxiliary functions for logging and debugging
 void log_rule_mg_status(sign_rule_mg_t *rule_mg);
+
+ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r);
+ngx_http_modsecurity_ctx_t *ngx_http_modsecurity_get_ctx(ngx_http_request_t *r);
 
 #endif

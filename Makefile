@@ -72,7 +72,7 @@ prepare:
 	fi
 	@if [ ! -f $(NGINX_PATH)/Makefile ]; then \
 		cd $(NGINX_PATH) && \
-		auto/configure --add-module=$(MODULE_PATH); \
+		auto/configure --add-module=$(MODULE_PATH) --with-debug;\
 	fi
 
 check-source:
