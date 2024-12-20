@@ -29,7 +29,9 @@ ngx_module_srcs="$ngx_addon_dir/src/rule_parser/rule_mg.c \
                  $ngx_addon_dir/src/auxiliary.c \
                  $ngx_addon_dir/src/waf_rule_match_engine_core.c \
                  $ngx_addon_dir/src/ngx_http_modsecurity_module.c \
-                 $ngx_addon_dir/src/ngx_http_modsecurity_precontent.c"
+                 $ngx_addon_dir/src/ngx_http_modsecurity_precontent.c \
+                 $ngx_addon_dir/src/ngx_http_modsecurity_header_filter.c\
+                 $ngx_addon_dir/src/ngx_http_modsecurity_body_filter.c"
                  
 
 ngx_module_libs="-lhs -lm"

@@ -99,4 +99,10 @@ void log_rule_mg_status(sign_rule_mg_t *rule_mg);
 ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r);
 ngx_http_modsecurity_ctx_t *ngx_http_modsecurity_get_ctx(ngx_http_request_t *r);
 
+// 初始化
+ngx_int_t ngx_http_modsecurity_precontent_init(ngx_conf_t *cf);
+
+ngx_int_t ngx_http_modsecurity_header_filter_init();
+ngx_int_t ngx_http_modsecurity_body_filter_init();
+
 #endif

@@ -17,9 +17,6 @@
 sign_rule_mg_t *sign_rule_mg = NULL;
 hs_scratch_t *scratch[HTTP_VAR_MAX];
 
-static ngx_http_output_body_filter_pt ngx_http_next_body_filter;
-static ngx_http_output_header_filter_pt ngx_http_next_header_filter;
-
 static void ngx_http_modsecurity_process_exit(ngx_cycle_t *cycle) {
   MLOGN("waf rule match engine process exit");
 }
@@ -59,86 +56,14 @@ ngx_http_modsecurity_get_ctx(ngx_http_request_t *r) {
   return usrdata;
 }
 
-static ngx_int_t predef_sign_response_header_checker(ngx_http_request_t *r) {
-  return NGX_DECLINED;
-}
-
-static ngx_int_t new_sign_response_header_filter(ngx_http_request_t *r) {
-  predef_sign_response_header_checker(r);
-  return ngx_http_next_header_filter(r);
-}
-
-static ngx_int_t new_sign_response_body_filter(ngx_http_request_t *r,
-                                               ngx_chain_t *in) {
-
-#ifdef WAF
-  if (is_bypass(r, CONF1_NEW_SIGN_ENGINE) == WAF_ENABLE) {
-    return ngx_http_next_body_filter(r, in);
-  }
-
-  ngx_http_core_srv_conf_t *cscf =
-      ngx_http_get_module_srv_conf(r, ngx_http_core_module);
-  ngx_uint_t ngx_server_id = cscf->server_conf_id;
-
-  waf_sign_template_t *set = NULL;
-  set = (waf_sign_template_t *)wafconf_general_conf_get_by_server_id(
-      ngx_server_id, CONF2_VIRTUAL_SITE_SUB_EVENT);
-
-  /* 云端只引用自定义模板情况 */
-  if (NULL == set) {
-    set = (waf_sign_template_t *)wafconf_general_conf_get_by_server_id(
-        ngx_server_id, CONF2_VIRTUAL_SITE_SUB_CUSTOM_EVENT);
-  }
-  if (NULL == set) {
-    return ngx_http_next_body_filter(r, in);
-  }
-
-#endif
-  ngx_http_modsecurity_ctx_t *usrdata = ngx_http_modsecurity_get_ctx(r);
-  if (usrdata == NULL) {
-    return ngx_http_next_body_filter(r, in);
-  }
-  usrdata->r = r;
-#ifdef WAF
-  usrdata->proto_var_id = NGX_VAR_RSP_BODY;
-
-  for (cl = in; cl; cl = cl->next) {
-    b = cl->buf;
-    len = ngx_buf_size(b);
-    if (len <= 0) {
-      continue;
-    }
-    if (r->upstream && r->upstream->conf &&
-        usrdata->rsp_detect_len > r->upstream->conf->proxy_detect_body_size) {
-      return ngx_http_next_body_filter(r, in);
-    }
-    usrdata->rsp_detect_len += len;
-
-    new_sign_engin_scan(b->pos, len, usrdata);
-  }
-#endif
-  return ngx_http_next_body_filter(r, in);
-}
-
 static ngx_int_t ngx_http_modsecurity_init(ngx_conf_t *cf) {
-  ngx_http_handler_pt *h;
-  ngx_http_core_main_conf_t *cmcf;
 
-  /* 保存并设置 filter chain */
-  ngx_http_next_body_filter = ngx_http_top_body_filter;
-  ngx_http_top_body_filter = new_sign_response_body_filter;
-  ngx_http_next_header_filter = ngx_http_top_header_filter;
-  ngx_http_top_header_filter = new_sign_response_header_filter;
-
-  cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
-
-  /* 注册 precontent phase handler */
-  h = ngx_array_push(&cmcf->phases[NGX_HTTP_PRECONTENT_PHASE].handlers);
-  if (h == NULL) {
+  if (ngx_http_modsecurity_precontent_init(cf) != NGX_OK) {
     return NGX_ERROR;
   }
-  *h = ngx_http_modsecurity_precontent_handler;
 
+  ngx_http_modsecurity_header_filter_init();
+  ngx_http_modsecurity_body_filter_init();
   if (sign_rule_mg && sign_rule_mg->string_match_context_array) {
     if (compile_all_hyperscan_databases(sign_rule_mg) != 0) {
       MLOGN("--ERROR compile_all_hyperscan_databases failed \n");

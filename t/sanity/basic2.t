@@ -7,20 +7,26 @@ no_shuffle();
 run_tests();
 
 __DATA__
-=== TEST 1: user data context creation
+=== TEST 1: handler execution
+--- http_config
+    error_log logs/error.log debug;
 --- config
-    location /test_ctx {
+    location /test_handler {
+        error_log logs/error.log debug;
         rule 'rule 1000 http.uri contains "a";';
         rule 'rule 1002 http.uri contains "b";';
-        return 200 "test context";
+        proxy_pass http://127.0.0.1:$TEST_NGINX_SERVER_PORT/echo;
+    }
+    
+    location /echo {
+        return 200 "echo";
     }
 --- request
-GET /test_ctx
+GET /test_handler
 --- error_log
-Attempting to get user data from request context
-User data not found in context, creating new one
-Successfully created and set new user data in context
+Entering precontent phase handler
+Exiting precontent phase handler
+entering modsecurity header filter
+entering modsecurity body filter
 --- no_error_log
-Failed to allocate memory for user data
 [error]
-
