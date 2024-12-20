@@ -45,7 +45,7 @@ static int ensure_rule_mask_capacity(sign_rule_mg_t* rule_mg, uint32_t rule_id) 
         return 0;  // 空间足够
     }
 
-    uint32_t new_size = rule_id + 128;  // 每次多分配一些空间
+    uint32_t new_size = rule_id + RULESETS_GROWTH_SIZE;  // 每次多分配一些空间
     rule_mask_array_t* new_masks = g_waf_rule_malloc(new_size * sizeof(rule_mask_array_t));
     if (!new_masks) {
         fprintf(stderr, "Failed to reallocate rule masks array\n");

@@ -21,7 +21,8 @@
   "relation_dir"
 #define CONF1_NEW_SIGN_ENGINE 1
 
-#define MAX_RULES_NUM 10000 // 默认最大规则数量，如果不够，那就每次增长128
+#define INITIAL_RULESETS_CAPACITY 10000 // 默认最大规则数量，如果不够，那就每次增长128
+#define RULESETS_GROWTH_SIZE 128 // 默认最大规则数量，如果不够，那就每次增长128
 // 单个协议变量中允许的最大字符串模式数量，用于限制字符串匹配上下文数组和模式列表的大小
 #ifdef TEST_PARSER
 #define INITIAL_PATTERNS_CAPACITY 1

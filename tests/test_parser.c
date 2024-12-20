@@ -789,31 +789,31 @@ TEST_CASE(realloc_string_ptterns) {
 int main() {
   TEST_SUITE_BEGIN();
 
-  // RUN_TEST(single_contains);
-  // RUN_TEST(regex_basic_path);
-  // RUN_TEST(regex_groups_and_choices);
-  // RUN_TEST(regex_file_extensions);
-  // RUN_TEST(regex_unicode_classes);
-  // RUN_TEST(regex_complex_path);
-  // RUN_TEST(regex_backreferences);
-  // RUN_TEST(regex_email);
-  // RUN_TEST(regex_multiple_conditions);
-  // RUN_TEST(regex_nested_parentheses);
-  // RUN_TEST(multiple_rules_merge);
-  // RUN_TEST(starts_with_basic);
-  // RUN_TEST(ends_with_basic);
-  // RUN_TEST(equals_basic);
-  // RUN_TEST(contains_special_chars);
-  // RUN_TEST(starts_with_special_chars);
-  // RUN_TEST(ends_with_special_chars);
-  // RUN_TEST(multi_pattern_hyperscan);
-  // RUN_TEST(rule_mg_duplication); // 添加新的测试用例
-  // RUN_TEST(and_masks);
-  // RUN_TEST(or_masks);
-  // RUN_TEST(complex_and_or_masks);
+  RUN_TEST(single_contains);
+  RUN_TEST(regex_basic_path);
+  RUN_TEST(regex_groups_and_choices);
+  RUN_TEST(regex_file_extensions);
+  RUN_TEST(regex_unicode_classes);
+  RUN_TEST(regex_complex_path);
+  RUN_TEST(regex_backreferences);
+  RUN_TEST(regex_email);
+  RUN_TEST(regex_multiple_conditions);
+  RUN_TEST(regex_nested_parentheses);
+  RUN_TEST(multiple_rules_merge);
+  RUN_TEST(starts_with_basic);
+  RUN_TEST(ends_with_basic);
+  RUN_TEST(equals_basic);
+  RUN_TEST(contains_special_chars);
+  RUN_TEST(starts_with_special_chars);
+  RUN_TEST(ends_with_special_chars);
+  RUN_TEST(multi_pattern_hyperscan);
+  RUN_TEST(rule_mg_duplication); // 添加新的测试用例
+  RUN_TEST(and_masks);
+  RUN_TEST(or_masks);
+  RUN_TEST(complex_and_or_masks);
   RUN_TEST(not_masks);
   RUN_TEST(not_or_masks);
-  // RUN_TEST(realloc_masks);
+  RUN_TEST(realloc_masks);
 
   TEST_SUITE_END();
   return 0;

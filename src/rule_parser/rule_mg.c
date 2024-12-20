@@ -40,7 +40,7 @@ int init_rule_mg(sign_rule_mg_t *rule_mg) {
   }
 
   // 初始化规则相关的字段
-  rule_mg->max_rules = MAX_RULES_NUM;
+  rule_mg->max_rules = INITIAL_RULESETS_CAPACITY;
   rule_mg->rules_count = 0;
   rule_mg->rule_ids = g_waf_rule_malloc(rule_mg->max_rules * sizeof(uint32_t));
   if (!rule_mg->rule_ids) {
