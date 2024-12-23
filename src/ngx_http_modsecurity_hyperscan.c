@@ -19,7 +19,7 @@ int on_match(unsigned int id, unsigned long long from, unsigned long long to,
     rule_relation_t relation = match_ctx->string_patterns_list[id].relations[i];
 
     int threat_id = relation.threat_id >> 8;
-    int sub_id = threat_id & 0xFF;
+    int sub_id = relation.threat_id & 0xFF;
     // 当前子规则下，如果触发该条件后，设置位图的掩码
     uint32_t and_bit = relation.and_bit;
     MLOGD("Matched threat_id: %d sub_id: %d and_bit: %d", threat_id, sub_id,
