@@ -58,15 +58,17 @@ typedef struct ngx_http_modsecurity_ctx_s {
 extern void new_sign_engin_scan(void *inputData, unsigned int inputLen,
                                 ngx_http_modsecurity_ctx_t *usrdata);
 
-#define DO_CHECK_URL_VARS(VAR, FIELD)                                          \
+#define DO_CHECK_VARS(VAR, FIELD)                                              \
   do {                                                                         \
-    string_match_context_t *match_ctx =                                        \
-        sign_rule_mg->string_match_context_array[FIELD];                       \
-    ctx->match_context = match_ctx;                                            \
-    MLOGD("do check %V", VAR);                                                 \
-    if (match_ctx && match_ctx->db && scratch[FIELD]) {                        \
-      hs_scan(match_ctx->db, (const char *)VAR.data, VAR.len, 0,               \
-              scratch[FIELD], on_match, ctx);                                  \
+    if (VAR != NULL) {                                                         \
+      string_match_context_t *match_ctx =                                      \
+          sign_rule_mg->string_match_context_array[FIELD];                     \
+      ctx->match_context = match_ctx;                                          \
+      MLOGD("do check %*s ", VAR.len, VAR.data);                               \
+      if (match_ctx && match_ctx->db && scratch[FIELD]) {                      \
+        hs_scan(match_ctx->db, (const char *)VAR.data, VAR.len, 0,             \
+                scratch[FIELD], on_match, ctx);                                \
+      }                                                                        \
     }                                                                          \
   } while (0)
 
