@@ -28,5 +28,18 @@ alloc scratch 0u failed, field is NULL
 alloc scratch 1u success
 alloc scratch 2u failed, field is NULL
 alloc scratch 3u failed, field is NULL
+Matched rule ID: 0 (from: 7lu, to: 8lu)
+Matched pattern: a
+Matched relation count : 1
+Matched threat_id: 1000 sub_id: 0 and_bit: 1
+recoed isn't exist, rule ID: 1000, Sub ID: 0, created new record
+Matched rule ID: 1 (from: 13lu, to: 14lu)
+Matched pattern: b
+Matched relation count : 1
+Matched threat_id: 1000 sub_id: 0 and_bit: 2
+finded exisesting record, rule ID: 1000, Sub ID: 0, BitMask: 0x1
+Traversing rule hits:
+tree Rule ID: 1000, Sub ID: 0, BitMask: 0x3, CombinedMask: 0x3
+Exiting precontent phase handler
 --- no_error_log
 [error]

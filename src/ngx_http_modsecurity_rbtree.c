@@ -60,9 +60,15 @@ ngx_int_t insert_rule_hit_node(ngx_rbtree_t *tree, ngx_pool_t *pool,
   rule_hit_node_t *existing = find_rule_hit_node(tree, threat_id);
   if (existing != NULL) {
     // 如果找到现有节点，执行OR操作
+    MLOGD("finded exisesting record, rule ID: %d, Sub ID: %d, BitMask: 0x%d",
+          existing->threat_id >> 8, existing->threat_id & 0xFF,
+          existing->rule_bit_mask);
     existing->rule_bit_mask |= rule_bit_mask;
     return NGX_OK;
   }
+
+  MLOGD("recoed isn't exist, rule ID: %d, Sub ID: %d, created new record",
+        threat_id >> 8, threat_id & 0xFF, rule_bit_mask);
 
   // 如果不存在，创建新节点
   rule_hit_node_t *node;
@@ -97,9 +103,11 @@ void traverse_rule_hit_tree(ngx_rbtree_node_t *node,
 
   // 处理当前节点
   rule_hit_node_t *current = (rule_hit_node_t *)node;
-  MLOGN(" tree Rule ID: %d, Sub ID: %d, BitMask: 0x%d, CombinedMask: 0x%d",
+  MLOGD(" tree Rule ID: %d, Sub ID: %d, BitMask: 0x%d, CombinedMask: 0x%d",
         current->threat_id >> 8, current->threat_id & 0xFF,
         current->rule_bit_mask, current->combined_rule_mask);
+
+  // tODO 上报日志
 
   // 再遍历右子树
   traverse_rule_hit_tree(node->right, sentinel);
@@ -112,6 +120,6 @@ void traverse_rule_hits(ngx_rbtree_t *tree) {
     return;
   }
 
-  MLOGN("Traversing rule hits:");
+  MLOGD("Traversing rule hits:");
   traverse_rule_hit_tree(tree->root, tree->sentinel);
 }
