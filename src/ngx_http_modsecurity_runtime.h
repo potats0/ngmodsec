@@ -112,4 +112,17 @@ ngx_int_t ngx_http_modsecurity_precontent_init(ngx_conf_t *cf);
 ngx_int_t ngx_http_modsecurity_header_filter_init();
 ngx_int_t ngx_http_modsecurity_body_filter_init();
 
+// nginx 红黑树相关操作函数
+void traverse_rule_hits(ngx_rbtree_t *tree);
+// 创建并插入新节点的辅助函数
+ngx_int_t insert_rule_hit_node(ngx_rbtree_t *tree, ngx_pool_t *pool,
+                               int threat_id, uint32_t rule_bit_mask,
+                               uint32_t combined_rule_mask);
+// 红黑树节点插入函数
+void rule_hit_insert_value(ngx_rbtree_node_t *temp, ngx_rbtree_node_t *node,
+                           ngx_rbtree_node_t *sentinel);
+
+// hyperscan 扫描回调函数
+int on_match(unsigned int id, unsigned long long from, unsigned long long to,
+             unsigned int flags, void *context);
 #endif
