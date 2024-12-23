@@ -38,6 +38,7 @@
 typedef enum {
   HTTP_VAR_UNKNOWN = 0,
   HTTP_VAR_URI,    // http.uri
+  HTTP_VAR_UA,     // http.user_agent
   HTTP_VAR_HEADER, // http.header
   HTTP_VAR_BODY,   // http.body
   HTTP_VAR_MAX

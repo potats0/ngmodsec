@@ -60,7 +60,7 @@ extern void new_sign_engin_scan(void *inputData, unsigned int inputLen,
 
 #define DO_CHECK_VARS(VAR, FIELD)                                              \
   do {                                                                         \
-    if (VAR != NULL) {                                                         \
+    if (VAR.data != NULL) {                                                    \
       string_match_context_t *match_ctx =                                      \
           sign_rule_mg->string_match_context_array[FIELD];                     \
       ctx->match_context = match_ctx;                                          \
@@ -68,6 +68,35 @@ extern void new_sign_engin_scan(void *inputData, unsigned int inputLen,
       if (match_ctx && match_ctx->db && scratch[FIELD]) {                      \
         hs_scan(match_ctx->db, (const char *)VAR.data, VAR.len, 0,             \
                 scratch[FIELD], on_match, ctx);                                \
+      }                                                                        \
+    }                                                                          \
+  } while (0)
+
+// 遍历所有的headers，获取目标name对应的value
+// 使用示例：
+// FOR_EACH_HEADER("User-Agent", HTTP_VAR_UA);
+#define FOR_EACH_HEADER_CHECK(HEADER_NAME, FIELD)                              \
+  do {                                                                         \
+    ngx_list_part_t *part = &r->headers_in.headers.part;                       \
+    ngx_table_elt_t *header = part->elts;                                      \
+                                                                               \
+    MLOGD("Starting to process %s headers", HEADER_NAME);                      \
+                                                                               \
+    for (size_t i = 0; /* void */; i++) {                                      \
+      if (i >= part->nelts) {                                                  \
+        if (part->next == NULL) {                                              \
+          break;                                                               \
+        }                                                                      \
+                                                                               \
+        part = part->next;                                                     \
+        header = part->elts;                                                   \
+        i = 0;                                                                 \
+      }                                                                        \
+                                                                               \
+      if (ngx_strncasecmp(header[i].key.data, (u_char *)HEADER_NAME,           \
+                          sizeof(#HEADER_NAME) - 1) == 0) {                    \
+        MLOGN("%s: %V", HEADER_NAME, &header[i].value);                        \
+        DO_CHECK_VARS(header[i].value, FIELD);                                 \
       }                                                                        \
     }                                                                          \
   } while (0)

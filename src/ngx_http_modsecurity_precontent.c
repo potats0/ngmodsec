@@ -11,7 +11,9 @@ ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r) {
     return NGX_DECLINED;
   }
 
-  DO_CHECK_URL_VARS(r->uri, HTTP_VAR_URI);
+  DO_CHECK_VARS(r->uri, HTTP_VAR_URI);
+
+  FOR_EACH_HEADER_CHECK("User-Agent", HTTP_VAR_UA);
 
   // 放在结尾，准备上报日志
   traverse_rule_hits(ctx->rule_hit_context);

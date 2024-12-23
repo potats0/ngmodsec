@@ -22,7 +22,8 @@ extern YYSTYPE yylval;
 "http.uri"      { yylval.var_type = HTTP_VAR_URI; return HTTP_VAR; }
 "http.header"   { yylval.var_type = HTTP_VAR_HEADER; return HTTP_VAR; }
 "http.body"     { yylval.var_type = HTTP_VAR_BODY; return HTTP_VAR; }
-"http.method"   { return HTTP_METHOD; }
+"http.user-agent"   { yylval.var_type = HTTP_VAR_UA; return HTTP_VAR; }
+"http.method"     { return HTTP_METHOD; }
 "GET"             { yylval.method = 0x00000002; return METHOD; }
 "HEAD"            { yylval.method = 0x00000004; return METHOD; }
 "POST"            { yylval.method = 0x00000008; return METHOD; }
