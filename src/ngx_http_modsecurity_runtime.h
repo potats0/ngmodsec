@@ -39,7 +39,7 @@ typedef struct rule_log_unit_s {
 
 typedef struct {
   ngx_rbtree_node_t node;
-  int threat_id;               // 命中规则ID
+  u_int32_t threat_id;         // 命中规则ID
   uint32_t rule_bit_mask;      // 保存记录规则命中的bit位
   uint32_t combined_rule_mask; // 告警所需的总命中bit位
   uint32_t not_rule_mask;      // 告警所需的非关系bit位
@@ -123,7 +123,7 @@ ngx_int_t ngx_http_modsecurity_body_filter_init();
 void traverse_rule_hits(ngx_rbtree_t *tree);
 // 创建并插入新节点的辅助函数
 ngx_int_t insert_rule_hit_node(ngx_rbtree_t *tree, ngx_pool_t *pool,
-                               int threat_id, uint32_t rule_bit_mask,
+                               u_int32_t threat_id, uint32_t rule_bit_mask,
                                uint32_t combined_rule_mask,
                                uint32_t not_rule_mask);
 // 红黑树节点插入函数

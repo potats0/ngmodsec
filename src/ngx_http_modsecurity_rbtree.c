@@ -34,7 +34,7 @@ void rule_hit_insert_value(ngx_rbtree_node_t *temp, ngx_rbtree_node_t *node,
 }
 
 // 查找节点的函数
-rule_hit_node_t *find_rule_hit_node(ngx_rbtree_t *tree, int threat_id) {
+rule_hit_node_t *find_rule_hit_node(ngx_rbtree_t *tree, u_int32_t threat_id) {
   ngx_rbtree_node_t *node = tree->root;
   ngx_rbtree_node_t *sentinel = tree->sentinel;
 
@@ -54,7 +54,7 @@ rule_hit_node_t *find_rule_hit_node(ngx_rbtree_t *tree, int threat_id) {
 
 // 创建并插入新节点的辅助函数
 ngx_int_t insert_rule_hit_node(ngx_rbtree_t *tree, ngx_pool_t *pool,
-                               int threat_id, uint32_t rule_bit_mask,
+                               u_int32_t threat_id, uint32_t rule_bit_mask,
                                uint32_t combined_rule_mask,
                                uint32_t not_rule_mask) {
   // 先查找是否已存在相同threat_id的节点
