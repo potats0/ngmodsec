@@ -14,20 +14,16 @@ ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r) {
 
   ngx_rbtree_t *tree = ngx_palloc(r->pool, sizeof(ngx_rbtree_t));
   ngx_rbtree_node_t *sentinel = ngx_palloc(r->pool, sizeof(ngx_rbtree_node_t));
+  ctx->rule_hit_context = tree;
+
   if (tree == NULL || sentinel == NULL) {
     return NGX_DECLINED;
   }
   ngx_rbtree_init(tree, sentinel, rule_hit_insert_value);
 
-  string_match_context_t *match_ctx =
-      sign_rule_mg->string_match_context_array[HTTP_VAR_URI];
-  ctx->rule_hit_context = tree;
-  ctx->match_context = match_ctx;
-  if (match_ctx && match_ctx->db && scratch[HTTP_VAR_URI]) {
-    hs_scan(match_ctx->db, (const char *)r->uri.data, r->uri.len, 0,
-            scratch[HTTP_VAR_URI], on_match, ctx);
-  }
+  DO_CHECK_URL_VARS(r->uri, HTTP_VAR_URI);
 
+  // 放在结尾，准备上报日志
   traverse_rule_hits(tree);
   MLOGD("Exiting precontent phase handler");
   return NGX_DECLINED;
