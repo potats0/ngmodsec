@@ -43,6 +43,8 @@ typedef struct {
   uint32_t rule_bit_mask;      // 保存记录规则命中的bit位
   uint32_t combined_rule_mask; // 告警所需的总命中bit位
   uint32_t not_rule_mask;      // 告警所需的非关系bit位
+  uint32_t rule_method;        // 该规则匹配的http请求方法
+  uint32_t method;             // 当前http请求方法
 } rule_hit_node_t;
 
 /** 用于匹配过程所需的输入和输出 **/
@@ -125,7 +127,8 @@ void traverse_rule_hits(ngx_rbtree_t *tree);
 ngx_int_t insert_rule_hit_node(ngx_rbtree_t *tree, ngx_pool_t *pool,
                                u_int32_t threat_id, uint32_t rule_bit_mask,
                                uint32_t combined_rule_mask,
-                               uint32_t not_rule_mask);
+                               uint32_t not_rule_mask, uint32_t rule_method,
+                               uint32_t method);
 // 红黑树节点插入函数
 void rule_hit_insert_value(ngx_rbtree_node_t *temp, ngx_rbtree_node_t *node,
                            ngx_rbtree_node_t *sentinel);

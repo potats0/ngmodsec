@@ -32,9 +32,14 @@ int on_match(unsigned int id, unsigned long long from, unsigned long long to,
     // 获取该子规则的非条件的掩码
     uint32_t rule_notbit_mask =
         sign_rule_mg->rule_masks[threat_id].not_masks[sub_id];
+    // 请求方法的掩码
+    uint32_t rule_method = sign_rule_mg->rule_masks[threat_id].method[sub_id];
+
+    MLOGD("current request method: %d", r->method);
 
     insert_rule_hit_node(tree, r->pool, relation.threat_id, relation.and_bit,
-                         rule_bit_mask, rule_notbit_mask);
+                         rule_bit_mask, rule_notbit_mask, rule_method,
+                         r->method);
   }
   return 0; // Continue matching
 }

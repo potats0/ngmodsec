@@ -56,7 +56,8 @@ rule_hit_node_t *find_rule_hit_node(ngx_rbtree_t *tree, u_int32_t threat_id) {
 ngx_int_t insert_rule_hit_node(ngx_rbtree_t *tree, ngx_pool_t *pool,
                                u_int32_t threat_id, uint32_t rule_bit_mask,
                                uint32_t combined_rule_mask,
-                               uint32_t not_rule_mask) {
+                               uint32_t not_rule_mask, uint32_t rule_method,
+                               uint32_t method) {
   // 先查找是否已存在相同threat_id的节点
   rule_hit_node_t *existing = find_rule_hit_node(tree, threat_id);
   if (existing != NULL) {
@@ -70,8 +71,9 @@ ngx_int_t insert_rule_hit_node(ngx_rbtree_t *tree, ngx_pool_t *pool,
   }
 
   MLOGD("recoed isn't exist, rule ID: %d, Sub ID: %d combined BitMask: 0x%d, "
-        "not_mask: 0x%d, created new record",
-        threat_id >> 8, threat_id & 0xFF, combined_rule_mask, not_rule_mask);
+        "not_mask: 0x%d method: %d, created new record",
+        threat_id >> 8, threat_id & 0xFF, combined_rule_mask, not_rule_mask,
+        rule_method);
 
   // 如果不存在，创建新节点
   rule_hit_node_t *node;
@@ -89,6 +91,8 @@ ngx_int_t insert_rule_hit_node(ngx_rbtree_t *tree, ngx_pool_t *pool,
   node->rule_bit_mask = rule_bit_mask;
   node->combined_rule_mask = combined_rule_mask;
   node->not_rule_mask = not_rule_mask;
+  node->rule_method = rule_method;
+  node->method = method;
 
   // 插入节点到红黑树
   ngx_rbtree_insert(tree, &node->node);
@@ -110,15 +114,17 @@ void traverse_rule_hit_tree(ngx_rbtree_node_t *node,
   // 处理当前节点
   rule_hit_node_t *current = (rule_hit_node_t *)node;
   MLOGD(" tree Rule ID: %d, Sub ID: %d, BitMask: 0x%d, CombinedMask: 0x%d, "
-        "not_mask: 0x%d",
+        "not_mask: 0x%d, rule_method: %d, req method: %d",
         current->threat_id >> 8, current->threat_id & 0xFF,
         current->rule_bit_mask, current->combined_rule_mask,
-        current->not_rule_mask);
+        current->not_rule_mask, current->rule_method, current->method);
   // 需要通过xor 排除非掩码，获取真正的andbit
   if (current->rule_bit_mask ==
           (current->combined_rule_mask ^ current->not_rule_mask) &&
       // 非条件判断
-      (current->rule_bit_mask & current->not_rule_mask) == 0) {
+      (current->rule_bit_mask & current->not_rule_mask) == 0 &&
+      // 方法匹配 直接and操作就行
+      current->rule_method & current->method) {
     // TODO 上报告警
     MLOGD("Matched Rule ID: %d", current->threat_id >> 8);
   }
