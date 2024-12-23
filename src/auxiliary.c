@@ -37,7 +37,8 @@ void log_rule_mg_status(sign_rule_mg_t *rule_mg) {
             continue;
           }
 
-          for (uint32_t pat_idx = 0; pat_idx < ctx->string_patterns_num; pat_idx++) {
+          for (uint32_t pat_idx = 0; pat_idx < ctx->string_patterns_num;
+               pat_idx++) {
             string_pattern_t *pattern = &ctx->string_patterns_list[pat_idx];
             if (!pattern || !pattern->string_pattern) {
               continue;
@@ -47,7 +48,7 @@ void log_rule_mg_status(sign_rule_mg_t *rule_mg) {
               continue;
             }
 
-            for (int rel_idx = 0; rel_idx < pattern->relation_count;
+            for (uint32_t rel_idx = 0; rel_idx < pattern->relation_count;
                  rel_idx++) {
               rule_relation_t *rel = &pattern->relations[rel_idx];
               if (!rel) {
@@ -122,7 +123,7 @@ void log_rule_mg_status(sign_rule_mg_t *rule_mg) {
         MLOGN("    Relations Count: %d", pattern->relation_count);
 
         if (pattern->relations) {
-          for (int k = 0; k < pattern->relation_count; k++) {
+          for (uint32_t k = 0; k < pattern->relation_count; k++) {
             rule_relation_t *rel = &pattern->relations[k];
             char and_bit_str[32];
             snprintf(and_bit_str, sizeof(and_bit_str), "%u", rel->and_bit);

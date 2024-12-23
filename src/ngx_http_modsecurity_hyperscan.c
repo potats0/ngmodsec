@@ -14,7 +14,8 @@ int on_match(unsigned int id, unsigned long long from, unsigned long long to,
   MLOGD("Matched relation count : %d",
         match_ctx->string_patterns_list[id].relation_count);
 
-  for (int i = 0; i < match_ctx->string_patterns_list[id].relation_count; i++) {
+  for (uint32_t i = 0; i < match_ctx->string_patterns_list[id].relation_count;
+       i++) {
     rule_relation_t relation = match_ctx->string_patterns_list[id].relations[i];
 
     MLOGD("Matched threat_id: %d sub_id: %d and_bit: %d",

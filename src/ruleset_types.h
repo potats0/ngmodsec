@@ -21,7 +21,8 @@
   "relation_dir"
 #define CONF1_NEW_SIGN_ENGINE 1
 
-#define INITIAL_RULESETS_CAPACITY 10000 // 默认最大规则数量，如果不够，那就每次增长128
+#define INITIAL_RULESETS_CAPACITY                                              \
+  10000 // 默认最大规则数量，如果不够，那就每次增长128
 #define RULESETS_GROWTH_SIZE 128 // 默认最大规则数量，如果不够，那就每次增长128
 // 单个协议变量中允许的最大字符串模式数量，用于限制字符串匹配上下文数组和模式列表的大小
 #ifdef TEST_PARSER
@@ -60,17 +61,17 @@ typedef struct rule_relation_s {
 typedef struct string_pattern_s {
   char *string_pattern;       // 匹配的字符串模式
   rule_relation_t *relations; // 引用这个模式的规则关系数组
-  int relation_count;         // 引用这个模式的规则关系数量
+  uint32_t relation_count;    // 引用这个模式的规则关系数量
   uint32_t hs_flags;          // Hyperscan标志位
 } string_pattern_t;
 
 /** 模式字符串规则匹配上下文，以每协议变量分配 **/
 typedef struct string_match_context_s {
   string_pattern_t *string_patterns_list; // 模式字符串list
-  uint32_t string_patterns_num;                // 模式字符串规则数量
-  uint32_t string_patterns_capacity; // 模式字符串规则容量
+  uint32_t string_patterns_num;           // 模式字符串规则数量
+  uint32_t string_patterns_capacity;      // 模式字符串规则容量
   uint32_t *string_ids; // 编译hs用，对应string_patterns_list的索引
-  hs_database_t *db;        // hs数据库
+  hs_database_t *db;    // hs数据库
 } string_match_context_t;
 
 /** 全局规则管理结构mg, 目前只实现字符串 **/
