@@ -90,10 +90,12 @@ ngx_http_modsecurity_get_ctx(ngx_http_request_t *r) {
   ctx->rule_hit_context = tree;
 
   if (tree == NULL || sentinel == NULL) {
+    MLOGE("ngx_palloc failed, rbtree init failed");
     return NULL;
   }
 
   ngx_rbtree_init(tree, sentinel, rule_hit_insert_value);
+  MLOGD("rbtree init success");
 
   return ctx;
 }
