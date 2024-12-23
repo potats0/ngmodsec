@@ -79,6 +79,7 @@ ngx_int_t insert_rule_hit_node(ngx_rbtree_t *tree, ngx_pool_t *pool,
   // 分配新节点内存
   node = ngx_palloc(pool, sizeof(rule_hit_node_t));
   if (node == NULL) {
+    MLOGE("alloc rule_hit_node_t failed");
     return NGX_ERROR;
   }
 
@@ -92,6 +93,8 @@ ngx_int_t insert_rule_hit_node(ngx_rbtree_t *tree, ngx_pool_t *pool,
   // 插入节点到红黑树
   ngx_rbtree_insert(tree, &node->node);
 
+  MLOGD("success insert new record, rule ID: %d, Sub ID: %d", threat_id >> 8,
+        threat_id & 0xFF);
   return NGX_OK;
 }
 
