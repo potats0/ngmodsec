@@ -84,7 +84,7 @@ ngx_int_t insert_rule_hit_node(ngx_rbtree_t *tree, ngx_pool_t *pool,
   }
 
   // 初始化节点数据
-  node->node.key = threat_id >> 8; // 使用rule_id作为key
+  node->node.key = threat_id; // 使用rule_id作为key
   node->threat_id = threat_id;
   node->rule_bit_mask = rule_bit_mask;
   node->combined_rule_mask = combined_rule_mask;
