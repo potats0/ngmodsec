@@ -243,6 +243,8 @@ rule 40001: not http.uri contains "public";
 rule 40002: not http.method equals "GET" and http.uri contains "api";
 ```
 
+注意：规则表达式中不支持单独的not条件。例如not http.uri contains "public"； 是不允许的。
+
 ### 规则示例
 
 1. 基本的包含匹配：
