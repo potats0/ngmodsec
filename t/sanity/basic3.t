@@ -32,7 +32,7 @@ Matched rule ID: 0 (from: 7lu, to: 8lu)
 Matched pattern: a
 Matched relation count : 1
 Matched threat_id: 1000 sub_id: 0 and_bit: 1
-recoed isn't exist, rule ID: 1000, Sub ID: 0 combined BitMask: 0x3, not_mask: 0x0, created new record
+recoed isn't exist, rule ID: 1000, Sub ID: 0 combined BitMask: 0x3, not_mask: 0x0 method: -1, created new record
 Matched rule ID: 1 (from: 13lu, to: 14lu)
 Matched pattern: b
 Matched relation count : 1

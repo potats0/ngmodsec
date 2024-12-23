@@ -28,6 +28,11 @@ hs_scratch_t *scratch[HTTP_VAR_MAX];
  * @return void 无返回值
  */
 void ngx_http_modsecurity_alloc_scratch(sign_rule_mg_t *mg) {
+  if (mg == NULL) {
+    MLOGE("alloc scratch failed, sign_rule_mg_t is NULL");
+    return;
+  }
+
   for (ngx_uint_t i = 0; i < HTTP_VAR_MAX; i++) {
     if (mg->string_match_context_array && mg->string_match_context_array[i]) {
       hs_database_t *db = mg->string_match_context_array[i]->db;
