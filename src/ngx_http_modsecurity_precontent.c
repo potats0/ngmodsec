@@ -10,21 +10,11 @@ ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r) {
     // 内存耗尽，相当于Bypass
     return NGX_DECLINED;
   }
-  ctx->r = r;
-
-  ngx_rbtree_t *tree = ngx_palloc(r->pool, sizeof(ngx_rbtree_t));
-  ngx_rbtree_node_t *sentinel = ngx_palloc(r->pool, sizeof(ngx_rbtree_node_t));
-  ctx->rule_hit_context = tree;
-
-  if (tree == NULL || sentinel == NULL) {
-    return NGX_DECLINED;
-  }
-  ngx_rbtree_init(tree, sentinel, rule_hit_insert_value);
 
   DO_CHECK_URL_VARS(r->uri, HTTP_VAR_URI);
 
   // 放在结尾，准备上报日志
-  traverse_rule_hits(tree);
+  traverse_rule_hits(ctx->rule_hit_context);
   MLOGD("Exiting precontent phase handler");
   return NGX_DECLINED;
 }

@@ -68,22 +68,34 @@ ngx_http_modsecurity_ctx_t *
 ngx_http_modsecurity_get_ctx(ngx_http_request_t *r) {
   MLOGD("Attempting to get user data from request context");
 
-  ngx_http_modsecurity_ctx_t *usrdata =
+  ngx_http_modsecurity_ctx_t *ctx =
       ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
-  if (usrdata == NULL) {
+  if (ctx == NULL) {
     MLOGD("User data not found in context, creating new one");
 
-    usrdata = ngx_pcalloc(r->pool, sizeof(ngx_http_modsecurity_ctx_t));
-    if (usrdata == NULL) {
+    ctx = ngx_pcalloc(r->pool, sizeof(ngx_http_modsecurity_ctx_t));
+    if (ctx == NULL) {
       MLOGD("Failed to allocate memory for user data");
       return NULL;
     }
 
-    ngx_http_set_ctx(r, usrdata, ngx_http_modsecurity_module);
+    ngx_http_set_ctx(r, ctx, ngx_http_modsecurity_module);
     MLOGD("Successfully created and set new user data in context");
   }
+  ctx->r = r;
 
-  return usrdata;
+  // 初始化红黑树
+  ngx_rbtree_t *tree = ngx_palloc(r->pool, sizeof(ngx_rbtree_t));
+  ngx_rbtree_node_t *sentinel = ngx_palloc(r->pool, sizeof(ngx_rbtree_node_t));
+  ctx->rule_hit_context = tree;
+
+  if (tree == NULL || sentinel == NULL) {
+    return NULL;
+  }
+
+  ngx_rbtree_init(tree, sentinel, rule_hit_insert_value);
+
+  return ctx;
 }
 
 static ngx_int_t ngx_http_modsecurity_init(ngx_conf_t *cf) {
