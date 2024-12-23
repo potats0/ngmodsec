@@ -60,6 +60,13 @@ int init_rule_mg(sign_rule_mg_t *rule_mg) {
     memset(&rule_mg->rule_masks[i], 0, sizeof(rule_mask_array_t));
   }
 
+  // 初始化所有规则的 method 为 0xFFFFFFFF
+  for (uint32_t i = 0; i < rule_mg->max_rules; i++) {
+    for (uint32_t j = 0; j < MAX_SUB_RULES_NUM; j++) {
+      rule_mg->rule_masks[i].method[j] = 0xFFFFFFFF;
+    }
+  }
+
   // 分配字符串匹配上下文数组
   rule_mg->string_match_context_array =
       g_waf_rule_malloc(HTTP_VAR_MAX * sizeof(string_match_context_t *));
@@ -187,10 +194,10 @@ sign_rule_mg_t *dup_rule_mg(const sign_rule_mg_t *src) {
 
     // 分配并复制模式列表
     dst_ctx->string_patterns_capacity = src_ctx->string_patterns_capacity;
-    dst_ctx->string_patterns_list = 
-        g_waf_rule_malloc(dst_ctx->string_patterns_capacity * sizeof(string_pattern_t));
+    dst_ctx->string_patterns_list = g_waf_rule_malloc(
+        dst_ctx->string_patterns_capacity * sizeof(string_pattern_t));
     if (!dst_ctx->string_patterns_list) {
-        goto cleanup;
+      goto cleanup;
     }
     memset(dst_ctx->string_patterns_list, 0,
            dst_ctx->string_patterns_capacity * sizeof(string_pattern_t));

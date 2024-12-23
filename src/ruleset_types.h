@@ -47,7 +47,8 @@ typedef enum {
 typedef struct rule_mask_array_s {
   u_int16_t and_masks[MAX_SUB_RULES_NUM]; // 每个子规则的条件掩码
   u_int16_t not_masks[MAX_SUB_RULES_NUM]; // 每个子规则的NOT条件掩码
-  u_int8_t sub_rules_count;               // 实际子规则数量
+  u_int32_t method[MAX_SUB_RULES_NUM]; // http请求方法，参考ngx_http_request_t
+  u_int8_t sub_rules_count;            // 实际子规则数量
 } rule_mask_array_t;
 
 /** 规则命中子式的逻辑关系 **/

@@ -54,6 +54,14 @@ static int ensure_rule_mask_capacity(sign_rule_mg_t* rule_mg, uint32_t rule_id) 
 
     memset(new_masks, 0, new_size * sizeof(rule_mask_array_t));
     memcpy(new_masks, rule_mg->rule_masks, rule_mg->max_rules * sizeof(rule_mask_array_t));
+
+    // 初始化新分配空间的 method 为 0xFFFFFFFF
+    for (uint32_t i = rule_mg->max_rules; i < new_size; i++) {
+        for (uint32_t j = 0; j < MAX_SUB_RULES_NUM; j++) {
+            new_masks[i].method[j] = 0xFFFFFFFF;
+        }
+    }
+
     g_waf_rule_free(rule_mg->rule_masks);
     rule_mg->rule_masks = new_masks;
     rule_mg->max_rules = new_size;
@@ -263,6 +271,7 @@ static int handle_match_expr(http_var_type_t var_type, char* pattern_str,
     int number;
     unsigned int flags;
     http_var_type_t var_type;
+    uint32_t method;
 }
 
 %token <string> STRING
@@ -274,6 +283,11 @@ static int handle_match_expr(http_var_type_t var_type, char* pattern_str,
 %token AND OR NOT
 %token RULE SEMICOLON
 %token NOCASE MULTILINE DOTALL SINGLEMATCH
+
+%token HTTP_METHOD
+%token <method> METHOD
+%type  <method> method_expr
+%token EQ
 
 %type <flags> pattern_flags
 %type <flags> pattern_flag
@@ -331,9 +345,23 @@ rule:
     }
     ;
 
+method_expr:
+    METHOD {
+        $$ = $1;
+    }
+    | method_expr '|' METHOD {
+        $$ = $1 | $3;
+    }
+    ;
+
 rule_expr:
     match_expr {
         printf("Converting match_expr to rule_expr\n");
+    }
+    | HTTP_METHOD EQ method_expr {
+        rule_mask_array_t* rule_mask = &current_rule_mg->rule_masks[current_rule_id];
+        rule_mask->method[current_sub_id] = $3;
+        printf("Setting HTTP method: %d\n", $3);
     }
     | NOT rule_expr {
         printf("NOT operation\n");
