@@ -32,14 +32,15 @@ Matched rule ID: 0 (from: 7lu, to: 8lu)
 Matched pattern: a
 Matched relation count : 1
 Matched threat_id: 1000 sub_id: 0 and_bit: 1
-recoed isn't exist, rule ID: 1000, Sub ID: 0, created new record
+recoed isn't exist, rule ID: 1000, Sub ID: 0 combined BitMask: 0x3, not_mask: 0x0, created new record
 Matched rule ID: 1 (from: 13lu, to: 14lu)
 Matched pattern: b
 Matched relation count : 1
 Matched threat_id: 1000 sub_id: 0 and_bit: 2
-finded exisesting record, rule ID: 1000, Sub ID: 0, BitMask: 0x1
+finded exisesting record, rule ID: 1000, Sub ID: 0, BitMask: 0x3, not_mask: 0x0
 Traversing rule hits:
 tree Rule ID: 1000, Sub ID: 0, BitMask: 0x3, CombinedMask: 0x3
+Matched Rule ID: 1000
 Exiting precontent phase handler
 --- no_error_log
 [error]

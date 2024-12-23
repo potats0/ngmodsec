@@ -55,20 +55,23 @@ rule_hit_node_t *find_rule_hit_node(ngx_rbtree_t *tree, int threat_id) {
 // 创建并插入新节点的辅助函数
 ngx_int_t insert_rule_hit_node(ngx_rbtree_t *tree, ngx_pool_t *pool,
                                int threat_id, uint32_t rule_bit_mask,
-                               uint32_t combined_rule_mask) {
+                               uint32_t combined_rule_mask,
+                               uint32_t not_rule_mask) {
   // 先查找是否已存在相同threat_id的节点
   rule_hit_node_t *existing = find_rule_hit_node(tree, threat_id);
   if (existing != NULL) {
-    // 如果找到现有节点，执行OR操作
-    MLOGD("finded exisesting record, rule ID: %d, Sub ID: %d, BitMask: 0x%d",
+    // 如果找到现有节点
+    MLOGD("finded exisesting record, rule ID: %d, Sub ID: %d, BitMask: 0x%d, "
+          "not_mask: 0x%d",
           existing->threat_id >> 8, existing->threat_id & 0xFF,
-          existing->rule_bit_mask);
+          existing->combined_rule_mask, existing->not_rule_mask);
     existing->rule_bit_mask |= rule_bit_mask;
     return NGX_OK;
   }
 
-  MLOGD("recoed isn't exist, rule ID: %d, Sub ID: %d, created new record",
-        threat_id >> 8, threat_id & 0xFF, rule_bit_mask);
+  MLOGD("recoed isn't exist, rule ID: %d, Sub ID: %d combined BitMask: 0x%d, "
+        "not_mask: 0x%d, created new record",
+        threat_id >> 8, threat_id & 0xFF, combined_rule_mask, not_rule_mask);
 
   // 如果不存在，创建新节点
   rule_hit_node_t *node;
@@ -84,6 +87,7 @@ ngx_int_t insert_rule_hit_node(ngx_rbtree_t *tree, ngx_pool_t *pool,
   node->threat_id = threat_id;
   node->rule_bit_mask = rule_bit_mask;
   node->combined_rule_mask = combined_rule_mask;
+  node->not_rule_mask = not_rule_mask;
 
   // 插入节点到红黑树
   ngx_rbtree_insert(tree, &node->node);
@@ -103,11 +107,19 @@ void traverse_rule_hit_tree(ngx_rbtree_node_t *node,
 
   // 处理当前节点
   rule_hit_node_t *current = (rule_hit_node_t *)node;
-  MLOGD(" tree Rule ID: %d, Sub ID: %d, BitMask: 0x%d, CombinedMask: 0x%d",
+  MLOGD(" tree Rule ID: %d, Sub ID: %d, BitMask: 0x%d, CombinedMask: 0x%d, "
+        "not_mask: 0x%d",
         current->threat_id >> 8, current->threat_id & 0xFF,
-        current->rule_bit_mask, current->combined_rule_mask);
-
-  // tODO 上报日志
+        current->rule_bit_mask, current->combined_rule_mask,
+        current->not_rule_mask);
+  // 需要通过xor 排除非掩码，获取真正的andbit
+  if (current->rule_bit_mask ==
+          (current->combined_rule_mask ^ current->not_rule_mask) &&
+      // 非条件判断
+      (current->rule_bit_mask & current->not_rule_mask) == 0) {
+    // TODO 上报告警
+    MLOGD("Matched Rule ID: %d", current->threat_id >> 8);
+  }
 
   // 再遍历右子树
   traverse_rule_hit_tree(node->right, sentinel);
