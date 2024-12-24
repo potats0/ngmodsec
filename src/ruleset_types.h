@@ -27,6 +27,7 @@ typedef enum {
   HTTP_VAR_HEADER,   // http.header
   HTTP_VAR_BODY,     // http.body
   HTTP_VAR_GET_ARGS, // http.get_args
+  HTTP_VAR_HEADERS_ARGS, // http.headers_args
   HTTP_VAR_MAX
 } http_var_type_t;
 
@@ -73,8 +74,8 @@ typedef struct hash_pattern_item_s {
 /** 全局规则管理结构mg, 目前只实现字符串 **/
 typedef struct sign_rule_mg_s {
   string_match_context_t **string_match_context_array; // 字符串匹配上下文数组
-  hash_pattern_item_t *get_match_context; // get参数匹配上下文
-  // hash_pattern_t *header_match_context;   // header参数匹配上下文
+  hash_pattern_item_t *get_match_context;    // get参数匹配上下文
+  hash_pattern_item_t *header_match_context; // header参数匹配上下文
   rule_mask_array_t *rule_masks; // 规则掩码数组（动态分配）
   uint32_t max_rules;            // 当前分配的最大规则数
   uint32_t rules_count;          // 实际规则数量

@@ -346,6 +346,7 @@ static int handle_kvmatch_expr(char *param, char* pattern_str,
 %token <flags> FLAGS
 %token <var_type> HTTP_VAR
 %token <var_type> HTTP_GET_ARGS
+%token <var_type> HTTP_HEADERS_ARGS
 %token <string> IDENTIFIER
 
 %token CONTAINS MATCHES STARTS_WITH ENDS_WITH EQUALS
@@ -507,6 +508,12 @@ match_expr:
     | HTTP_GET_ARGS '[' IDENTIFIER ']' EQUALS STRING pattern_flags {
         printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
          if (handle_kvmatch_expr($3, $6, OP_EQUALS, $7) != 0) {
+            YYERROR;
+        }
+    }
+    | HTTP_HEADERS_ARGS '[' IDENTIFIER ']' CONTAINS STRING pattern_flags {
+        printf("Matched HTTP headers arg %s contains: %s with flags: 0x%x\n", $3, $6, $7);
+        if (handle_kvmatch_expr($3, $6, OP_CONTAINS, $7) != 0) {
             YYERROR;
         }
     }
