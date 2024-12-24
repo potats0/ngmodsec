@@ -9,7 +9,7 @@ void parse_get_args(ngx_http_request_t *r) {
     MLOGD("No GET parameters found");
     return;
   }
-  MLOGD("GET parameters found");
+  MLOGD("GET parameters found Starting to process uri args");
 
   u_char *start = r->args.data;
   u_char *end = r->args.data + r->args.len;
@@ -40,4 +40,6 @@ void parse_get_args(ngx_http_request_t *r) {
       CHECK_HTTP_PARAM_MATCH(key, value, sign_rule_mg->get_match_context, ctx);
     }
   }
+
+  MLOGD("Exiting to process uri args");
 }
