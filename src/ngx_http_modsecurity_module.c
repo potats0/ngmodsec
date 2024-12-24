@@ -15,7 +15,6 @@
 #endif
 
 sign_rule_mg_t *sign_rule_mg = NULL;
-hs_scratch_t *scratch[HTTP_VAR_MAX];
 
 /**
  * @brief 为WAF规则匹配引擎分配hyperscan scratch空间
@@ -33,16 +32,17 @@ void ngx_http_modsecurity_alloc_scratch(sign_rule_mg_t *mg) {
     return;
   }
 
+  // 为普通的string_match_context分配scratch
   for (ngx_uint_t i = 0; i < HTTP_VAR_MAX; i++) {
     if (mg->string_match_context_array && mg->string_match_context_array[i]) {
-      hs_database_t *db = mg->string_match_context_array[i]->db;
-      if (db == NULL) {
-        scratch[i] = NULL;
+      string_match_context_t *ctx = mg->string_match_context_array[i];
+      if (ctx->db == NULL) {
+        ctx->scratch = NULL;
         MLOGE("alloc scratch %lu failed, hyperscan db is NULL", i);
       } else {
-        if (hs_alloc_scratch(db, &(scratch[i])) != HS_SUCCESS) {
+        if (hs_alloc_scratch(ctx->db, &(ctx->scratch)) != HS_SUCCESS) {
           MLOGE("alloc scratch %lu failed", i);
-          scratch[i] = NULL;
+          ctx->scratch = NULL;
         }
         MLOGN("alloc scratch %lu success", i);
       }
@@ -50,10 +50,53 @@ void ngx_http_modsecurity_alloc_scratch(sign_rule_mg_t *mg) {
       MLOGN("alloc scratch %lu failed, field is NULL", i);
     }
   }
+
+  // 为GET参数的hash表分配scratch
+  if (mg->get_match_context) {
+    hash_pattern_item_t *current, *tmp;
+    HASH_ITER(hh, mg->get_match_context, current, tmp) {
+      string_match_context_t *ctx = &current->context;
+      if (ctx->db == NULL) {
+        ctx->scratch = NULL;
+        MLOGE("alloc scratch for GET arg %s failed, hyperscan db is NULL",
+              current->key);
+      } else {
+        if (hs_alloc_scratch(ctx->db, &(ctx->scratch)) != HS_SUCCESS) {
+          MLOGE("alloc scratch for GET arg %s failed", current->key);
+          ctx->scratch = NULL;
+        }
+        MLOGN("alloc scratch for GET arg %s success", current->key);
+      }
+    }
+  }
 }
 
 static void ngx_http_modsecurity_process_exit(ngx_cycle_t *cycle) {
-  MLOGN("waf rule match engine process exit");
+  MLOGN("process exit");
+  sign_rule_mg_t *mg = sign_rule_mg;
+
+  // 释放普通的string_match_context的scratch
+  for (ngx_uint_t i = 0; i < HTTP_VAR_MAX; i++) {
+    if (mg->string_match_context_array && mg->string_match_context_array[i]) {
+      string_match_context_t *ctx = mg->string_match_context_array[i];
+      if (ctx->scratch) {
+        hs_free_scratch(ctx->scratch);
+        ctx->scratch = NULL;
+      }
+    }
+  }
+
+  // 释放GET参数的scratch
+  if (sign_rule_mg && sign_rule_mg->get_match_context) {
+    hash_pattern_item_t *current, *tmp;
+    HASH_ITER(hh, sign_rule_mg->get_match_context, current, tmp) {
+      string_match_context_t *ctx = &current->context;
+      if (ctx->scratch) {
+        hs_free_scratch(ctx->scratch);
+        ctx->scratch = NULL;
+      }
+    }
+  }
 }
 
 static ngx_int_t ngx_http_modsecurity_module_init(ngx_cycle_t *cycle) {

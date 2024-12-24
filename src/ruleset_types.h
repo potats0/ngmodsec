@@ -3,6 +3,7 @@
 
 #include "uthash.h"
 #include <hs/hs_common.h>
+#include <hs/hs_runtime.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -74,8 +75,9 @@ typedef struct string_match_context_s {
   string_pattern_t *string_patterns_list; // 模式字符串list
   uint32_t string_patterns_num;           // 模式字符串规则数量
   uint32_t string_patterns_capacity;      // 模式字符串规则容量
-  uint32_t *string_ids; // 编译hs用，对应string_patterns_list的索引
-  hs_database_t *db;    // hs数据库
+  uint32_t *string_ids;  // 编译hs用，对应string_patterns_list的索引
+  hs_database_t *db;     // hs数据库
+  hs_scratch_t *scratch; // 添加scratch字段
 } string_match_context_t;
 
 // 用来支持类似Hash模式，主要备用在get参数的模式串存储和header模式串的存储

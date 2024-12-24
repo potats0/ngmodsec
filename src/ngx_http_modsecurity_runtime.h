@@ -55,19 +55,17 @@ typedef struct ngx_http_modsecurity_ctx_s {
   ngx_http_request_t *r; // for hit_ctx alloc & log
 } ngx_http_modsecurity_ctx_t;
 
-extern void new_sign_engin_scan(void *inputData, unsigned int inputLen,
-                                ngx_http_modsecurity_ctx_t *usrdata);
-
 #define DO_CHECK_VARS(VAR, FIELD)                                              \
   do {                                                                         \
     if (VAR.data != NULL) {                                                    \
       string_match_context_t *match_ctx =                                      \
           sign_rule_mg->string_match_context_array[FIELD];                     \
       ctx->match_context = match_ctx;                                          \
+      hs_scratch_t *scratch = match_ctx->scratch;                              \
       MLOGD("do check %*s ", VAR.len, VAR.data);                               \
-      if (match_ctx && match_ctx->db && scratch[FIELD]) {                      \
-        hs_scan(match_ctx->db, (const char *)VAR.data, VAR.len, 0,             \
-                scratch[FIELD], on_match, ctx);                                \
+      if (match_ctx && match_ctx->db && scratch) {                             \
+        hs_scan(match_ctx->db, (const char *)VAR.data, VAR.len, 0, scratch,    \
+                on_match, ctx);                                                \
       }                                                                        \
     }                                                                          \
   } while (0)
@@ -128,10 +126,6 @@ extern void new_sign_engin_scan(void *inputData, unsigned int inputLen,
 
 /** 全局管理数据结构mg **/
 extern sign_rule_mg_t *sign_rule_mg;
-extern hs_scratch_t *scratch[HTTP_VAR_MAX];
-
-// /** hs所用到的scratch内存 进程启动时分配 **/
-// extern hs_scratch_t *scratch[NGX_VAR_MAX];
 
 /** new sign 模块结构 **/
 extern ngx_module_t ngx_http_modsecurity_module;
