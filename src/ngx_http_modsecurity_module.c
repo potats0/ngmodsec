@@ -129,21 +129,23 @@ ngx_http_modsecurity_get_ctx(ngx_http_request_t *r) {
 
     ngx_http_set_ctx(r, ctx, ngx_http_modsecurity_module);
     MLOGD("Successfully created and set new user data in context");
+
+    ctx->r = r;
+
+    // 初始化红黑树
+    ngx_rbtree_t *tree = ngx_palloc(r->pool, sizeof(ngx_rbtree_t));
+    ngx_rbtree_node_t *sentinel =
+        ngx_palloc(r->pool, sizeof(ngx_rbtree_node_t));
+    ctx->rule_hit_context = tree;
+
+    if (tree == NULL || sentinel == NULL) {
+      MLOGE("ngx_palloc failed, rbtree init failed");
+      return NULL;
+    }
+
+    ngx_rbtree_init(tree, sentinel, rule_hit_insert_value);
+    MLOGD("rbtree init success");
   }
-  ctx->r = r;
-
-  // 初始化红黑树
-  ngx_rbtree_t *tree = ngx_palloc(r->pool, sizeof(ngx_rbtree_t));
-  ngx_rbtree_node_t *sentinel = ngx_palloc(r->pool, sizeof(ngx_rbtree_node_t));
-  ctx->rule_hit_context = tree;
-
-  if (tree == NULL || sentinel == NULL) {
-    MLOGE("ngx_palloc failed, rbtree init failed");
-    return NULL;
-  }
-
-  ngx_rbtree_init(tree, sentinel, rule_hit_insert_value);
-  MLOGD("rbtree init success");
 
   return ctx;
 }
