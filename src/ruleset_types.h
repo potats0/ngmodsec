@@ -8,30 +8,13 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-/** 规则文件加载路径 **/
-#define RULE_FILE_PATH                                                         \
-  "/usr/local/waf/conf/security_detect/sign_conf/parser_result/predef_rule/"   \
-  "string_pattern_dir"
-#define STR_FILE_PATH                                                          \
-  "/usr/local/waf/conf/security_detect/sign_conf/parser_result/predef_rule/"   \
-  "string_pattern_dir"
-#define PCRE_FILE_PATH                                                         \
-  "/usr/local/waf/conf/security_detect/sign_conf/parser_result/predef_rule/"   \
-  "pcre_pattern_dir"
-#define RELA_FILE_PATH                                                         \
-  "/usr/local/waf/conf/security_detect/sign_conf/parser_result/predef_rule/"   \
-  "relation_dir"
 #define CONF1_NEW_SIGN_ENGINE 1
 
-#define INITIAL_RULESETS_CAPACITY                                              \
-  10000 // 默认最大规则数量，如果不够，那就每次增长128
+// 默认最大规则数量，如果不够，那就每次增长128
+#define INITIAL_RULESETS_CAPACITY 10000
 #define RULESETS_GROWTH_SIZE 128 // 默认最大规则数量，如果不够，那就每次增长128
 // 单个协议变量中允许的最大字符串模式数量，用于限制字符串匹配上下文数组和模式列表的大小
-#ifdef TEST_PARSER
-#define INITIAL_PATTERNS_CAPACITY 1
-#else
 #define INITIAL_PATTERNS_CAPACITY 256
-#endif
 #define PATTERNS_GROWTH_SIZE 128
 
 #define MAX_SUB_RULES_NUM 8 // 每个规则的最大子规则数
