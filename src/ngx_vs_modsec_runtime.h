@@ -23,7 +23,7 @@ typedef struct ngx_vs_modsec_ctx_s {
   string_match_context_t *match_context;
   ngx_rbtree_t *rule_hit_rbtree;
   ngx_http_request_t *request; // for hit_ctx alloc & log
-} ngx_http_modsecurity_ctx_t;
+} ngx_vs_modsec_ctx_t;
 
 #define DO_CHECK_VARS(VAR, FIELD)                                              \
   do {                                                                         \
@@ -50,7 +50,7 @@ extern ngx_module_t ngx_http_modsecurity_module;
 void log_rule_mg_status(sign_rule_mg_t *rule_mg);
 
 ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r);
-ngx_http_modsecurity_ctx_t *ngx_http_modsecurity_get_ctx(ngx_http_request_t *r);
+ngx_vs_modsec_ctx_t *ngx_http_modsecurity_get_ctx(ngx_http_request_t *r);
 
 // 初始化
 ngx_int_t ngx_http_modsecurity_precontent_init(ngx_conf_t *cf);

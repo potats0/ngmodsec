@@ -14,7 +14,7 @@ cd -
 
 ngx_module_incs="$ngx_addon_dir/src/ $ngx_addon_dir/src/rule_parser/"
 
-ngx_module_deps="$ngx_addon_dir/src/ngx_http_modsecurity_runtime.h \
+ngx_module_deps="$ngx_addon_dir/src/ngx_vs_modsec_runtime.h \
                  $ngx_addon_dir/src/ruleset_types.h \
                  $ngx_addon_dir/src/ddebug.h \
                  $ngx_addon_dir/src/rule_parser/rule_parser.tab.h"
@@ -25,13 +25,13 @@ ngx_module_srcs="$ngx_addon_dir/src/rule_parser/rule_mg.c \
                  $ngx_addon_dir/src/rule_parser/pattern_converter.c \
                  $ngx_addon_dir/src/rule_parser/hyperscan_utils.c \
                  $ngx_addon_dir/src/auxiliary.c \
-                 $ngx_addon_dir/src/ngx_http_modsecurity_module.c \
-                 $ngx_addon_dir/src/ngx_http_modsecurity_precontent.c \
-                 $ngx_addon_dir/src/ngx_http_modsecurity_header_filter.c\
-                 $ngx_addon_dir/src/ngx_http_modsecurity_body_filter.c\
-                 $ngx_addon_dir/src/ngx_http_modsecurity_rbtree.c\
-                 $ngx_addon_dir/src/ngx_http_modsecurity_hyperscan.c\
-                 $ngx_addon_dir/src/ngx_http_modsecurity_args.c"
+                 $ngx_addon_dir/src/ngx_vs_modsec_module.c \
+                 $ngx_addon_dir/src/ngx_vs_modsec_precontent.c \
+                 $ngx_addon_dir/src/ngx_vs_modsec_header_filter.c\
+                 $ngx_addon_dir/src/ngx_vs_modsec_body_filter.c\
+                 $ngx_addon_dir/src/ngx_vs_modsec_rbtree.c\
+                 $ngx_addon_dir/src/ngx_vs_modsec_hyperscan.c\
+                 $ngx_addon_dir/src/ngx_vs_modsec_args.c"
                  
 
 ngx_module_libs="-lhs -lm"

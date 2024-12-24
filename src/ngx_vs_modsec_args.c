@@ -1,5 +1,5 @@
 #include "ddebug.h"
-#include "ngx_http_modsecurity_runtime.h"
+#include "ngx_vs_modsec_runtime.h"
 #include <ngx_config.h>
 #include <ngx_core.h>
 #include <ngx_http.h>
@@ -15,7 +15,7 @@ void parse_get_args(ngx_http_request_t *r) {
   u_char *end = r->args.data + r->args.len;
   u_char *p = start;
   u_char *key_start, *key_end, *value_start, *value_end;
-  ngx_http_modsecurity_ctx_t *ctx = ngx_http_modsecurity_get_ctx(r);
+  ngx_vs_modsec_ctx_t *ctx = ngx_http_modsecurity_get_ctx(r);
 
   while (p < end) {
     // Find key start and end
