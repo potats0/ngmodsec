@@ -10,8 +10,8 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # 检查系统版本
-if ! grep -q "Ubuntu 22.04" /etc/os-release; then
-    echo "错误: 此脚本仅支持 Ubuntu 22.04"
+if ! grep -q "Ubuntu 22" /etc/os-release; then
+    echo "错误: 此脚本仅支持 Ubuntu 22.04/10"
     echo "当前系统信息:"
     cat /etc/os-release
     exit 1
@@ -32,7 +32,8 @@ apt install -y \
     g++ \
     pkg-config \
     cmake \
-    ragel
+    ragel \
+    clang-format
 
 # 开发工具
 echo "安装开发工具..."

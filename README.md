@@ -33,6 +33,7 @@
 - Flex（用于词法分析）
 - Bison（用于语法分析）
 - Hyperscan（用于高性能正则匹配）
+- Clang-format (用于代码格式化)
 
 ### 开发工具
 - Git（版本控制）
