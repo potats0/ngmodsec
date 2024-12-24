@@ -42,8 +42,13 @@ typedef struct ngx_vs_modsec_ctx_s {
 #define CHECK_HTTP_PARAM_MATCH(key, value, hash_context, ctx)                                                 \
     do {                                                                                                      \
         MLOGD("Checking parameter %V=%V", &(key), &(value));                                                  \
+        u_char *lowcase_key = ngx_pnalloc(r->pool, (key).len);                                                \
+        if (lowcase_key == NULL) {                                                                            \
+            break;                                                                                            \
+        }                                                                                                     \
+        ngx_strlow(lowcase_key, (key).data, (key).len);                                                       \
         hash_pattern_item_t *item = NULL;                                                                     \
-        HASH_FIND(hh, (hash_context), (key).data, (key).len, item);                                           \
+        HASH_FIND(hh, (hash_context), lowcase_key, (key).len, item);                                          \
         if (item) {                                                                                           \
             string_match_context_t *match_ctx = &item->context;                                               \
             (ctx)->match_context = match_ctx;                                                                 \
