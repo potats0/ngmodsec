@@ -58,21 +58,11 @@ extern YYSTYPE yylval;
 "/m"            { return MULTILINE; }   /* 多行模式 */
 "/s"            { return DOTALL; }      /* 点号匹配换行 */
 "/f"            { return SINGLEMATCH; } /* 单次匹配 */
-[0-9]+          { 
-                    yylval.number = atoi(yytext);
-                    return NUMBER;
-                }
-
-\"[^\"]*\"      {
-                    // 去掉引号并复制字符串
-                    int len = strlen(yytext) - 2;  // 减去两个引号
-                    char* str = malloc(len + 1);   // +1 用于 null 终止符
-                    strncpy(str, yytext + 1, len);
-                    str[len] = '\0';
-                    yylval.string = str;
-                    return STRING;
-                }
-
+[0-9]+              { yylval.number = atoi(yytext); return NUMBER; }
+\"[^\"]*\"          { yylval.string = strdup(yytext + 1);
+                      yylval.string[strlen(yylval.string) - 1] = '\0';
+                      return STRING; }
+[a-zA-Z0-9_]+       { yylval.string = strdup(yytext); return IDENTIFIER; }
 .               { 
                     fprintf(stderr, "Error: Unexpected character '%s' at line %d\n", yytext, yylineno);
                     return YYUNDEF;  /* 返回一个未定义的 token，让 bison 处理错误 */

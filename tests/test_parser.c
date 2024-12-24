@@ -850,6 +850,63 @@ TEST_CASE(http_method) {
   passed_tests++;
 }
 
+TEST_CASE(kv_support) {
+  printf("=== Running Test: kv_support ===\n");
+  const char *rule_str = "rule 1001 http.get_args[cmd] contains \"admin\" and "
+                         "http.get_args[cmd] contains \"t66y\" ;";
+  printf("Testing rule: %s\n", rule_str);
+
+  sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
+  ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
+  ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
+
+  int result = parse_rule_string(rule_str, rule_mg);
+  ASSERT_EQ(0, result, "Rule parsing failed");
+
+  // 打印规则信息
+  printf("\nRule Information:\n");
+  printf("Rules Count: %d\n", rule_mg->rules_count);
+
+  // 打印GET参数hash表
+  printf("\nGET Args Match Contexts:\n");
+  if (rule_mg->get_match_context) {
+    hash_pattern_item_t *current, *tmp;
+    HASH_ITER(hh, rule_mg->get_match_context, current, tmp) {
+      printf("Key: %s\n", current->key);
+      string_match_context_t *ctx = &current->context;
+      printf("  Pattern Count: %d\n", ctx->string_patterns_num);
+
+      for (uint32_t j = 0; j < ctx->string_patterns_num; j++) {
+        string_pattern_t *pattern = &ctx->string_patterns_list[j];
+        if (!pattern || !pattern->string_pattern) {
+          printf("  Pattern %d: <invalid>\n", j);
+          continue;
+        }
+
+        printf("  Pattern %d: %s\n", j, pattern->string_pattern);
+        printf("    HS Flags: 0x%x\n", pattern->hs_flags);
+        printf("    Relations Count: %d\n", pattern->relation_count);
+
+        if (pattern->relations) {
+          for (uint32_t k = 0; k < pattern->relation_count; k++) {
+            rule_relation_t *rel = &pattern->relations[k];
+            printf("    Relation %d:\n", k);
+            printf("      Threat ID: %u\n", rel->threat_id);
+            printf("      Pattern ID: %u\n", rel->pattern_id);
+            printf("      AND Bit: 0x%x\n", rel->and_bit);
+          }
+        }
+      }
+    }
+  } else {
+    printf("No GET args patterns\n");
+  }
+
+  printf("Test passed\n");
+  destroy_rule_mg(rule_mg);
+  passed_tests++;
+}
+
 int main() {
   TEST_SUITE_BEGIN();
 
@@ -879,6 +936,7 @@ int main() {
   RUN_TEST(not_or_masks);
   RUN_TEST(realloc_masks);
   RUN_TEST(http_method);
+  RUN_TEST(kv_support);
 
   TEST_SUITE_END();
   return 0;
