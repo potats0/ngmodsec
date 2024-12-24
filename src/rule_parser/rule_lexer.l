@@ -63,7 +63,7 @@ extern YYSTYPE yylval;
 \"[^\"]*\"          { yylval.string = strdup(yytext + 1);
                       yylval.string[strlen(yylval.string) - 1] = '\0';
                       return STRING; }
-[a-zA-Z0-9_]+       { yylval.string = strdup(yytext); return IDENTIFIER; }
+[a-zA-Z0-9_\-.]+       { yylval.string = strdup(yytext); return IDENTIFIER; }
 .               { 
                     fprintf(stderr, "Error: Unexpected character '%s' at line %d\n", yytext, yylineno);
                     return YYUNDEF;  /* 返回一个未定义的 token，让 bison 处理错误 */
