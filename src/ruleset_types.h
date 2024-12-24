@@ -1,6 +1,7 @@
 #ifndef __NEW_SIGN_PUB_H__
 #define __NEW_SIGN_PUB_H__
 
+#include "uthash.h"
 #include <hs/hs_common.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -37,10 +38,11 @@
 /** HTTP协议变量类型枚举 **/
 typedef enum {
   HTTP_VAR_UNKNOWN = 0,
-  HTTP_VAR_URI,    // http.uri
-  HTTP_VAR_UA,     // http.user_agent
-  HTTP_VAR_HEADER, // http.header
-  HTTP_VAR_BODY,   // http.body
+  HTTP_VAR_URI,      // http.uri
+  HTTP_VAR_UA,       // http.user_agent
+  HTTP_VAR_HEADER,   // http.header
+  HTTP_VAR_BODY,     // http.body
+  HTTP_VAR_GET_ARGS, // http.get_args
   HTTP_VAR_MAX
 } http_var_type_t;
 
@@ -76,9 +78,18 @@ typedef struct string_match_context_s {
   hs_database_t *db;    // hs数据库
 } string_match_context_t;
 
+// 用来支持类似Hash模式，主要备用在get参数的模式串存储和header模式串的存储
+typedef struct hash_pattern_item_s {
+  string_match_context_t context; // 对应的匹配上下文
+  char *key;                      // key值，作为hash的key
+  UT_hash_handle hh;              // uthash handle
+} hash_pattern_item_t;
+
 /** 全局规则管理结构mg, 目前只实现字符串 **/
 typedef struct sign_rule_mg_s {
   string_match_context_t **string_match_context_array; // 字符串匹配上下文数组
+  hash_pattern_item_t *get_match_context; // get参数匹配上下文
+  // hash_pattern_t *header_match_context;   // header参数匹配上下文
   rule_mask_array_t *rule_masks; // 规则掩码数组（动态分配）
   uint32_t max_rules;            // 当前分配的最大规则数
   uint32_t rules_count;          // 实际规则数量

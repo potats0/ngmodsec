@@ -41,9 +41,11 @@ void print_rule_info(sign_rule_mg_t *rule_mg) {
            rule_mg->string_match_context_array[ctx_idx] != NULL; ctx_idx++) {
         string_match_context_t *ctx =
             rule_mg->string_match_context_array[ctx_idx];
-        for (int pat_idx = 0; pat_idx < ctx->string_patterns_num; pat_idx++) {
+        for (uint32_t pat_idx = 0; pat_idx < ctx->string_patterns_num;
+             pat_idx++) {
           string_pattern_t *pattern = &ctx->string_patterns_list[pat_idx];
-          for (int rel_idx = 0; rel_idx < pattern->relation_count; rel_idx++) {
+          for (uint32_t rel_idx = 0; rel_idx < pattern->relation_count;
+               rel_idx++) {
             rule_relation_t *rel = &pattern->relations[rel_idx];
             if ((rel->threat_id >> 8) == rule_id) {
               uint8_t sub_id = rel->threat_id & 0xFF;
@@ -69,6 +71,56 @@ void print_rule_info(sign_rule_mg_t *rule_mg) {
     printf("\n");
   }
 
+  // 打印规则掩码
+  printf("\nRule Masks:\n");
+  for (uint32_t i = 0; i < rule_mg->rules_count; i++) {
+    uint32_t rule_id = rule_mg->rule_ids[i];
+    rule_mask_array_t *masks = &rule_mg->rule_masks[rule_id];
+    printf("Rule %u:\n", rule_id);
+    printf("  Sub Rules Count: %u\n", masks->sub_rules_count);
+    for (uint32_t j = 0; j < masks->sub_rules_count; j++) {
+      printf("  Sub Rule %u:\n", j);
+      printf("    AND Mask: 0x%x\n", masks->and_masks[j]);
+      printf("    NOT Mask: 0x%x\n", masks->not_masks[j]);
+      printf("    Method: 0x%x\n", masks->method[j]);
+    }
+  }
+
+  // 打印GET参数hash表
+  printf("\nGET Args Match Contexts:\n");
+  if (rule_mg->get_match_context) {
+    hash_pattern_item_t *current, *tmp;
+    HASH_ITER(hh, rule_mg->get_match_context, current, tmp) {
+      printf("Key: %s\n", current->key);
+      string_match_context_t *ctx = &current->context;
+      printf("  Pattern Count: %d\n", ctx->string_patterns_num);
+
+      for (uint32_t j = 0; j < ctx->string_patterns_num; j++) {
+        string_pattern_t *pattern = &ctx->string_patterns_list[j];
+        if (!pattern || !pattern->string_pattern) {
+          printf("  Pattern %d: <invalid>\n", j);
+          continue;
+        }
+
+        printf("  Pattern %d: %s\n", j, pattern->string_pattern);
+        printf("    HS Flags: 0x%x\n", pattern->hs_flags);
+        printf("    Relations Count: %d\n", pattern->relation_count);
+
+        if (pattern->relations) {
+          for (uint32_t k = 0; k < pattern->relation_count; k++) {
+            rule_relation_t *rel = &pattern->relations[k];
+            printf("    Relation %d:\n", k);
+            printf("      Threat ID: %u\n", rel->threat_id);
+            printf("      Pattern ID: %u\n", rel->pattern_id);
+            printf("      AND Bit: 0x%x\n", rel->and_bit);
+          }
+        }
+      }
+    }
+  } else {
+    printf("No GET args patterns\n");
+  }
+
   // 打印所有的匹配上下文
   if (rule_mg->string_match_context_array) {
     printf("String Match Contexts:\n");
@@ -87,7 +139,7 @@ void print_rule_info(sign_rule_mg_t *rule_mg) {
       printf("Match Context %d:\n", i);
       printf("  Pattern Count: %d\n", ctx->string_patterns_num);
 
-      for (int j = 0; j < ctx->string_patterns_num; j++) {
+      for (uint32_t j = 0; j < ctx->string_patterns_num; j++) {
         string_pattern_t *pattern = &ctx->string_patterns_list[j];
         if (!pattern || !pattern->string_pattern) {
           printf("  Pattern %d: <invalid>\n", j);
@@ -100,7 +152,7 @@ void print_rule_info(sign_rule_mg_t *rule_mg) {
         printf("    Relations Count: %d\n", pattern->relation_count);
 
         if (pattern->relations) {
-          for (int k = 0; k < pattern->relation_count; k++) {
+          for (uint32_t k = 0; k < pattern->relation_count; k++) {
             rule_relation_t *rel = &pattern->relations[k];
             printf("    Relation %d:\n", k);
             printf("      Threat ID: %u\n", rel->threat_id);
