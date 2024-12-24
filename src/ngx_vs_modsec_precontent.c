@@ -17,6 +17,43 @@ ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r) {
 
   parse_get_args(r);
 
+  ngx_list_part_t *part = &r->headers_in.headers.part;
+  ngx_table_elt_t *header = part->elts;
+
+  for (size_t i = 0; /* void */; i++) {
+    if (i >= part->nelts) {
+      if (part->next == NULL) {
+        // 链表遍历完毕
+        break;
+      }
+
+      part = part->next;
+      header = part->elts;
+      i = 0;
+    }
+
+    ngx_str_t key = header[i].key;
+    ngx_str_t value = header[i].value;
+
+    MLOGD("Checking HEADERS parameter %V=%V", &key, &value);
+
+    hash_pattern_item_t *item = NULL;
+    HASH_FIND(hh, sign_rule_mg->headers_match_context, key.data, key.len, item);
+
+    if (item) {
+      string_match_context_t *match_ctx = &item->context;
+      ctx->match_context = match_ctx;
+      hs_scratch_t *scratch = match_ctx->scratch;
+
+      if (match_ctx && match_ctx->db && scratch) {
+        hs_scan(match_ctx->db, (const char *)value.data, value.len, 0, scratch,
+                on_match, ctx);
+      }
+    } else {
+      MLOGD("header %V not match any rule", &key);
+    }
+  }
+
   // 放在结尾，准备上报日志
   traverse_rule_hits(ctx->rule_hit_rbtree);
   MLOGD("Exiting precontent phase handler");

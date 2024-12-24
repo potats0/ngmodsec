@@ -94,5 +94,19 @@ int compile_all_hyperscan_databases(sign_rule_mg_t *rule_mg) {
     }
   }
 
+  // 编译HEADER参数的hash表
+  if (rule_mg->headers_match_context) {
+    hash_pattern_item_t *current, *tmp;
+    HASH_ITER(hh, rule_mg->headers_match_context, current, tmp) {
+      string_match_context_t *ctx = &current->context;
+      if (compile_hyperscan_database(ctx) != 0) {
+        fprintf(stderr,
+                "Failed to compile Hyperscan database for HEADER arg %s\n",
+                current->key);
+        return -1;
+      }
+    }
+  }
+
   return 0;
 }

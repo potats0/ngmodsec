@@ -69,6 +69,25 @@ void ngx_http_modsecurity_alloc_scratch(sign_rule_mg_t *mg) {
       }
     }
   }
+
+  // 为header参数的hash表分配scratch
+  if (mg->headers_match_context) {
+    hash_pattern_item_t *current, *tmp;
+    HASH_ITER(hh, mg->headers_match_context, current, tmp) {
+      string_match_context_t *ctx = &current->context;
+      if (ctx->db == NULL) {
+        ctx->scratch = NULL;
+        MLOGE("alloc scratch for HEADER arg %s failed, hyperscan db is NULL",
+              current->key);
+      } else {
+        if (hs_alloc_scratch(ctx->db, &(ctx->scratch)) != HS_SUCCESS) {
+          MLOGE("alloc scratch for HEADER arg %s failed", current->key);
+          ctx->scratch = NULL;
+        }
+        MLOGN("alloc scratch for HEADER arg %s success", current->key);
+      }
+    }
+  }
 }
 
 static void ngx_http_modsecurity_process_exit(ngx_cycle_t *cycle) {
@@ -90,6 +109,18 @@ static void ngx_http_modsecurity_process_exit(ngx_cycle_t *cycle) {
   if (sign_rule_mg && sign_rule_mg->get_match_context) {
     hash_pattern_item_t *current, *tmp;
     HASH_ITER(hh, sign_rule_mg->get_match_context, current, tmp) {
+      string_match_context_t *ctx = &current->context;
+      if (ctx->scratch) {
+        hs_free_scratch(ctx->scratch);
+        ctx->scratch = NULL;
+      }
+    }
+  }
+
+  // 释放HEADER参数的scratch
+  if (sign_rule_mg && sign_rule_mg->headers_match_context) {
+    hash_pattern_item_t *current, *tmp;
+    HASH_ITER(hh, sign_rule_mg->headers_match_context, current, tmp) {
       string_match_context_t *ctx = &current->context;
       if (ctx->scratch) {
         hs_free_scratch(ctx->scratch);

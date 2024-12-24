@@ -36,6 +36,7 @@ void parse_get_args(ngx_http_request_t *r) {
       ngx_str_t key = {.data = key_start, .len = key_end - key_start};
       ngx_str_t value = {.data = value_start, .len = value_end - value_start};
 
+      MLOGD("Checking GET parameter %V=%V", &key, &value);
       // 检查 GET 参数
       hash_pattern_item_t *item = NULL;
       HASH_FIND(hh, sign_rule_mg->get_match_context, key.data, key.len, item);
@@ -44,9 +45,6 @@ void parse_get_args(ngx_http_request_t *r) {
         string_match_context_t *match_ctx = &item->context;
         ctx->match_context = match_ctx;
         hs_scratch_t *scratch = match_ctx->scratch;
-
-        MLOGD("Checking GET parameter %.*s=%.*s", (int)key.len, key.data,
-              (int)value.len, value.data);
 
         if (match_ctx && match_ctx->db && scratch) {
           hs_scan(match_ctx->db, (const char *)value.data, value.len, 0,
