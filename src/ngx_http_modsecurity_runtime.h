@@ -70,35 +70,6 @@ typedef struct ngx_http_modsecurity_ctx_s {
     }                                                                          \
   } while (0)
 
-// 遍历所有的headers，获取目标name对应的value
-// 使用示例：
-// FOR_EACH_HEADER("User-Agent", HTTP_VAR_UA);
-#define FOR_EACH_HEADER_CHECK(HEADER_NAME, FIELD)                              \
-  do {                                                                         \
-    ngx_list_part_t *part = &r->headers_in.headers.part;                       \
-    ngx_table_elt_t *header = part->elts;                                      \
-                                                                               \
-    MLOGD("Starting to process %s headers", HEADER_NAME);                      \
-                                                                               \
-    for (size_t i = 0; /* void */; i++) {                                      \
-      if (i >= part->nelts) {                                                  \
-        if (part->next == NULL) {                                              \
-          break;                                                               \
-        }                                                                      \
-                                                                               \
-        part = part->next;                                                     \
-        header = part->elts;                                                   \
-        i = 0;                                                                 \
-      }                                                                        \
-                                                                               \
-      if (ngx_strncasecmp(header[i].key.data, (u_char *)HEADER_NAME,           \
-                          sizeof(#HEADER_NAME) - 1) == 0) {                    \
-        MLOGN("%s: %V", HEADER_NAME, &header[i].value);                        \
-        DO_CHECK_VARS(header[i].value, FIELD);                                 \
-      }                                                                        \
-    }                                                                          \
-  } while (0)
-
 #define NGINX_CHECK_HEAD_STR(var, proto_id)                                    \
   do {                                                                         \
     usrdata->proto_var_id = proto_id;                                          \
@@ -161,4 +132,7 @@ void rule_hit_insert_value(ngx_rbtree_node_t *temp, ngx_rbtree_node_t *node,
 // hyperscan 扫描回调函数
 int on_match(unsigned int id, unsigned long long from, unsigned long long to,
              unsigned int flags, void *context);
+
+// 获取请求中的参数
+void parse_get_args(ngx_http_request_t *r);
 #endif
