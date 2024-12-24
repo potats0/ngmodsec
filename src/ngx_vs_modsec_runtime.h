@@ -40,6 +40,44 @@ typedef struct ngx_vs_modsec_ctx_s {
     }                                                                          \
   } while (0)
 
+#define CHECK_HTTP_PARAM_MATCH(key, value, hash_context, ctx)                  \
+  do {                                                                         \
+    MLOGD("Checking parameter %V=%V", &(key), &(value));                       \
+    hash_pattern_item_t *item = NULL;                                          \
+    HASH_FIND(hh, (hash_context), (key).data, (key).len, item);                \
+    if (item) {                                                                \
+      string_match_context_t *match_ctx = &item->context;                      \
+      (ctx)->match_context = match_ctx;                                        \
+      hs_scratch_t *scratch = match_ctx->scratch;                              \
+      if (match_ctx && match_ctx->db && scratch) {                             \
+        hs_scan(match_ctx->db, (const char *)(value).data, (value).len, 0,     \
+                scratch, on_match, (ctx));                                     \
+      }                                                                        \
+    } else {                                                                   \
+      MLOGD("parameter %V not match any rule", &(key));                        \
+    }                                                                          \
+  } while (0)
+
+// 在 ngx_vs_modsec_runtime.h 中定义宏
+#define ITERATE_NGX_LIST(part, item, item_type, code_block)                    \
+  do {                                                                         \
+    ngx_list_part_t *_current_part = (part);                                   \
+    item_type *item = _current_part->elts;                                     \
+    for (size_t _i = 0;;) {                                                    \
+      if (_i >= _current_part->nelts) {                                        \
+        if (_current_part->next == NULL) {                                     \
+          break;                                                               \
+        }                                                                      \
+        _current_part = _current_part->next;                                   \
+        item = _current_part->elts;                                            \
+        _i = 0;                                                                \
+        continue;                                                              \
+      }                                                                        \
+      item = &((item_type *)_current_part->elts)[_i];                          \
+      code_block _i++;                                                         \
+    }                                                                          \
+  } while (0)
+
 /** 全局管理数据结构mg **/
 extern sign_rule_mg_t *sign_rule_mg;
 
@@ -76,4 +114,5 @@ int on_match(unsigned int id, unsigned long long from, unsigned long long to,
 
 // 获取请求中的参数
 void parse_get_args(ngx_http_request_t *r);
+
 #endif

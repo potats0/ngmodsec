@@ -1,5 +1,5 @@
 #include "ddebug.h"
-#include "ngx_http_modsecurity_runtime.h"
+#include "ngx_vs_modsec_runtime.h"
 #include "ruleset_types.h"
 #include <ngx_config.h>
 #include <ngx_core.h>
