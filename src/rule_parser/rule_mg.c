@@ -164,6 +164,44 @@ void destroy_rule_mg(sign_rule_mg_t *rule_mg) {
     g_waf_rule_free(rule_mg->get_match_context);
   }
 
+  // 释放headers参数hash表
+  if (rule_mg->headers_match_context) {
+    hash_pattern_item_t *current, *tmp;
+    HASH_ITER(hh, rule_mg->headers_match_context, current, tmp) {
+      // 从hash表中删除
+      HASH_DEL(rule_mg->headers_match_context, current);
+
+      // 释放item的内容
+      if (current->key) {
+        g_waf_rule_free(current->key);
+      }
+
+      // 释放context中的内容
+      string_match_context_t *ctx = &current->context;
+      if (ctx->string_patterns_list) {
+        for (uint32_t j = 0; j < ctx->string_patterns_num; j++) {
+          if (ctx->string_patterns_list[j].string_pattern) {
+            g_waf_rule_free(ctx->string_patterns_list[j].string_pattern);
+          }
+          if (ctx->string_patterns_list[j].relations) {
+            g_waf_rule_free(ctx->string_patterns_list[j].relations);
+          }
+        }
+        g_waf_rule_free(ctx->string_patterns_list);
+      }
+      if (ctx->string_ids) {
+        g_waf_rule_free(ctx->string_ids);
+      }
+      if (ctx->db) {
+        hs_free_database(ctx->db);
+      }
+
+      // 释放item本身
+      g_waf_rule_free(current);
+    }
+    g_waf_rule_free(rule_mg->headers_match_context);
+  }
+
   // 释放规则ID数组
   if (rule_mg->rule_ids) {
     g_waf_rule_free(rule_mg->rule_ids);
