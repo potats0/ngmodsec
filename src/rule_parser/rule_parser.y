@@ -313,6 +313,35 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
         } else {
             g_waf_rule_free(param); // key已存在，释放新的
         }
+
+        // 检查并调整and_bit
+        if (current_rule_id < current_rule_mg->max_rules) {
+            uint16_t current_mask = current_rule_mg->rule_masks[current_rule_id].and_masks[current_sub_id];
+            if (current_mask != 0) {  // 如果已经有模式，生成新的 and_bit
+                uint16_t new_bit = generate_new_and_bit(current_mask);
+                if (!new_bit) {
+                    fprintf(stderr, "Error: No available and_bit for rule %u sub_rule %u\n", current_rule_id, current_sub_id);
+                    return -1;
+                }
+                current_and_bit = new_bit;
+            }
+        }
+        
+        printf("Adding pattern: %s to %s (flags: 0x%x) for rule ID: %u (current_sub_id: %u, and_bit: 0x%x, not_mask: 0x%x)\n", 
+            pattern_str, param, flags, current_rule_id, current_sub_id, current_and_bit, current_not_mask);
+
+        // 确保规则掩码数组容量足够
+        if (ensure_rule_mask_capacity(current_rule_mg, current_rule_id) != 0) {
+            return -1;
+        }
+
+        // 更新规则掩码
+        rule_mask_array_t* rule_mask = &current_rule_mg->rule_masks[current_rule_id];
+        rule_mask->and_masks[current_sub_id] |= current_and_bit;
+        
+        if (current_sub_id >= rule_mask->sub_rules_count) {
+            rule_mask->sub_rules_count = current_sub_id + 1;
+        }
         
         // 获取或创建模式
         string_pattern_t* pattern_entry = get_or_create_pattern(&item->context, converted_pattern, flags);
