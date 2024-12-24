@@ -264,6 +264,73 @@ static int handle_match_expr(http_var_type_t var_type, char* pattern_str,
     free(pattern_str);
     return 0;
 }
+
+static int handle_kvmatch_expr(char *param, char* pattern_str,
+                            operator_type_t op_type, uint32_t flags ){
+            // Look up the key in the hash table
+        hash_pattern_item_t *item = NULL;
+        HASH_FIND_STR(current_rule_mg->get_match_context, param, item);
+
+        char* converted_pattern = convert_to_hyperscan_pattern(pattern_str, op_type);
+
+        g_waf_rule_free(pattern_str);
+        
+        if (item == NULL) {
+            // Create new item if it doesn't exist
+            item = g_waf_rule_malloc(sizeof(hash_pattern_item_t));
+            if (!item) {
+                g_waf_rule_free(param);
+                g_waf_rule_free(converted_pattern);
+                yyerror("Failed to allocate hash pattern item");
+                return -1;
+            }
+            memset(item, 0, sizeof(hash_pattern_item_t));
+            
+            // 复制key
+
+            printf("Matched key %s matches: %s with flags: 0x%x\n", param, converted_pattern, flags);
+            item->key = param;
+            
+            // 初始化context
+            string_match_context_t *ctx = &item->context;
+            ctx->string_patterns_capacity = INITIAL_PATTERNS_CAPACITY;
+            ctx->string_patterns_num = 0;
+            ctx->string_ids = NULL;
+            ctx->db = NULL;
+            
+            ctx->string_patterns_list = g_waf_rule_malloc(ctx->string_patterns_capacity * sizeof(string_pattern_t));
+            if (!ctx->string_patterns_list) {
+                g_waf_rule_free(item->key);
+                g_waf_rule_free(item);
+                g_waf_rule_free(converted_pattern);
+                yyerror("Failed to allocate patterns list");
+                return -1;
+            }
+            memset(ctx->string_patterns_list, 0, ctx->string_patterns_capacity * sizeof(string_pattern_t));
+            
+            // Add to hash table
+            HASH_ADD_KEYPTR(hh, current_rule_mg->get_match_context, item->key, strlen(item->key), item);
+        } else {
+            g_waf_rule_free(param); // key已存在，释放新的
+        }
+        
+        // 获取或创建模式
+        string_pattern_t* pattern_entry = get_or_create_pattern(&item->context, converted_pattern, flags);
+        if (!pattern_entry) {
+            g_waf_rule_free(converted_pattern);
+            yyerror("Failed to get or create pattern");
+            return -1;
+        }
+
+        // 添加规则关系
+        if (add_rule_relation(pattern_entry, current_rule_id, current_sub_id, current_and_bit) != 0) {
+            g_waf_rule_free(converted_pattern);
+            yyerror("Failed to add rule relation");
+            return -1;
+        }
+        
+        return 0;
+}
 %}
 
 %union {
@@ -414,137 +481,37 @@ match_expr:
     }
     | HTTP_GET_ARGS '[' IDENTIFIER ']' CONTAINS STRING pattern_flags {
         printf("Matched HTTP GET arg %s contains: %s with flags: 0x%x\n", $3, $6, $7);
-        
-        // Look up the key in the hash table
-        hash_pattern_item_t *item = NULL;
-        HASH_FIND_STR(current_rule_mg->get_match_context, $3, item);
-        
-        if (item == NULL) {
-            // Create new item if it doesn't exist
-            item = g_waf_rule_malloc(sizeof(hash_pattern_item_t));
-            if (!item) {
-                g_waf_rule_free($3);
-                g_waf_rule_free($6);
-                yyerror("Failed to allocate hash pattern item");
-                YYERROR;
-            }
-            memset(item, 0, sizeof(hash_pattern_item_t));
-            
-            // 复制key
-            item->key = $3;
-            
-            // 初始化context
-            string_match_context_t *ctx = &item->context;
-            ctx->string_patterns_capacity = INITIAL_PATTERNS_CAPACITY;
-            ctx->string_patterns_num = 0;
-            ctx->string_ids = NULL;
-            ctx->db = NULL;
-            
-            ctx->string_patterns_list = g_waf_rule_malloc(ctx->string_patterns_capacity * sizeof(string_pattern_t));
-            if (!ctx->string_patterns_list) {
-                g_waf_rule_free(item->key);
-                g_waf_rule_free(item);
-                g_waf_rule_free($6);
-                yyerror("Failed to allocate patterns list");
-                YYERROR;
-            }
-            memset(ctx->string_patterns_list, 0, ctx->string_patterns_capacity * sizeof(string_pattern_t));
-            
-            // Add to hash table
-            HASH_ADD_KEYPTR(hh, current_rule_mg->get_match_context, item->key, strlen(item->key), item);
-        } else {
-            g_waf_rule_free($3); // key已存在，释放新的
-        }
-        
-        // 获取或创建模式
-        string_pattern_t* pattern_entry = get_or_create_pattern(&item->context, $6, $7);
-        if (!pattern_entry) {
-            g_waf_rule_free($6);
-            yyerror("Failed to get or create pattern");
+        if (handle_kvmatch_expr($3, $6, OP_CONTAINS, $7) != 0) {
             YYERROR;
         }
-
-        // 添加规则关系
-        if (add_rule_relation(pattern_entry, current_rule_id, current_sub_id, current_and_bit) != 0) {
-            g_waf_rule_free($6);
-            yyerror("Failed to add rule relation");
-            YYERROR;
-        }
-
-        g_waf_rule_free($6);
+        
     }
     | HTTP_GET_ARGS '[' IDENTIFIER ']' MATCHES STRING pattern_flags {
         printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
-        
-        // Look up the key in the hash table
-        hash_pattern_item_t *item = NULL;
-        HASH_FIND_STR(current_rule_mg->get_match_context, $3, item);
-        
-        if (item == NULL) {
-            // Create new item if it doesn't exist
-            item = g_waf_rule_malloc(sizeof(hash_pattern_item_t));
-            if (!item) {
-                g_waf_rule_free($3);
-                g_waf_rule_free($6);
-                yyerror("Failed to allocate hash pattern item");
-                YYERROR;
-            }
-            memset(item, 0, sizeof(hash_pattern_item_t));
-            
-            // 复制key
-            item->key = $3;
-            
-            // 初始化context
-            string_match_context_t *ctx = &item->context;
-            ctx->string_patterns_capacity = INITIAL_PATTERNS_CAPACITY;
-            ctx->string_patterns_num = 0;
-            ctx->string_ids = NULL;
-            ctx->db = NULL;
-            
-            ctx->string_patterns_list = g_waf_rule_malloc(ctx->string_patterns_capacity * sizeof(string_pattern_t));
-            if (!ctx->string_patterns_list) {
-                g_waf_rule_free(item->key);
-                g_waf_rule_free(item);
-                g_waf_rule_free($6);
-                yyerror("Failed to allocate patterns list");
-                YYERROR;
-            }
-            memset(ctx->string_patterns_list, 0, ctx->string_patterns_capacity * sizeof(string_pattern_t));
-            
-            // Add to hash table
-            HASH_ADD_KEYPTR(hh, current_rule_mg->get_match_context, item->key, strlen(item->key), item);
-        } else {
-            g_waf_rule_free($3); // key已存在，释放新的
-        }
-        
-        // 获取或创建模式
-        string_pattern_t* pattern_entry = get_or_create_pattern(&item->context, $6, $7);
-        if (!pattern_entry) {
-            g_waf_rule_free($6);
-            yyerror("Failed to get or create pattern");
+         if (handle_kvmatch_expr($3, $6, OP_MATCHES, $7) != 0) {
             YYERROR;
         }
-
-        // 添加规则关系
-        if (add_rule_relation(pattern_entry, current_rule_id, current_sub_id, current_and_bit) != 0) {
-            g_waf_rule_free($6);
-            yyerror("Failed to add rule relation");
-            YYERROR;
-        }
-
-        g_waf_rule_free($6);
     }
-    | match_expr_rest
-    ;
-
-match_expr_rest:
-    | HTTP_VAR MATCHES STRING pattern_flags {
-        printf("Matched HTTP variable type %d matches: %s with flags: 0x%x\n", $1, $3, $4);
-        if (handle_match_expr($1, $3, OP_MATCHES, $4) != 0) {
+    | HTTP_GET_ARGS '[' IDENTIFIER ']' STARTS_WITH STRING pattern_flags {
+        printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
+         if (handle_kvmatch_expr($3, $6, OP_STARTS_WITH, $7) != 0) {
+            YYERROR;
+        }
+    }
+    | HTTP_GET_ARGS '[' IDENTIFIER ']' ENDS_WITH STRING pattern_flags {
+        printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
+         if (handle_kvmatch_expr($3, $6, OP_ENDS_WITH, $7) != 0) {
+            YYERROR;
+        }
+    }
+    | HTTP_GET_ARGS '[' IDENTIFIER ']' EQUALS STRING pattern_flags {
+        printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
+         if (handle_kvmatch_expr($3, $6, OP_EQUALS, $7) != 0) {
             YYERROR;
         }
     }
     ;
+
 
 pattern_flags:
     /* empty */ { $$ = 0; }

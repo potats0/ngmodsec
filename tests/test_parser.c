@@ -853,7 +853,7 @@ TEST_CASE(http_method) {
 TEST_CASE(kv_support) {
   printf("=== Running Test: kv_support ===\n");
   const char *rule_str = "rule 1001 http.get_args[cmd] contains \"admin\" and "
-                         "http.get_args[cmd] contains \"t66y\" ;";
+                         "http.get_args[cmd] starts_with \"t66y\" ;";
   printf("Testing rule: %s\n", rule_str);
 
   sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
