@@ -265,11 +265,11 @@ static int handle_match_expr(http_var_type_t var_type, char* pattern_str,
     return 0;
 }
 
-static int handle_kvmatch_expr(char *param, char* pattern_str,
+static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, char* pattern_str,
                             operator_type_t op_type, uint32_t flags ){
             // Look up the key in the hash table
         hash_pattern_item_t *item = NULL;
-        HASH_FIND_STR(current_rule_mg->get_match_context, param, item);
+        HASH_FIND_STR(*hash_item, param, item);
 
         char* converted_pattern = convert_to_hyperscan_pattern(pattern_str, op_type);
 
@@ -309,7 +309,7 @@ static int handle_kvmatch_expr(char *param, char* pattern_str,
             memset(ctx->string_patterns_list, 0, ctx->string_patterns_capacity * sizeof(string_pattern_t));
             
             // Add to hash table
-            HASH_ADD_KEYPTR(hh, current_rule_mg->get_match_context, item->key, strlen(item->key), item);
+            HASH_ADD_KEYPTR(hh, *hash_item, item->key, strlen(item->key), item);
         } else {
             g_waf_rule_free(param); // key已存在，释放新的
         }
@@ -482,38 +482,38 @@ match_expr:
     }
     | HTTP_GET_ARGS '[' IDENTIFIER ']' CONTAINS STRING pattern_flags {
         printf("Matched HTTP GET arg %s contains: %s with flags: 0x%x\n", $3, $6, $7);
-        if (handle_kvmatch_expr($3, $6, OP_CONTAINS, $7) != 0) {
+        if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_CONTAINS, $7) != 0) {
             YYERROR;
         }
         
     }
     | HTTP_GET_ARGS '[' IDENTIFIER ']' MATCHES STRING pattern_flags {
         printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
-         if (handle_kvmatch_expr($3, $6, OP_MATCHES, $7) != 0) {
+         if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_MATCHES, $7) != 0) {
             YYERROR;
         }
     }
     | HTTP_GET_ARGS '[' IDENTIFIER ']' STARTS_WITH STRING pattern_flags {
         printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
-         if (handle_kvmatch_expr($3, $6, OP_STARTS_WITH, $7) != 0) {
+         if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_STARTS_WITH, $7) != 0) {
             YYERROR;
         }
     }
     | HTTP_GET_ARGS '[' IDENTIFIER ']' ENDS_WITH STRING pattern_flags {
         printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
-         if (handle_kvmatch_expr($3, $6, OP_ENDS_WITH, $7) != 0) {
+         if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_ENDS_WITH, $7) != 0) {
             YYERROR;
         }
     }
     | HTTP_GET_ARGS '[' IDENTIFIER ']' EQUALS STRING pattern_flags {
         printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
-         if (handle_kvmatch_expr($3, $6, OP_EQUALS, $7) != 0) {
+         if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_EQUALS, $7) != 0) {
             YYERROR;
         }
     }
     | HTTP_HEADERS_ARGS '[' IDENTIFIER ']' CONTAINS STRING pattern_flags {
         printf("Matched HTTP headers arg %s contains: %s with flags: 0x%x\n", $3, $6, $7);
-        if (handle_kvmatch_expr($3, $6, OP_CONTAINS, $7) != 0) {
+        if (handle_kvmatch_expr(&current_rule_mg->headers_match_context, $3, $6, OP_CONTAINS, $7) != 0) {
             YYERROR;
         }
     }

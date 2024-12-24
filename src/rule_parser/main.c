@@ -121,6 +121,40 @@ void print_rule_info(sign_rule_mg_t *rule_mg) {
     printf("No GET args patterns\n");
   }
 
+  printf("\nHEADERS Args Match Contexts:\n");
+  if (rule_mg->headers_match_context) {
+    hash_pattern_item_t *current, *tmp;
+    HASH_ITER(hh, rule_mg->headers_match_context, current, tmp) {
+      printf("Key: %s\n", current->key);
+      string_match_context_t *ctx = &current->context;
+      printf("  Pattern Count: %d\n", ctx->string_patterns_num);
+
+      for (uint32_t j = 0; j < ctx->string_patterns_num; j++) {
+        string_pattern_t *pattern = &ctx->string_patterns_list[j];
+        if (!pattern || !pattern->string_pattern) {
+          printf("  Pattern %d: <invalid>\n", j);
+          continue;
+        }
+
+        printf("  Pattern %d: %s\n", j, pattern->string_pattern);
+        printf("    HS Flags: 0x%x\n", pattern->hs_flags);
+        printf("    Relations Count: %d\n", pattern->relation_count);
+
+        if (pattern->relations) {
+          for (uint32_t k = 0; k < pattern->relation_count; k++) {
+            rule_relation_t *rel = &pattern->relations[k];
+            printf("    Relation %d:\n", k);
+            printf("      Threat ID: %u\n", rel->threat_id);
+            printf("      Pattern ID: %u\n", rel->pattern_id);
+            printf("      AND Bit: 0x%x\n", rel->and_bit);
+          }
+        }
+      }
+    }
+  } else {
+    printf("No HEADERS args patterns\n");
+  }
+
   // 打印所有的匹配上下文
   if (rule_mg->string_match_context_array) {
     printf("String Match Contexts:\n");

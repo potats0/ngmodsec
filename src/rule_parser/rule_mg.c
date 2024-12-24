@@ -54,10 +54,12 @@ int init_rule_mg(sign_rule_mg_t *rule_mg) {
     fprintf(stderr, "Failed to allocate rule masks array\n");
     goto error;
   }
-  memset(rule_mg->rule_masks, 0, rule_mg->max_rules * sizeof(rule_mask_array_t));
+  memset(rule_mg->rule_masks, 0,
+         rule_mg->max_rules * sizeof(rule_mask_array_t));
 
   // 初始化get参数hash表
-  rule_mg->get_match_context = NULL;  // uthash需要初始化为NULL
+  rule_mg->get_match_context = NULL;     // uthash需要初始化为NULL
+  rule_mg->headers_match_context = NULL; // uthash需要初始化为NULL
 
   // 初始化所有规则的 method 为 0xFFFFFFFF
   for (uint32_t i = 0; i < rule_mg->max_rules; i++) {
@@ -135,7 +137,7 @@ void destroy_rule_mg(sign_rule_mg_t *rule_mg) {
       if (current->key) {
         g_waf_rule_free(current->key);
       }
-      
+
       // 释放context中的内容
       string_match_context_t *ctx = &current->context;
       if (ctx->string_patterns_list) {
@@ -155,7 +157,7 @@ void destroy_rule_mg(sign_rule_mg_t *rule_mg) {
       if (ctx->db) {
         hs_free_database(ctx->db);
       }
-      
+
       // 释放item本身
       g_waf_rule_free(current);
     }
@@ -193,12 +195,14 @@ sign_rule_mg_t *dup_rule_mg(const sign_rule_mg_t *src) {
 
   // 复制规则掩码数组
   if (src->rule_masks) {
-    dst->rule_masks = g_waf_rule_malloc(dst->max_rules * sizeof(rule_mask_array_t));
+    dst->rule_masks =
+        g_waf_rule_malloc(dst->max_rules * sizeof(rule_mask_array_t));
     if (!dst->rule_masks) {
       fprintf(stderr, "Failed to allocate rule masks array\n");
       goto error;
     }
-    memcpy(dst->rule_masks, src->rule_masks, src->max_rules * sizeof(rule_mask_array_t));
+    memcpy(dst->rule_masks, src->rule_masks,
+           src->max_rules * sizeof(rule_mask_array_t));
   }
 
   // 复制get参数hash表
@@ -209,7 +213,8 @@ sign_rule_mg_t *dup_rule_mg(const sign_rule_mg_t *src) {
     // 遍历源hash表并复制每个item
     hash_pattern_item_t *src_item, *tmp;
     HASH_ITER(hh, src->get_match_context, src_item, tmp) {
-      hash_pattern_item_t *new_item = g_waf_rule_malloc(sizeof(hash_pattern_item_t));
+      hash_pattern_item_t *new_item =
+          g_waf_rule_malloc(sizeof(hash_pattern_item_t));
       if (!new_item) {
         fprintf(stderr, "Failed to allocate hash pattern item\n");
         goto error;
@@ -257,8 +262,8 @@ sign_rule_mg_t *dup_rule_mg(const sign_rule_mg_t *src) {
           dst_pattern->relation_count = src_pattern->relation_count;
 
           if (src_pattern->relation_count > 0) {
-            dst_pattern->relations = g_waf_rule_malloc(dst_pattern->relation_count *
-                                                       sizeof(rule_relation_t));
+            dst_pattern->relations = g_waf_rule_malloc(
+                dst_pattern->relation_count * sizeof(rule_relation_t));
             if (!dst_pattern->relations) {
               fprintf(stderr, "Failed to allocate relations\n");
               goto error;
@@ -270,7 +275,8 @@ sign_rule_mg_t *dup_rule_mg(const sign_rule_mg_t *src) {
       }
 
       // 添加到hash表
-      HASH_ADD_KEYPTR(hh, dst->get_match_context, new_item->key, strlen(new_item->key), new_item);
+      HASH_ADD_KEYPTR(hh, dst->get_match_context, new_item->key,
+                      strlen(new_item->key), new_item);
     }
   }
 
@@ -375,7 +381,7 @@ error:
       if (current->key) {
         g_waf_rule_free(current->key);
       }
-      
+
       // 释放context中的内容
       string_match_context_t *ctx = &current->context;
       if (ctx->string_patterns_list) {
@@ -395,7 +401,7 @@ error:
       if (ctx->db) {
         hs_free_database(ctx->db);
       }
-      
+
       // 释放item本身
       g_waf_rule_free(current);
     }
