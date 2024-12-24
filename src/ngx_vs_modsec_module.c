@@ -31,100 +31,20 @@ void ngx_http_modsecurity_alloc_scratch(sign_rule_mg_t *mg) {
         return;
     }
 
-    // 为普通的string_match_context分配scratch
-    for (ngx_uint_t i = 0; i < HTTP_VAR_MAX; i++) {
-        if (mg->string_match_context_array && mg->string_match_context_array[i]) {
-            string_match_context_t *ctx = mg->string_match_context_array[i];
-            if (ctx->db == NULL) {
-                ctx->scratch = NULL;
-                MLOGE("alloc scratch %lu failed, hyperscan db is NULL", i);
-            } else {
-                if (hs_alloc_scratch(ctx->db, &(ctx->scratch)) != HS_SUCCESS) {
-                    MLOGE("alloc scratch %lu failed", i);
-                    ctx->scratch = NULL;
-                }
-                MLOGN("alloc scratch %lu success", i);
-            }
-        } else {
-            MLOGN("alloc scratch %lu failed, field is NULL", i);
-        }
-    }
-
-    // 为GET参数的hash表分配scratch
-    if (mg->get_match_context) {
-        hash_pattern_item_t *current, *tmp;
-        HASH_ITER(hh, mg->get_match_context, current, tmp) {
-            string_match_context_t *ctx = &current->context;
-            if (ctx->db == NULL) {
-                ctx->scratch = NULL;
-                MLOGE("alloc scratch for GET arg %s failed, hyperscan db is NULL", current->key);
-            } else {
-                if (hs_alloc_scratch(ctx->db, &(ctx->scratch)) != HS_SUCCESS) {
-                    MLOGE("alloc scratch for GET arg %s failed", current->key);
-                    ctx->scratch = NULL;
-                }
-                MLOGN("alloc scratch for GET arg %s success", current->key);
-            }
-        }
-    }
-
-    // 为header参数的hash表分配scratch
-    if (mg->headers_match_context) {
-        hash_pattern_item_t *current, *tmp;
-        HASH_ITER(hh, mg->headers_match_context, current, tmp) {
-            string_match_context_t *ctx = &current->context;
-            if (ctx->db == NULL) {
-                ctx->scratch = NULL;
-                MLOGE("alloc scratch for HEADER arg %s failed, hyperscan db is NULL", current->key);
-            } else {
-                if (hs_alloc_scratch(ctx->db, &(ctx->scratch)) != HS_SUCCESS) {
-                    MLOGE("alloc scratch for HEADER arg %s failed", current->key);
-                    ctx->scratch = NULL;
-                }
-                MLOGN("alloc scratch for HEADER arg %s success", current->key);
-            }
-        }
-    }
+    // 为所有类型的context分配scratch
+    ALLOC_HYPERSCAN_SCRATCH_ARRAY(mg->string_match_context_array, HTTP_VAR_MAX, "string_match");
+    ALLOC_HYPERSCAN_SCRATCH_HASH(mg->get_match_context, "GET arg");
+    ALLOC_HYPERSCAN_SCRATCH_HASH(mg->headers_match_context, "header");
 }
 
 static void ngx_http_modsecurity_process_exit(ngx_cycle_t *cycle) {
     MLOGN("process exit");
     sign_rule_mg_t *mg = sign_rule_mg;
 
-    // 释放普通的string_match_context的scratch
-    for (ngx_uint_t i = 0; i < HTTP_VAR_MAX; i++) {
-        if (mg->string_match_context_array && mg->string_match_context_array[i]) {
-            string_match_context_t *ctx = mg->string_match_context_array[i];
-            if (ctx->scratch) {
-                hs_free_scratch(ctx->scratch);
-                ctx->scratch = NULL;
-            }
-        }
-    }
-
-    // 释放GET参数的scratch
-    if (sign_rule_mg && sign_rule_mg->get_match_context) {
-        hash_pattern_item_t *current, *tmp;
-        HASH_ITER(hh, sign_rule_mg->get_match_context, current, tmp) {
-            string_match_context_t *ctx = &current->context;
-            if (ctx->scratch) {
-                hs_free_scratch(ctx->scratch);
-                ctx->scratch = NULL;
-            }
-        }
-    }
-
-    // 释放HEADER参数的scratch
-    if (sign_rule_mg && sign_rule_mg->headers_match_context) {
-        hash_pattern_item_t *current, *tmp;
-        HASH_ITER(hh, sign_rule_mg->headers_match_context, current, tmp) {
-            string_match_context_t *ctx = &current->context;
-            if (ctx->scratch) {
-                hs_free_scratch(ctx->scratch);
-                ctx->scratch = NULL;
-            }
-        }
-    }
+    // 释放所有类型的context的scratch
+    FREE_HYPERSCAN_SCRATCH_ARRAY(mg->string_match_context_array, HTTP_VAR_MAX, "string_match");
+    FREE_HYPERSCAN_SCRATCH_HASH(mg->get_match_context, "GET arg");
+    FREE_HYPERSCAN_SCRATCH_HASH(mg->headers_match_context, "header");
 }
 
 static ngx_int_t ngx_http_modsecurity_module_init(ngx_cycle_t *cycle) {

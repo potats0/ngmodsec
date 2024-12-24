@@ -81,6 +81,85 @@ typedef struct ngx_vs_modsec_ctx_s {
         }                                                   \
     } while (0)
 
+#define ALLOC_SINGLE_SCRATCH(ctx, type_name, id_fmt, ...)                                                \
+    do {                                                                                                 \
+        if (ctx->db == NULL) {                                                                           \
+            ctx->scratch = NULL;                                                                         \
+            MLOGE("alloc scratch for " type_name id_fmt " failed, hyperscan db is NULL", ##__VA_ARGS__); \
+        } else {                                                                                         \
+            if (hs_alloc_scratch(ctx->db, &(ctx->scratch)) != HS_SUCCESS) {                              \
+                MLOGE("alloc scratch for " type_name id_fmt " failed", ##__VA_ARGS__);                   \
+                ctx->scratch = NULL;                                                                     \
+            }                                                                                            \
+            MLOGN("alloc scratch for " type_name id_fmt " success", ##__VA_ARGS__);                      \
+        }                                                                                                \
+    } while (0)
+
+#define FREE_SINGLE_SCRATCH(ctx, type_name, id_fmt, ...)                           \
+    do {                                                                           \
+        if (ctx->scratch) {                                                        \
+            hs_free_scratch(ctx->scratch);                                         \
+            ctx->scratch = NULL;                                                   \
+            MLOGN("free scratch for " type_name id_fmt " success", ##__VA_ARGS__); \
+        }                                                                          \
+    } while (0)
+
+#define ALLOC_HYPERSCAN_SCRATCH_ARRAY(array, size, type_name)          \
+    do {                                                               \
+        for (ngx_uint_t i = 0; i < size; i++) {                        \
+            if (array && array[i]) {                                   \
+                ALLOC_SINGLE_SCRATCH(array[i], type_name, "[%lu]", i); \
+            }                                                          \
+        }                                                              \
+    } while (0)
+
+#define FREE_HYPERSCAN_SCRATCH_ARRAY(array, size, type_name)          \
+    do {                                                              \
+        for (ngx_uint_t i = 0; i < size; i++) {                       \
+            if (array && array[i]) {                                  \
+                FREE_SINGLE_SCRATCH(array[i], type_name, "[%lu]", i); \
+            }                                                         \
+        }                                                             \
+    } while (0)
+
+#define ALLOC_HYPERSCAN_SCRATCH_HASH(hash_context, type_name)                            \
+    do {                                                                                 \
+        if (hash_context) {                                                              \
+            hash_pattern_item_t *current, *tmp;                                          \
+            HASH_ITER(hh, hash_context, current, tmp) {                                  \
+                ALLOC_SINGLE_SCRATCH(&current->context, type_name, " %s", current->key); \
+            }                                                                            \
+        }                                                                                \
+    } while (0)
+
+#define FREE_HYPERSCAN_SCRATCH_HASH(hash_context, type_name)                            \
+    do {                                                                                \
+        if (hash_context) {                                                             \
+            hash_pattern_item_t *current, *tmp;                                         \
+            HASH_ITER(hh, hash_context, current, tmp) {                                 \
+                FREE_SINGLE_SCRATCH(&current->context, type_name, " %s", current->key); \
+            }                                                                           \
+        }                                                                               \
+    } while (0)
+
+#define ALLOC_HYPERSCAN_SCRATCH(context, type_name)                                  \
+    do {                                                                             \
+        if (context->type == ARRAY_CONTEXT) {                                        \
+            ALLOC_HYPERSCAN_SCRATCH_ARRAY(context->array, context->size, type_name); \
+        } else if (context->type == HASH_CONTEXT) {                                  \
+            ALLOC_HYPERSCAN_SCRATCH_HASH(context->hash_context, type_name);          \
+        }                                                                            \
+    } while (0)
+
+#define FREE_HYPERSCAN_SCRATCH(context, type_name)                                  \
+    do {                                                                            \
+        if (context->type == ARRAY_CONTEXT) {                                       \
+            FREE_HYPERSCAN_SCRATCH_ARRAY(context->array, context->size, type_name); \
+        } else if (context->type == HASH_CONTEXT) {                                 \
+            FREE_HYPERSCAN_SCRATCH_HASH(context->hash_context, type_name);          \
+        }                                                                           \
+    } while (0)
+
 #if defined(DDEBUG) && (DDEBUG)
 
 #define MLOG(logger, level, fmt, ...) ngx_log_error(level, logger, 0, fmt, ##__VA_ARGS__)
