@@ -5,8 +5,8 @@ int on_match(unsigned int id, unsigned long long from, unsigned long long to,
              unsigned int flags, void *context) {
   ngx_http_modsecurity_ctx_t *ctx = (ngx_http_modsecurity_ctx_t *)context;
   string_match_context_t *match_ctx = ctx->match_context;
-  ngx_rbtree_t *tree = ctx->rule_hit_context;
-  ngx_http_request_t *r = ctx->r;
+  ngx_rbtree_t *tree = ctx->rule_hit_rbtree;
+  ngx_http_request_t *r = ctx->request;
 
   MLOGD("Matched rule ID: %d (from: %llu, to: %llu)", id, from, to);
   MLOGD("Matched pattern: %s",

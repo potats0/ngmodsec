@@ -35,7 +35,7 @@ static ngx_int_t ngx_http_modsecurity_body_filter(ngx_http_request_t *r,
   // if (usrdata == NULL) {
   //   return ngx_http_next_body_filter(r, in);
   // }
-  usrdata->r = r;
+  usrdata->request = r;
 #ifdef WAF
   usrdata->proto_var_id = NGX_VAR_RSP_BODY;
 

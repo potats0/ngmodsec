@@ -11,20 +11,18 @@
 
 typedef struct {
   ngx_rbtree_node_t node;
-  u_int32_t threat_id;         // 命中规则ID
-  uint32_t rule_bit_mask;      // 保存记录规则命中的bit位
-  uint32_t combined_rule_mask; // 告警所需的总命中bit位
-  uint32_t not_rule_mask;      // 告警所需的非关系bit位
-  uint32_t rule_method;        // 该规则匹配的http请求方法
-  uint32_t method;             // 当前http请求方法
-} rule_hit_node_t;
+  uint32_t matched_rule_id;         // 命中规则ID ruleid <<8 | subid
+  uint32_t rule_hit_bitmask;        // 保存记录规则命中的bit位
+  uint32_t alert_trigger_bitmask;   // 告警触发所需的总命中bit位
+  uint32_t alert_exclusion_bitmask; // 告警所需的非关系bit位
+  uint32_t matched_rule_methods;    // 该规则匹配的http请求方法
+  uint32_t current_request_method;  // 当前HTTP请求方法
+} rule_hit_record_t;
 
-/** 用于匹配过程所需的输入和输出 **/
 typedef struct ngx_http_modsecurity_ctx_s {
   string_match_context_t *match_context;
-  ngx_rbtree_t *rule_hit_context;
-  uint32_t rsp_detect_len;
-  ngx_http_request_t *r; // for hit_ctx alloc & log
+  ngx_rbtree_t *rule_hit_rbtree;
+  ngx_http_request_t *request; // for hit_ctx alloc & log
 } ngx_http_modsecurity_ctx_t;
 
 #define DO_CHECK_VARS(VAR, FIELD)                                              \
