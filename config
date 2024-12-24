@@ -12,11 +12,11 @@ bison -d rule_parser.y
 flex rule_lexer.l
 cd -
 
-ngx_module_incs="$ngx_addon_dir/src/ $ngx_addon_dir/src/rule_parser/"
+ngx_module_incs="$ngx_addon_dir/src/ 
+$ngx_addon_dir/src/"
 
 ngx_module_deps="$ngx_addon_dir/src/ngx_vs_modsec_runtime.h \
                  $ngx_addon_dir/src/ruleset_types.h \
-                 $ngx_addon_dir/src/ddebug.h \
                  $ngx_addon_dir/src/rule_parser/rule_parser.tab.h"
 
 ngx_module_srcs="$ngx_addon_dir/src/rule_parser/rule_mg.c \
