@@ -28,6 +28,7 @@ extern YYSTYPE yylval;
 "http.query_string"     { yylval.var_type = HTTP_VAR_QUERY_STRING; return HTTP_VAR; }
 "http.all_get_args"     { yylval.var_type = HTTP_VAR_ALL_GET_ARGS; return HTTP_VAR; }
 "http.all_get_name"     { yylval.var_type = HTTP_VAR_ALL_GET_NAME; return HTTP_VAR; }
+"http.all_header_value"     { yylval.var_type = HTTP_VAR_ALL_HEADER_VALUE; return HTTP_VAR; }
 "http.user-agent"   { yylval.var_type = HTTP_VAR_UA; return HTTP_VAR; }
 "http.get_args"     { yylval.var_type = HTTP_VAR_GET_ARGS; return HTTP_GET_ARGS; }
 "http.headers"   { yylval.var_type = HTTP_VAR_GET_ARGS; return HTTP_HEADERS_ARGS; }

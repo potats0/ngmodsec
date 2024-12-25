@@ -72,8 +72,10 @@ ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r) {
 
     MLOGD("Starting to process headers");
 
-    ITERATE_NGX_LIST(&r->headers_in.headers.part, header, ngx_table_elt_t,
-                     { CHECK_HTTP_PARAM_MATCH(header->key, header->value, sign_rule_mg->headers_match_context, ctx); });
+    ITERATE_NGX_LIST(&r->headers_in.headers.part, header, ngx_table_elt_t, {
+        CHECK_HTTP_PARAM_MATCH(header->key, header->value, sign_rule_mg->headers_match_context, ctx);
+        DO_CHECK_VARS(header->value, HTTP_VAR_ALL_HEADER_VALUE);
+    });
 
     MLOGD("Finished processing headers");
 
