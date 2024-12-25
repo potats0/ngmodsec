@@ -39,6 +39,19 @@ typedef struct ngx_vs_modsec_ctx_s {
         }                                                                                           \
     } while (0)
 
+#define DO_CHECK_HEADER_VARS(VAR, FIELD)                       \
+    do {                                                       \
+        ngx_str_t _val;                                        \
+        if (r->headers_in.VAR) {                               \
+            _val = r->headers_in.VAR->value;                   \
+            MLOGD("Request " #VAR ": \"%V\"", &_val);          \
+        } else {                                               \
+            MLOGD("No " #VAR " header found in the request."); \
+        }                                                      \
+        DO_CHECK_VARS(_val, FIELD);                            \
+                                                               \
+    } while (0)
+
 #define CHECK_HTTP_PARAM_MATCH(key, value, hash_context, ctx)                                                 \
     do {                                                                                                      \
         MLOGD("Checking parameter %V=%V", &(key), &(value));                                                  \

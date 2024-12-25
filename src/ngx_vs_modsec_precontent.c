@@ -12,19 +12,7 @@ ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r) {
 
     DO_CHECK_VARS(r->uri, HTTP_VAR_URI);
 
-    ngx_str_t host;
-
-    // 获取 Host 头
-    if (r->headers_in.host) {
-        host = r->headers_in.host->value;
-
-        // 将 Host 信息记录到错误日志中（级别为 NOTICE）
-        ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "Request Host: \"%V\"", &host);
-    } else {
-        // 如果没有 Host 头，则记录相应信息
-        ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "No Host header found in the request.");
-    }
-    DO_CHECK_VARS(host, HTTP_VAR_HOST);
+    DO_CHECK_HEADER_VARS(host, HTTP_VAR_HOST);
 
     parse_get_args(r);
 
