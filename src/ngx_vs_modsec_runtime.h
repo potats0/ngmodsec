@@ -28,7 +28,7 @@ typedef struct ngx_vs_modsec_ctx_s {
 
 #define DO_CHECK_VARS(VAR, FIELD)                                                                              \
     do {                                                                                                       \
-        if (VAR.data != NULL) {                                                                                \
+        if (VAR.data != NULL && sign_rule_mg != NULL) {                                                        \
             string_match_context_t *match_ctx = sign_rule_mg->string_match_context_array[FIELD];               \
             ctx->match_context = match_ctx;                                                                    \
             MLOGD("do check %*s " #FIELD, VAR.len, VAR.data);                                                  \

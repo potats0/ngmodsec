@@ -5,12 +5,14 @@
 ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r) {
     MLOGD("Entering precontent phase handler");
     ngx_vs_modsec_ctx_t *ctx = ngx_http_modsecurity_get_ctx(r);
-    if (ctx == NULL) {
+    if (ctx == NULL || sign_rule_mg == NULL) {
         // 内存耗尽，相当于Bypass
+        MLOGE("sign_rule_mg or ngx_vs_modsec_ctx is NULL");
         return NGX_DECLINED;
     }
 
     DO_CHECK_VARS(r->uri, HTTP_VAR_URI);
+    MLOGD("aaaa");
     DO_CHECK_VARS(r->unparsed_uri, HTTP_VAR_UNPARSED_URI);
     DO_CHECK_VARS(r->exten, HTTP_VAR_EXTEN);
 
