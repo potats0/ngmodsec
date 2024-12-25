@@ -23,6 +23,8 @@
    * 跳过空参数，只处理有效的key-value对
 5. a=x&a=y&b=z http参数污染
    * 每一个name对应的value都会送检对应的参数的正则匹配中
+6. a=x&a=y?a&b=z 
+   * ?会正确的出现在value中
 
 # Nginx WAF Rule Match Engine Module
 
