@@ -33,7 +33,7 @@ typedef enum {
     HTTP_VAR_UNPARSED_URI,     // http.unparsed_uri
     HTTP_VAR_EXTEN,            // http.exten
     HTTP_VAR_QUERY_STRING,     // http.query_string
-    HTTP_VAR_ALL_GET_ARGS,     // http.all_get_args
+    HTTP_VAR_ALL_GET_VALUE,    // http.all_get_value
     HTTP_VAR_ALL_GET_NAME,     // http.all_get_name
     HTTP_VAR_ALL_HEADER_VALUE, // http.all_header_value
     HTTP_VAR_MAX

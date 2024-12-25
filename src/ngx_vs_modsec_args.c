@@ -52,7 +52,7 @@ void parse_get_args(ngx_http_request_t *r) {
             CHECK_HTTP_PARAM_MATCH(key, value, sign_rule_mg->get_match_context, ctx);
 
             // 对于不定参数，全都送检
-            DO_CHECK_VARS(value, HTTP_VAR_ALL_GET_ARGS);
+            DO_CHECK_VARS(value, HTTP_VAR_ALL_GET_VALUE);
 
             // 对于name部分也送检
             DO_CHECK_VARS(key, HTTP_VAR_ALL_GET_NAME);

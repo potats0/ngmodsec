@@ -12,7 +12,7 @@ __DATA__
 --- config
     location /test_handler {
         error_log logs/error.log debug;
-        rule 'rule 1000 http.all_get_args contains "php"  ;';
+        rule 'rule 1000 http.all_get_value contains "php"  ;';
         proxy_pass http://127.0.0.1:$TEST_NGINX_SERVER_PORT/echo;
     }
     
@@ -27,7 +27,7 @@ User-Agent: TestAgent/1.0
 host: www.baidu.com
 --- error_log
 compile_all_hyperscan_databases successfully
-do check php HTTP_VAR_ALL_GET_ARGS
+do check php HTTP_VAR_ALL_GET_VALUE
 Matched rule ID: 0 (from: 0lu, to: 3lu)
 Matched pattern: php
 Matched relation count : 1
