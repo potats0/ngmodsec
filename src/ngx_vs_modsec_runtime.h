@@ -31,11 +31,11 @@ typedef struct ngx_vs_modsec_ctx_s {
         if (VAR.data != NULL) {                                                                                \
             string_match_context_t *match_ctx = sign_rule_mg->string_match_context_array[FIELD];               \
             ctx->match_context = match_ctx;                                                                    \
-            MLOGD("do check %*s ", VAR.len, VAR.data);                                                         \
+            MLOGD("do check %*s " #FIELD, VAR.len, VAR.data);                                                  \
             if (match_ctx && match_ctx->db && match_ctx->scratch) {                                            \
                 hs_scan(match_ctx->db, (const char *)VAR.data, VAR.len, 0, match_ctx->scratch, on_match, ctx); \
             } else {                                                                                           \
-                MLOGD("hs db or scratch is NULL");                                                             \
+                MLOGD(#FIELD " hs db or scratch is NULL");                                                     \
             }                                                                                                  \
         }                                                                                                      \
     } while (0)
