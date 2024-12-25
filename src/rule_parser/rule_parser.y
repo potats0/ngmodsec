@@ -489,36 +489,25 @@ rule_expr:
     ;
 
 match_expr:
-    HTTP_VAR CONTAINS STRING pattern_flags {
-        printf("Matched HTTP variable type %d contains: %s with flags: 0x%x\n", $1, $3, $4);
-        if (handle_match_expr($1, $3, OP_CONTAINS, $4) != 0) {
+    HTTP_VAR op_type STRING pattern_flags {
+
+        const char* op_str;
+
+        switch($2) {
+            case OP_CONTAINS:     op_str = "contains"; break;
+            case OP_MATCHES:      op_str = "matches"; break;
+            case OP_STARTS_WITH:  op_str = "starts with"; break;
+            case OP_ENDS_WITH:    op_str = "ends with"; break;
+            case OP_EQUALS:       op_str = "equals"; break;
+            default:             op_str = "unknown"; break;
+        }
+
+        printf("Matched HTTP variable type %d %s: %s with flags: 0x%x\n", $1, op_str, $3, $4);
+        if (handle_match_expr($1, $3, $2, $4) != 0) {
             YYERROR;
         }
     }
-    | HTTP_VAR MATCHES STRING pattern_flags {
-        printf("Matched HTTP variable type %d matches: %s with flags: 0x%x\n", $1, $3, $4);
-        if (handle_match_expr($1, $3, OP_MATCHES, $4) != 0) {
-            YYERROR;
-        }
-    }
-    | HTTP_VAR STARTS_WITH STRING pattern_flags {
-        printf("Matched HTTP variable type %d starts_with: %s with flags: 0x%x\n", $1, $3, $4);
-        if (handle_match_expr($1, $3, OP_STARTS_WITH, $4) != 0) {
-            YYERROR;
-        }
-    }
-    | HTTP_VAR ENDS_WITH STRING pattern_flags {
-        printf("Matched HTTP variable type %d ends_with: %s with flags: 0x%x\n", $1, $3, $4);
-        if (handle_match_expr($1, $3, OP_ENDS_WITH, $4) != 0) {
-            YYERROR;
-        }
-    }
-    | HTTP_VAR EQUALS STRING pattern_flags {
-        printf("Matched HTTP variable type %d equal: %s with flags: 0x%x\n", $1, $3, $4);
-        if (handle_match_expr($1, $3, OP_EQUALS, $4) != 0) {
-            YYERROR;
-        }
-    }
+
     | HTTP_GET_ARGS '[' STRING ']' op_type STRING pattern_flags {
         const char* op_str;
         switch($5) {
