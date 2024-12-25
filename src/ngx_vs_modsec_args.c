@@ -58,6 +58,9 @@ void parse_get_args(ngx_http_request_t *r) {
 
             // 对于不定参数，全都送检
             DO_CHECK_VARS(value, HTTP_VAR_ALL_GET_ARGS);
+
+            // 对于name部分也送检
+            DO_CHECK_VARS(key, HTTP_VAR_ALL_GET_NAME);
         }
     }
 

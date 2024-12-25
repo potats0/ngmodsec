@@ -13,6 +13,7 @@
 | http.raw_req_body | - | 送检请求的body，未解码 |
 | http.query_string | ngx.args | 送检参数部分，从url中第一次出现?后面的部分 |
 | http.all_get_args | - | 把get参数中每一个解析后的value都送检 |
+| http.all_get_name | - | 把get参数中每一个解析后的key都送检 |
 
 其中在get的参数解析中，有可能会出现以下几种情况
 1. 正常参数 ?b=c

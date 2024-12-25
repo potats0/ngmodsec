@@ -34,6 +34,7 @@ typedef enum {
     HTTP_VAR_EXTEN,        // http.exten
     HTTP_VAR_QUERY_STRING, // http.query_string
     HTTP_VAR_ALL_GET_ARGS, // http.all_get_args
+    HTTP_VAR_ALL_GET_NAME, // http.all_get_name
     HTTP_VAR_MAX
 } http_var_type_t;
 
