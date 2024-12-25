@@ -18,6 +18,7 @@ http.method 送检ngx.method method必须是GET,POST,PUT,DELETE,HEAD,OPTIONS,TRA
 http.get_args["cmd"] 把get参数的cmd送检
 http.headers["cmd"] 把header的cmd送检 
 http.host 送检请求的host，这个可能会产生双写bug。如果需要检测双写， 请使用http.headers["host"]
+http.raw_req_body 送检请求的body ，未解码
 
 
 
