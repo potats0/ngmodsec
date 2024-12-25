@@ -48,11 +48,6 @@ void parse_get_args(ngx_http_request_t *r) {
 
             MLOGD("GET param: %V = %V", &key, &value);
 
-            if (key.len == 0 || value.len == 0) {
-                MLOGD("Invalid GET parameter");
-                continue;
-            }
-
             // 对于 GET 参数
             CHECK_HTTP_PARAM_MATCH(key, value, sign_rule_mg->get_match_context, ctx);
 

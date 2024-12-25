@@ -19,9 +19,9 @@
 1. 正常参数 ?b=c
    * key: "b", value: "c"
 2. 空值参数 ?a=
-   * key: "a", value: "" (空字符串)  这样会跳过送检value
+   * key: "a", value: "" (空字符串)  这样会跳过送检value，但是可以用http.all_get_name解决，参考13-rule-http-all_get_name.t
 3. 无值参数 ?param
-   * key: "param", value: "" (空字符串) 无法被送检到get参数中，需要使用http.query_string解决
+   * key: "param", value: "" (空字符串) 无法被送检到get参数中，需要使用http.query_string或http.all_get_name解决，参考13-rule-http-all_get_name.t
 4. 连续分隔符 ?a&&b=c
    * 跳过空参数，只处理有效的key-value对
 5. a=x&a=y&b=z http参数污染

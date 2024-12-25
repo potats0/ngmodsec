@@ -54,6 +54,10 @@ typedef struct ngx_vs_modsec_ctx_s {
 
 #define CHECK_HTTP_PARAM_MATCH(key, value, hash_context, ctx)                                                 \
     do {                                                                                                      \
+        if (key.len == 0 || value.len == 0) {                                                                 \
+            MLOGD("Invalid GET parameter, key or value is empty");                                            \
+            continue;                                                                                         \
+        }                                                                                                     \
         MLOGD("Checking parameter %V=%V", &(key), &(value));                                                  \
         u_char *lowcase_key = ngx_pnalloc(r->pool, (key).len);                                                \
         if (lowcase_key == NULL) {                                                                            \
