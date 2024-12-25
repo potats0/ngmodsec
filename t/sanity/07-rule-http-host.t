@@ -43,3 +43,29 @@ Matched Rule ID: 1000
 Exiting precontent phase handler
 --- no_error_log
 [error]
+
+=== TEST 2: Host协议变量为空，不会触发空指针
+--- http_config
+    error_log logs/error.log debug;
+--- config
+    location /test_handler {
+        error_log logs/error.log debug;
+        rule 'rule 1000 http.uri contains "a";';
+        proxy_pass http://127.0.0.1:$TEST_NGINX_SERVER_PORT/echo;
+    }
+    
+    location /echo {
+        return 200 "echo";
+    }
+--- request
+GET /test_handler?a=b&c=d&e=f&cmd=a
+--- more_headers
+user: TestAgent/2.0
+User-Agent: TestAgent/1.0
+host: www.baidu.com
+--- error_log
+compile_all_hyperscan_databases successfully
+do check www.baidu.com 
+Exiting precontent phase handler
+--- no_error_log
+[error]

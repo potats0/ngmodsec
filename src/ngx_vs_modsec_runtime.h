@@ -26,17 +26,18 @@ typedef struct ngx_vs_modsec_ctx_s {
     ngx_http_request_t *request; // for hit_ctx alloc & log
 } ngx_vs_modsec_ctx_t;
 
-#define DO_CHECK_VARS(VAR, FIELD)                                                                   \
-    do {                                                                                            \
-        if (VAR.data != NULL) {                                                                     \
-            string_match_context_t *match_ctx = sign_rule_mg->string_match_context_array[FIELD];    \
-            ctx->match_context = match_ctx;                                                         \
-            hs_scratch_t *scratch = match_ctx->scratch;                                             \
-            MLOGD("do check %*s ", VAR.len, VAR.data);                                              \
-            if (match_ctx && match_ctx->db && scratch) {                                            \
-                hs_scan(match_ctx->db, (const char *)VAR.data, VAR.len, 0, scratch, on_match, ctx); \
-            }                                                                                       \
-        }                                                                                           \
+#define DO_CHECK_VARS(VAR, FIELD)                                                                              \
+    do {                                                                                                       \
+        if (VAR.data != NULL) {                                                                                \
+            string_match_context_t *match_ctx = sign_rule_mg->string_match_context_array[FIELD];               \
+            ctx->match_context = match_ctx;                                                                    \
+            MLOGD("do check %*s ", VAR.len, VAR.data);                                                         \
+            if (match_ctx && match_ctx->db && match_ctx->scratch) {                                            \
+                hs_scan(match_ctx->db, (const char *)VAR.data, VAR.len, 0, match_ctx->scratch, on_match, ctx); \
+            } else {                                                                                           \
+                MLOGD("hs db or scratch is NULL");                                                             \
+            }                                                                                                  \
+        }                                                                                                      \
     } while (0)
 
 #define DO_CHECK_HEADER_VARS(VAR, FIELD)                       \
@@ -45,11 +46,10 @@ typedef struct ngx_vs_modsec_ctx_s {
         if (r->headers_in.VAR) {                               \
             _val = r->headers_in.VAR->value;                   \
             MLOGD("Request " #VAR ": \"%V\"", &_val);          \
+            DO_CHECK_VARS(_val, FIELD);                        \
         } else {                                               \
             MLOGD("No " #VAR " header found in the request."); \
         }                                                      \
-        DO_CHECK_VARS(_val, FIELD);                            \
-                                                               \
     } while (0)
 
 #define CHECK_HTTP_PARAM_MATCH(key, value, hash_context, ctx)                                                 \
