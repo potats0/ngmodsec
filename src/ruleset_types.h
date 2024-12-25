@@ -26,7 +26,7 @@ typedef enum {
     HTTP_VAR_URI,          // http.uri
     HTTP_VAR_UA,           // http.user_agent
     HTTP_VAR_HEADER,       // http.header
-    HTTP_VAR_BODY,         // http.body
+    HTTP_VAR_RAW_REQ_BODY, // http.raw_req_body
     HTTP_VAR_GET_ARGS,     // http.get_args
     HTTP_VAR_HEADERS_ARGS, // http.headers_args
     HTTP_VAR_HOST,         // http.host

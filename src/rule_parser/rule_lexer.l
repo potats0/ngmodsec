@@ -21,7 +21,7 @@ extern YYSTYPE yylval;
 "rule"          { return RULE; }
 "http.uri"      { yylval.var_type = HTTP_VAR_URI; return HTTP_VAR; }
 "http.header"   { yylval.var_type = HTTP_VAR_HEADER; return HTTP_VAR; }
-"http.body"     { yylval.var_type = HTTP_VAR_BODY; return HTTP_VAR; }
+"http.raw_req_body"     { yylval.var_type = HTTP_VAR_RAW_REQ_BODY; return HTTP_VAR; }
 "http.host"     { yylval.var_type = HTTP_VAR_HOST; return HTTP_VAR; }
 "http.unparsed_uri"     { yylval.var_type = HTTP_VAR_UNPARSED_URI; return HTTP_VAR; }
 "http.exten"     { yylval.var_type = HTTP_VAR_EXTEN; return HTTP_VAR; }
