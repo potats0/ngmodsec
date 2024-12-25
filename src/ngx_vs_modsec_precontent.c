@@ -11,6 +11,7 @@ ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r) {
     }
 
     DO_CHECK_VARS(r->uri, HTTP_VAR_URI);
+    DO_CHECK_VARS(r->unparsed_uri, HTTP_VAR_UNPARSED_URI);
 
     DO_CHECK_HEADER_VARS(host, HTTP_VAR_HOST);
 

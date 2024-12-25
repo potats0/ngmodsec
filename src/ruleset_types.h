@@ -30,6 +30,7 @@ typedef enum {
     HTTP_VAR_GET_ARGS,     // http.get_args
     HTTP_VAR_HEADERS_ARGS, // http.headers_args
     HTTP_VAR_HOST,         // http.host
+    HTTP_VAR_UNPARSED_URI, // http.unparsed_uri
     HTTP_VAR_MAX
 } http_var_type_t;
 
