@@ -18,8 +18,13 @@ static void ngx_http_modsecurity_body_handler(ngx_http_request_t *r) {
 
         // 计算body总长度
         size_t len = 0;
-        for (ngx_chain_t *cl = r->request_body->bufs; cl && len != 0; cl = cl->next) {
+        for (cl = r->request_body->bufs; cl != NULL; cl = cl->next) {
             len += cl->buf->last - cl->buf->pos;
+        }
+
+        if (len == 0) {
+            MLOGD("empty body");
+            break;
         }
 
         // 分配内存存储完整body
@@ -42,6 +47,7 @@ static void ngx_http_modsecurity_body_handler(ngx_http_request_t *r) {
 
     } while (0);
 
+    MLOGD("Exiting body filter phase handler");
     // 继续处理请求
     ngx_http_finalize_request(r, NGX_OK);
 }
@@ -83,7 +89,7 @@ ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r) {
     // 放在结尾，准备上报日志
     traverse_rule_hits(ctx->rule_hit_rbtree);
     MLOGD("Exiting precontent phase handler");
-    return NGX_DECLINED;
+    return NGX_OK;
 }
 
 ngx_int_t ngx_http_modsecurity_precontent_init(ngx_conf_t *cf) {

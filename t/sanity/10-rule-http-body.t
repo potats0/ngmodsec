@@ -105,3 +105,42 @@ Matched pattern: a
 Matched Rule ID: 1000
 --- no_error_log
 [error]
+
+=== TEST 5: bug
+--- http_config
+    error_log logs/error.log debug;
+--- config
+        # 精确匹配 /echo 并返回固定响应
+        location = /echo {
+            return 200 "echo";
+        }
+
+        # 处理其他所有请求
+        location / {
+            error_log logs/error.log debug;
+
+            # 检查是否为内部代理请求
+            if ($http_x_internal_proxy = "true") {
+                return 200 "echo";
+            }
+
+            # 应用自定义规则
+            rule 'rule 1001 http.uri contains "index.php/oqrs/request_form" and http.method = POST;';
+
+            # 设置自定义请求头标识内部代理请求
+            proxy_set_header X-Internal-Proxy true;
+
+            # 代理请求到 /echo
+            proxy_pass http://127.0.0.1:$TEST_NGINX_SERVER_PORT/echo;
+        }
+
+--- request
+POST /index.php/oqrs/request_form
+station_id=1 AND (SELECT 2469 FROM(SELECT COUNT(*),CONCAT(0x7162716b71,(SELECT (ELT(2469=2469,1))),0x7162716b71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+--- more_headers
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36
+
+--- error_log
+Matched Rule ID: 1001
+--- no_error_log
+[error]
