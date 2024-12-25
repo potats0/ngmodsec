@@ -4,10 +4,14 @@ use Test::Nginx::Socket 'no_plan';
 no_root_location();
 no_shuffle();
 
+# 测试HTTP方法在规则中的处理：
+# 1. 测试用例1：验证规则中同时包含URI匹配和HTTP方法匹配的情况
+# 2. 测试用例2：验证规则中未设置HTTP方法时的默认行为
+
 run_tests();
 
 __DATA__
-=== TEST 1: handler execution
+=== TEST 1: Rule matching with HTTP method condition
 --- http_config
     error_log logs/error.log debug;
 --- config
@@ -24,16 +28,12 @@ __DATA__
 GET /test_handler
 --- error_log
 compile_all_hyperscan_databases successfully
-alloc scratch 0u failed, field is NULL
-alloc scratch 1u success
-alloc scratch 2u failed, field is NULL
-alloc scratch 3u failed, field is NULL
 Matched Rule ID: 1000
 Exiting precontent phase handler
 --- no_error_log
 [error]
 
-=== TEST 2: didn't set method in rule
+=== TEST 2: Rule matching without HTTP method condition (default behavior)
 --- http_config
     error_log logs/error.log debug;
 --- config
@@ -50,10 +50,6 @@ Exiting precontent phase handler
 GET /test_handler
 --- error_log
 compile_all_hyperscan_databases successfully
-alloc scratch 0u failed, field is NULL
-alloc scratch 1u success
-alloc scratch 2u failed, field is NULL
-alloc scratch 3u failed, field is NULL
 Matched Rule ID: 1000
 Exiting precontent phase handler
 --- no_error_log

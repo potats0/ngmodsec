@@ -4,16 +4,19 @@ use Test::Nginx::Socket 'no_plan';
 no_root_location();
 no_shuffle();
 
+# 测试HTTP GET参数在规则中的处理：
+# 1. 测试用例1：验证规则中同时包含URI匹配和GET参数匹配的情况，确保能正确解析和匹配URL查询字符串中的参数
+
 run_tests();
 
 __DATA__
-=== TEST 1: http-useragent
+=== TEST 1: Rule matching with HTTP GET parameter condition
 --- http_config
     error_log logs/error.log debug;
 --- config
     location /test_handler {
         error_log logs/error.log debug;
-        rule 'rule 1000 http.uri contains "a" and http.headers[user-agent] contains "TestAgent";';
+        rule 'rule 1000 http.uri contains "a" and http.get_args[cmd] contains "a";';
         proxy_pass http://127.0.0.1:$TEST_NGINX_SERVER_PORT/echo;
     }
     
@@ -21,7 +24,7 @@ __DATA__
         return 200 "echo";
     }
 --- request
-GET /test_handler
+GET /test_handler?a=b&c=d&e=f&cmd=a
 --- more_headers
 User-Agent: TestAgent/2.0
 User-Agent: TestAgent/1.0

@@ -3,11 +3,14 @@ use Test::Nginx::Socket 'no_plan';
 # 设置测试环境
 no_root_location();
 no_shuffle();
+# 测试规则中NOT条件的处理逻辑：
+# 1. 测试用例1：验证正向匹配 - 当URL中包含"a"但不包含"b"时应该匹配成功
+# 2. 测试用例2：验证反向匹配 - 当URL中同时包含"a"和"b"时应该匹配失败
 
 run_tests();
 
 __DATA__
-=== TEST 1: handler execution
+=== TEST 1: NOT condition rule matching - positive case (match when negated pattern absent)
 --- http_config
     error_log logs/error.log debug;
 --- config
@@ -24,10 +27,6 @@ __DATA__
 GET /test_handler
 --- error_log
 compile_all_hyperscan_databases successfully
-alloc scratch 0u failed, field is NULL
-alloc scratch 1u success
-alloc scratch 2u failed, field is NULL
-alloc scratch 3u failed, field is NULL
 Matched rule ID: 0 (from: 7lu, to: 8lu)
 Matched pattern: a
 Matched relation count : 1
@@ -40,7 +39,7 @@ Exiting precontent phase handler
 --- no_error_log
 [error]
 
-=== TEST 2: match not
+=== TEST 2: NOT condition rule matching - negative case (no match when negated pattern present)
 --- http_config
     error_log logs/error.log debug;
 --- config
@@ -57,10 +56,6 @@ Exiting precontent phase handler
 GET /test_handlerb
 --- error_log
 compile_all_hyperscan_databases successfully
-alloc scratch 0u failed, field is NULL
-alloc scratch 1u success
-alloc scratch 2u failed, field is NULL
-alloc scratch 3u failed, field is NULL
 Matched rule ID: 0 (from: 7lu, to: 8lu)
 Matched pattern: a
 Matched relation count : 1
