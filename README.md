@@ -11,16 +11,16 @@
 
 ## 目前新引擎支持的协议变量
 
-http.uri 送检ngx.uri，会经过一次url解码, 会经过一次url规范化，不包含url参数部分
-http.unparsed_uri 送检ngx.unparsed_uri，不经过任何处理，包含url参数部分
-http.exten 送检ngx.exten, 也就是url中文件扩展名部分 例如 /test.html 那么就是html
-http.method 送检ngx.method method必须是GET,POST,PUT,DELETE,HEAD,OPTIONS,TRACE,CONNECT,PROPFIND,PROPPATCH,LOCK,UNLOCK,PATCH,TRACE,CONNECT,不同的method之间可以用|分隔
-http.get_args["cmd"] 把get参数的cmd送检
-http.headers["cmd"] 把header的cmd送检 
-http.host 送检请求的host，这个可能会产生双写bug。如果需要检测双写， 请使用http.headers["host"]
-http.raw_req_body 送检请求的body ，未解码
-
-
+| 协议变量 | Nginx变量 | 说明 |
+|---------|-----------|------|
+| http.uri | ngx.uri | 会经过一次url解码和url规范化，不包含url参数部分 |
+| http.unparsed_uri | ngx.unparsed_uri | 不经过任何处理，包含url参数部分 |
+| http.exten | ngx.exten | url中文件扩展名部分，例如 /test.html 中的 html |
+| http.method | ngx.method | method必须是GET,POST,PUT,DELETE,HEAD,OPTIONS,TRACE,CONNECT,PROPFIND,PROPPATCH,LOCK,UNLOCK,PATCH,TRACE,CONNECT，不同的method之间可以用\|分隔 |
+| http.get_args["cmd"] | - | 把get参数的cmd送检 |
+| http.headers["cmd"] | - | 把header的cmd送检 |
+| http.host | ngx.host | 送检请求的host（可能产生双写bug，建议使用http.headers["host"]） |
+| http.raw_req_body | - | 送检请求的body，未解码 |
 
 # Nginx WAF Rule Match Engine Module
 
