@@ -24,15 +24,34 @@ void parse_get_args(ngx_http_request_t *r) {
         key_end = p;
 
         // Find value start and end
-        value_start = (p < end && *p == '=') ? p + 1 : p;
-        while (p < end && *p != '&') p++;
-        value_end = p;
-        p++; // Skip & or reach end
+        if (p < end && *p == '=') {
+            p++; // Skip '='
+            value_start = p;
+            while (p < end && *p != '&') p++;
+            value_end = p;
+        } else {
+            // Handle cases like "?param&" or "?param"
+            value_start = value_end = p;
+        }
+
+        if (p < end && *p == '&') {
+            p++; // Skip '&'
+        } else if (p == end) {
+            // Last parameter
+            p = end;
+        }
 
         if (key_end > key_start) {
             // Create temporary ngx_str_t for key and value
             ngx_str_t key = {.data = key_start, .len = key_end - key_start};
             ngx_str_t value = {.data = value_start, .len = value_end - value_start};
+
+            MLOGD("GET param: %V = %V", &key, &value);
+
+            if (key.len == 0 || value.len == 0) {
+                MLOGD("Invalid GET parameter");
+                continue;
+            }
 
             // 对于 GET 参数
             CHECK_HTTP_PARAM_MATCH(key, value, sign_rule_mg->get_match_context, ctx);

@@ -34,3 +34,103 @@ Matched Rule ID: 1000
 Exiting precontent phase handler
 --- no_error_log
 [error]
+
+=== TEST 2: GET parameter without value
+--- http_config
+    error_log logs/error.log debug;
+--- config
+    location /test_handler {
+        error_log logs/error.log debug;
+        rule 'rule 1000 http.uri contains "a" and http.get_args["cmd"] contains "a";';
+        proxy_pass http://127.0.0.1:$TEST_NGINX_SERVER_PORT/echo;
+    }
+    
+    location /echo {
+        return 200 "echo";
+    }
+--- request
+GET /test_handler?a=&c=d
+--- more_headers
+User-Agent: TestAgent/2.0
+User-Agent: TestAgent/1.0
+--- error_log
+compile_all_hyperscan_databases successfully
+GET param: a =
+Exiting precontent phase handler
+--- no_error_log
+[error]
+
+=== TEST 3: GET parameter without name
+--- http_config
+    error_log logs/error.log debug;
+--- config
+    location /test_handler {
+        error_log logs/error.log debug;
+        rule 'rule 1000 http.uri contains "a" and http.get_args["cmd"] contains "a";';
+        proxy_pass http://127.0.0.1:$TEST_NGINX_SERVER_PORT/echo;
+    }
+    
+    location /echo {
+        return 200 "echo";
+    }
+--- request
+GET /test_handler?=b&c=d
+--- more_headers
+User-Agent: TestAgent/2.0
+User-Agent: TestAgent/1.0
+--- error_log
+compile_all_hyperscan_databases successfully
+Exiting precontent phase handler
+--- no_error_log
+[error]
+
+=== TEST 4: GET parameter without =
+--- http_config
+    error_log logs/error.log debug;
+--- config
+    location /test_handler {
+        error_log logs/error.log debug;
+        rule 'rule 1000 http.uri contains "a" and http.get_args["cmd"] contains "a";';
+        proxy_pass http://127.0.0.1:$TEST_NGINX_SERVER_PORT/echo;
+    }
+    
+    location /echo {
+        return 200 "echo";
+    }
+--- request
+GET /test_handler?b&c=d
+--- more_headers
+User-Agent: TestAgent/2.0
+User-Agent: TestAgent/1.0
+--- error_log
+compile_all_hyperscan_databases successfully
+GET param: b = 
+Invalid GET parameter
+Exiting precontent phase handler
+--- no_error_log
+[error]
+
+=== TEST 5: 连续分隔符 ?a&&b=c
+--- http_config
+    error_log logs/error.log debug;
+--- config
+    location /test_handler {
+        error_log logs/error.log debug;
+        rule 'rule 1000 http.uri contains "a" and http.get_args["cmd"] contains "a";';
+        proxy_pass http://127.0.0.1:$TEST_NGINX_SERVER_PORT/echo;
+    }
+    
+    location /echo {
+        return 200 "echo";
+    }
+--- request
+GET /test_handler?a&&b=c
+--- more_headers
+User-Agent: TestAgent/2.0
+User-Agent: TestAgent/1.0
+--- error_log
+compile_all_hyperscan_databases successfully
+GET param: b = 
+Exiting precontent phase handler
+--- no_error_log
+[error]

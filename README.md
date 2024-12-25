@@ -12,6 +12,18 @@
 | http.host | ngx.host | 送检请求的host（可能产生双写bug，建议使用http.headers["host"]） |
 | http.raw_req_body | - | 送检请求的body，未解码 |
 
+其中在get的参数解析中，有可能会出现以下几种情况
+1. 正常参数 ?b=c
+   * key: "b", value: "c"
+2. 空值参数 ?a=
+   * key: "a", value: "" (空字符串)  这样会跳过送检value
+3. 无值参数 ?param
+   * key: "param", value: "" (空字符串) 无法被送检到get参数中，需要使用http.unparsed_uri解决
+4. 连续分隔符 ?a&&b=c
+   * 跳过空参数，只处理有效的key-value对
+5. a=x&a=y&b=z http参数污染
+   * 每一个name对应的value都会送检对应的参数的正则匹配中
+
 # Nginx WAF Rule Match Engine Module
 
 这是一个基于 Nginx 的 WAF 规则匹配引擎模块，支持复杂的规则解析和匹配功能。
