@@ -83,13 +83,14 @@ typedef struct ngx_vs_modsec_ctx_s {
 
 #define ALLOC_SINGLE_SCRATCH(ctx, type_name, id_fmt, ...)                                                \
     do {                                                                                                 \
-        if (ctx->db == NULL) {                                                                           \
-            ctx->scratch = NULL;                                                                         \
+        string_match_context_t *_ctx = (ctx);                                                            \
+        if (_ctx->db == NULL) {                                                                          \
+            _ctx->scratch = NULL;                                                                        \
             MLOGE("alloc scratch for " type_name id_fmt " failed, hyperscan db is NULL", ##__VA_ARGS__); \
         } else {                                                                                         \
-            if (hs_alloc_scratch(ctx->db, &(ctx->scratch)) != HS_SUCCESS) {                              \
+            if (hs_alloc_scratch(_ctx->db, &_ctx->scratch) != HS_SUCCESS) {                              \
                 MLOGE("alloc scratch for " type_name id_fmt " failed", ##__VA_ARGS__);                   \
-                ctx->scratch = NULL;                                                                     \
+                _ctx->scratch = NULL;                                                                    \
             }                                                                                            \
             MLOGN("alloc scratch for " type_name id_fmt " success", ##__VA_ARGS__);                      \
         }                                                                                                \
@@ -97,9 +98,10 @@ typedef struct ngx_vs_modsec_ctx_s {
 
 #define FREE_SINGLE_SCRATCH(ctx, type_name, id_fmt, ...)                           \
     do {                                                                           \
-        if (ctx->scratch) {                                                        \
-            hs_free_scratch(ctx->scratch);                                         \
-            ctx->scratch = NULL;                                                   \
+        string_match_context_t *_ctx = (ctx);                                      \
+        if (_ctx->scratch) {                                                       \
+            hs_free_scratch(_ctx->scratch);                                        \
+            _ctx->scratch = NULL;                                                  \
             MLOGN("free scratch for " type_name id_fmt " success", ##__VA_ARGS__); \
         }                                                                          \
     } while (0)
