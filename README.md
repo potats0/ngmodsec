@@ -1,13 +1,3 @@
-# 7090 Fields 与nginx内置变量对应关系
-
-   
-| 7090        | Nginx        | 序号                | 说明                                    |
-|-------------|-------------|--------------------|-----------------------------------------|
-| method_name | method_name | NGX_VAR_METHOD    | http请求方法                             |
-| http_url （建议改名）   | unparsed_uri| NGX_VAR_UNPARSED_URI | 带有query参数且未经url解码的原始url，很像7085中的http_url，在某些自定义规则场景中很有用          |
-| http_uri    | uri|  |      暂定     | 经过解码和规范化的路径部分，经常在自定义规则中做访问控制中使用          |
-| http_args   | args| 暂定 | query string原始部分          |
-                                      |
 
 ## 目前新引擎支持的协议变量
 
