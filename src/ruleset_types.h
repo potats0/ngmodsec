@@ -32,6 +32,7 @@ typedef enum {
     HTTP_VAR_HOST,         // http.host
     HTTP_VAR_UNPARSED_URI, // http.unparsed_uri
     HTTP_VAR_EXTEN,        // http.exten
+    HTTP_VAR_QUERY_STRING, // http.query_string
     HTTP_VAR_MAX
 } http_var_type_t;
 

@@ -11,6 +11,7 @@
 | http.headers["cmd"] | - | 把header的cmd送检 |
 | http.host | ngx.host | 送检请求的host（可能产生双写bug，建议使用http.headers["host"]） |
 | http.raw_req_body | - | 送检请求的body，未解码 |
+| http.query_string | ngx.args | 送检参数部分，从url中第一次出现?后面的部分 |
 
 其中在get的参数解析中，有可能会出现以下几种情况
 1. 正常参数 ?b=c
@@ -18,7 +19,7 @@
 2. 空值参数 ?a=
    * key: "a", value: "" (空字符串)  这样会跳过送检value
 3. 无值参数 ?param
-   * key: "param", value: "" (空字符串) 无法被送检到get参数中，需要使用http.unparsed_uri解决
+   * key: "param", value: "" (空字符串) 无法被送检到get参数中，需要使用http.query_string解决
 4. 连续分隔符 ?a&&b=c
    * 跳过空参数，只处理有效的key-value对
 5. a=x&a=y&b=z http参数污染
