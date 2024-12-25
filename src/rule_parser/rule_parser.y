@@ -328,7 +328,7 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
         }
         
         printf("Adding pattern: %s to %s (flags: 0x%x) for rule ID: %u (current_sub_id: %u, and_bit: 0x%x, not_mask: 0x%x)\n", 
-            pattern_str, param, flags, current_rule_id, current_sub_id, current_and_bit, current_not_mask);
+            converted_pattern, param, flags, current_rule_id, current_sub_id, current_and_bit, current_not_mask);
 
         // 确保规则掩码数组容量足够
         if (ensure_rule_mask_capacity(current_rule_mg, current_rule_id) != 0) {
