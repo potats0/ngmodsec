@@ -16,7 +16,7 @@ __DATA__
 --- config
     location /test_handler {
         error_log logs/error.log debug;
-        rule 'rule 1000 http.uri contains "a" and http.headers[user-agent] contains "TestAgent";';
+        rule 'rule 1000 http.uri contains "a" and http.headers["user-agent"] contains "TestAgent";';
         proxy_pass http://127.0.0.1:$TEST_NGINX_SERVER_PORT/echo;
     }
     

@@ -509,38 +509,38 @@ match_expr:
             YYERROR;
         }
     }
-    | HTTP_GET_ARGS '[' IDENTIFIER ']' CONTAINS STRING pattern_flags {
+    | HTTP_GET_ARGS '[' STRING ']' CONTAINS STRING pattern_flags {
         printf("Matched HTTP GET arg %s contains: %s with flags: 0x%x\n", $3, $6, $7);
         if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_CONTAINS, $7) != 0) {
             YYERROR;
         }
         
     }
-    | HTTP_GET_ARGS '[' IDENTIFIER ']' MATCHES STRING pattern_flags {
+    | HTTP_GET_ARGS '[' STRING ']' MATCHES STRING pattern_flags {
         printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
          if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_MATCHES, $7) != 0) {
             YYERROR;
         }
     }
-    | HTTP_GET_ARGS '[' IDENTIFIER ']' STARTS_WITH STRING pattern_flags {
+    | HTTP_GET_ARGS '[' STRING ']' STARTS_WITH STRING pattern_flags {
         printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
          if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_STARTS_WITH, $7) != 0) {
             YYERROR;
         }
     }
-    | HTTP_GET_ARGS '[' IDENTIFIER ']' ENDS_WITH STRING pattern_flags {
+    | HTTP_GET_ARGS '[' STRING ']' ENDS_WITH STRING pattern_flags {
         printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
          if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_ENDS_WITH, $7) != 0) {
             YYERROR;
         }
     }
-    | HTTP_GET_ARGS '[' IDENTIFIER ']' EQUALS STRING pattern_flags {
+    | HTTP_GET_ARGS '[' STRING ']' EQUALS STRING pattern_flags {
         printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
          if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_EQUALS, $7) != 0) {
             YYERROR;
         }
     }
-    | HTTP_HEADERS_ARGS '[' IDENTIFIER ']' CONTAINS STRING pattern_flags {
+    | HTTP_HEADERS_ARGS '[' STRING ']' CONTAINS STRING pattern_flags {
         printf("Matched HTTP headers arg %s contains: %s with flags: 0x%x\n", $3, $6, $7);
         if (handle_kvmatch_expr(&current_rule_mg->headers_match_context, $3, $6, OP_CONTAINS, $7) != 0) {
             YYERROR;
