@@ -31,8 +31,7 @@ apt install -y \
     gcc \
     g++ \
     pkg-config \
-    cmake \
-    ragel \
+    clang\
     clang-format
 
 # 开发工具

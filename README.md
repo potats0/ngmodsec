@@ -9,6 +9,18 @@
 | http_args   | args| 暂定 | query string原始部分          |
                                       |
 
+## 目前新引擎支持的协议变量
+
+http.uri 送检ngx.uri，会经过一次url解码, 会经过一次url规范化，不包含url参数部分
+http.unparsed_uri 送检ngx.unparsed_uri，不经过任何处理，包含url参数部分
+http.exten 送检ngx.exten, 也就是url中文件扩展名部分 例如 /test.html 那么就是html
+http.method 送检ngx.method method必须是GET,POST,PUT,DELETE,HEAD,OPTIONS,TRACE,CONNECT,PROPFIND,PROPPATCH,LOCK,UNLOCK,PATCH,TRACE,CONNECT,不同的method之间可以用|分隔
+http.get_args["cmd"] 把get参数的cmd送检
+http.headers["cmd"] 把header的cmd送检 
+http.host 送检请求的host，这个可能会产生双写bug。如果需要检测双写， 请使用http.headers["host"]
+
+
+
 # Nginx WAF Rule Match Engine Module
 
 这是一个基于 Nginx 的 WAF 规则匹配引擎模块，支持复杂的规则解析和匹配功能。
@@ -141,6 +153,8 @@ make test
 本模块支持灵活的规则语法来定义 WAF 规则。以下是详细说明：
 
 ### 基本规则格式
+
+注意: 目前规则支持八个or条件 每个条件支持32个子式
 
 ```
 rule <规则ID>: <匹配表达式>;
