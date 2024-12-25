@@ -368,6 +368,7 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
     unsigned int flags;
     http_var_type_t var_type;
     uint32_t method;
+    int op_type;
 }
 
 %token <string> STRING
@@ -390,6 +391,7 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
 
 %type <flags> pattern_flags
 %type <flags> pattern_flag
+%type <number> op_type
 
 // 定义运算符优先级和结合性
 %left OR
@@ -401,6 +403,14 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
 rules:
     /* empty */
     | rules rule
+    ;
+
+op_type
+    : CONTAINS     { $$ = OP_CONTAINS; }
+    | MATCHES      { $$ = OP_MATCHES; }
+    | STARTS_WITH  { $$ = OP_STARTS_WITH; }
+    | ENDS_WITH    { $$ = OP_ENDS_WITH; }
+    | EQUALS       { $$ = OP_EQUALS; }
     ;
 
 rule:
@@ -509,34 +519,18 @@ match_expr:
             YYERROR;
         }
     }
-    | HTTP_GET_ARGS '[' STRING ']' CONTAINS STRING pattern_flags {
-        printf("Matched HTTP GET arg %s contains: %s with flags: 0x%x\n", $3, $6, $7);
-        if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_CONTAINS, $7) != 0) {
-            YYERROR;
+    | HTTP_GET_ARGS '[' STRING ']' op_type STRING pattern_flags {
+        const char* op_str;
+        switch($5) {
+            case OP_CONTAINS:     op_str = "contains"; break;
+            case OP_MATCHES:      op_str = "matches"; break;
+            case OP_STARTS_WITH:  op_str = "starts with"; break;
+            case OP_ENDS_WITH:    op_str = "ends with"; break;
+            case OP_EQUALS:       op_str = "equals"; break;
+            default:             op_str = "unknown"; break;
         }
-        
-    }
-    | HTTP_GET_ARGS '[' STRING ']' MATCHES STRING pattern_flags {
-        printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
-         if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_MATCHES, $7) != 0) {
-            YYERROR;
-        }
-    }
-    | HTTP_GET_ARGS '[' STRING ']' STARTS_WITH STRING pattern_flags {
-        printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
-         if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_STARTS_WITH, $7) != 0) {
-            YYERROR;
-        }
-    }
-    | HTTP_GET_ARGS '[' STRING ']' ENDS_WITH STRING pattern_flags {
-        printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
-         if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_ENDS_WITH, $7) != 0) {
-            YYERROR;
-        }
-    }
-    | HTTP_GET_ARGS '[' STRING ']' EQUALS STRING pattern_flags {
-        printf("Matched HTTP GET arg %s matches: %s with flags: 0x%x\n", $3, $6, $7);
-         if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, OP_EQUALS, $7) != 0) {
+        printf("Matched HTTP GET arg %s %s: %s with flags: 0x%x\n", $3, op_str, $6, $7);
+        if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, $5, $7) != 0) {
             YYERROR;
         }
     }
