@@ -627,6 +627,12 @@ match_expr:
             YYERROR;
         }
     }
+    | HTTP_HEADERS_ARGS '[' STRING ']' IN string_list pattern_flags {
+        set_new_andbit();
+        if (handle_kv_string_list_expr(&current_rule_mg->headers_match_context, $3, $6->items, $6->count, $7) != 0) {
+            YYERROR;
+        }
+    }
     ;
 
 
