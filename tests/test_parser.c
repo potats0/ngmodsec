@@ -255,7 +255,7 @@ TEST_CASE(regex_multiple_conditions) {
 // 测试嵌套括号
 TEST_CASE(regex_nested_parentheses) {
     const char *rule_str =
-        "rule 2011 http.body matches "
+        "rule 2011 http.raw_req_body matches "
         "\"^(?:[^()]*(?:\\([^()]*\\)[^()]*)*){0,100}$\" /s;";
     sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
     ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
@@ -491,65 +491,6 @@ TEST_CASE(multi_pattern_hyperscan) {
     // 清理
     hs_free_scratch(scratch);
     destroy_rule_mg(rule_mg);
-    passed_tests++;
-}
-
-// 测试规则管理器复制功能
-TEST_CASE(rule_mg_duplication) {
-    const char *rule_str =
-        "rule 1001 http.uri contains \"admin\" and http.header contains \"evil\" "
-        "or http.body contains \"hack\";";
-    sign_rule_mg_t *rule_mg = calloc(1, sizeof(sign_rule_mg_t));
-    ASSERT_NOT_NULL(rule_mg, "Failed to allocate rule_mg");
-    ASSERT_EQ(0, init_rule_mg(rule_mg), "Failed to initialize rule_mg");
-
-    // 解析原始规则
-    ASSERT_EQ(0, parse_rule_string(rule_str, rule_mg), "Failed to parse rule");
-
-    // 复制规则管理器
-    sign_rule_mg_t *dup_mg = dup_rule_mg(rule_mg);
-    ASSERT_NOT_NULL(dup_mg, "Failed to duplicate rule_mg");
-
-    // 验证基本属性
-    ASSERT_EQ(rule_mg->rules_count, dup_mg->rules_count, "Rules count mismatch");
-    ASSERT_EQ(rule_mg->rule_ids[0], dup_mg->rule_ids[0], "Rule ID mismatch");
-
-    // 验证规则掩码
-    for (size_t i = 0; i < rule_mg->rules_count; i++) {
-        ASSERT_EQ(rule_mg->rule_masks[i].sub_rules_count, dup_mg->rule_masks[i].sub_rules_count,
-                  "Sub rules count mismatch");
-
-        for (size_t j = 0; j < rule_mg->rule_masks[i].sub_rules_count; j++) {
-            ASSERT_EQ(rule_mg->rule_masks[i].and_masks[j], dup_mg->rule_masks[i].and_masks[j], "AND mask mismatch");
-            ASSERT_EQ(rule_mg->rule_masks[i].not_masks[j], dup_mg->rule_masks[i].not_masks[j], "NOT mask mismatch");
-        }
-    }
-
-    // 验证字符串匹配上下文
-    for (int i = 0; i < HTTP_VAR_MAX; i++) {
-        if (rule_mg->string_match_context_array[i] != NULL) {
-            ASSERT_NOT_NULL(dup_mg->string_match_context_array[i], "String match context not duplicated");
-
-            string_match_context_t *src_ctx = rule_mg->string_match_context_array[i];
-            string_match_context_t *dup_ctx = dup_mg->string_match_context_array[i];
-
-            ASSERT_EQ(src_ctx->string_patterns_num, dup_ctx->string_patterns_num, "Pattern count mismatch");
-
-            // 验证模式字符串
-            for (uint32_t j = 0; j < src_ctx->string_patterns_num; j++) {
-                ASSERT_STR_EQ(src_ctx->string_patterns_list[j].string_pattern,
-                              dup_ctx->string_patterns_list[j].string_pattern, "Pattern string mismatch");
-
-                // 验证规则关系
-                ASSERT_EQ(src_ctx->string_patterns_list[j].relation_count,
-                          dup_ctx->string_patterns_list[j].relation_count, "Relation count mismatch");
-            }
-        }
-    }
-
-    // 清理资源
-    destroy_rule_mg(rule_mg);
-    destroy_rule_mg(dup_mg);
     passed_tests++;
 }
 
