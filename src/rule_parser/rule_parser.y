@@ -541,48 +541,26 @@ rule_expr:
 
 match_expr:
     HTTP_VAR op_type STRING pattern_flags {
-        const char* op_str;
-        switch($2) {
-            case OP_CONTAINS:     op_str = "contains"; break;
-            case OP_MATCHES:      op_str = "matches"; break;
-            case OP_STARTS_WITH:  op_str = "starts with"; break;
-            case OP_ENDS_WITH:    op_str = "ends with"; break;
-            case OP_EQUALS:       op_str = "equals"; break;
-            default:             op_str = "unknown"; break;
-        }
-        printf("Matched HTTP variable type %d %s: %s with flags: 0x%x\n", $1, op_str, $3, $4);
         set_new_andbit();
         if (handle_match_expr($1, $3, $2, $4) != 0) {
             YYERROR;
         }
     }
     | HTTP_VAR IN string_list pattern_flags {
-        printf("Matched HTTP variable type %d in string list with flags: 0x%x\n", $1, $4);
         set_new_andbit();
         if (handle_string_list_expr($1, $3->items, $3->count, $4) != 0) {
             YYERROR;
         }
     }
     | HTTP_GET_ARGS '[' STRING ']' op_type STRING pattern_flags {
-        const char* op_str;
-        switch($5) {
-            case OP_CONTAINS:     op_str = "contains"; break;
-            case OP_MATCHES:      op_str = "matches"; break;
-            case OP_STARTS_WITH:  op_str = "starts with"; break;
-            case OP_ENDS_WITH:    op_str = "ends with"; break;
-            case OP_EQUALS:       op_str = "equals"; break;
-            default:             op_str = "unknown"; break;
-        }
         set_new_andbit();
-        printf("Matched HTTP GET arg %s %s: %s with flags: 0x%x\n", $3, op_str, $6, $7);
         if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, $5, $7) != 0) {
             YYERROR;
         }
     }
-    | HTTP_HEADERS_ARGS '[' STRING ']' CONTAINS STRING pattern_flags {
-        printf("Matched HTTP headers arg %s contains: %s with flags: 0x%x\n", $3, $6, $7);
+    | HTTP_HEADERS_ARGS '[' STRING ']' op_type STRING pattern_flags {
         set_new_andbit();
-        if (handle_kvmatch_expr(&current_rule_mg->headers_match_context, $3, $6, OP_CONTAINS, $7) != 0) {
+        if (handle_kvmatch_expr(&current_rule_mg->headers_match_context, $3, $6, $5, $7) != 0) {
             YYERROR;
         }
     }
