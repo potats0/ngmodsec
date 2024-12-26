@@ -78,6 +78,22 @@ static uint16_t generate_new_and_bit(uint16_t current_mask) {
     return new_bit;
 }
 
+// 生成新的未使用的and_bit，并设置到全局变量中current_and_bit
+static void set_new_andbit(){
+    // 检查并调整and_bit in 中所有的子式共用一个掩码
+    if (current_rule_id < current_rule_mg->max_rules) {
+        uint16_t current_mask = current_rule_mg->rule_masks[current_rule_id].and_masks[current_sub_id];
+        if (current_mask != 0) {  // 如果已经有模式，生成新的 and_bit
+            uint16_t new_bit = generate_new_and_bit(current_mask);
+            if (!new_bit) {
+                fprintf(stderr, "Error: No available and_bit for rule %u sub_rule %u\n", current_rule_id, current_sub_id);
+                return ;
+            }
+            current_and_bit = new_bit;
+        }
+    }
+}
+
 // 确保规则掩码数组有足够空间
 static int ensure_rule_mask_capacity(sign_rule_mg_t* rule_mg, uint32_t rule_id) {
     if (rule_id < rule_mg->max_rules) {
@@ -232,26 +248,11 @@ static int add_rule_relation(string_pattern_t* pattern_entry, uint32_t rule_id, 
 }
 
 // 主函数：添加模式到上下文
-static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uint32_t flags, bool need_newbit) {
+static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uint32_t flags) {
     
     if (!current_rule_mg) {
         fprintf(stderr, "Failed to allocate rule_mg\n");
         return;
-    }
-
-    if (need_newbit){
-        // 检查并调整and_bit
-        if (current_rule_id < current_rule_mg->max_rules) {
-            uint16_t current_mask = current_rule_mg->rule_masks[current_rule_id].and_masks[current_sub_id];
-            if (current_mask != 0) {  // 如果已经有模式，生成新的 and_bit
-                uint16_t new_bit = generate_new_and_bit(current_mask);
-                if (!new_bit) {
-                    fprintf(stderr, "Error: No available and_bit for rule %u sub_rule %u\n", current_rule_id, current_sub_id);
-                    return;
-                }
-                current_and_bit = new_bit;
-            }
-        }
     }
     
     printf("Adding pattern: %s to %d (flags: 0x%x) for rule ID: %u (current_sub_id: %u, and_bit: 0x%x, not_mask: 0x%x)\n", 
@@ -291,9 +292,9 @@ static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uin
     }
 }
 
-// 辅助函数：处理模式匹配表达式, need_newbit 代表是否需要生成新的 and_bit， 主要处理括号表达式
+// 辅助函数：处理模式匹配表达式
 static int handle_match_expr(http_var_type_t var_type, char* pattern_str, 
-                           operator_type_t op_type, uint32_t flags, bool need_newbit) {
+                           operator_type_t op_type, uint32_t flags) {
     
     char* converted_pattern = convert_to_hyperscan_pattern(pattern_str, op_type);
     if (!converted_pattern) {
@@ -301,7 +302,7 @@ static int handle_match_expr(http_var_type_t var_type, char* pattern_str,
         return -1;
     }
     
-    add_pattern_to_context(var_type, converted_pattern, flags, need_newbit);
+    add_pattern_to_context(var_type, converted_pattern, flags);
     free(pattern_str);
     return 0;
 }
@@ -354,19 +355,6 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
         } else {
             g_waf_rule_free(param); // key已存在，释放新的
         }
-
-        // 检查并调整and_bit
-        if (current_rule_id < current_rule_mg->max_rules) {
-            uint16_t current_mask = current_rule_mg->rule_masks[current_rule_id].and_masks[current_sub_id];
-            if (current_mask != 0) {  // 如果已经有模式，生成新的 and_bit
-                uint16_t new_bit = generate_new_and_bit(current_mask);
-                if (!new_bit) {
-                    fprintf(stderr, "Error: No available and_bit for rule %u sub_rule %u\n", current_rule_id, current_sub_id);
-                    return -1;
-                }
-                current_and_bit = new_bit;
-            }
-        }
         
         printf("Adding pattern: %s to %s (flags: 0x%x) for rule ID: %u (current_sub_id: %u, and_bit: 0x%x, not_mask: 0x%x)\n", 
             converted_pattern, param, flags, current_rule_id, current_sub_id, current_and_bit, current_not_mask);
@@ -408,22 +396,9 @@ static int handle_string_list_expr(http_var_type_t var_type, char** items, size_
         return -1;
     }
 
-    // 检查并调整and_bit in 中所有的子式共用一个掩码
-    if (current_rule_id < current_rule_mg->max_rules) {
-        uint16_t current_mask = current_rule_mg->rule_masks[current_rule_id].and_masks[current_sub_id];
-        if (current_mask != 0) {  // 如果已经有模式，生成新的 and_bit
-            uint16_t new_bit = generate_new_and_bit(current_mask);
-            if (!new_bit) {
-                fprintf(stderr, "Error: No available and_bit for rule %u sub_rule %u\n", current_rule_id, current_sub_id);
-                return -1;
-            }
-            current_and_bit = new_bit;
-        }
-    }
-
     // 为每个字符串创建一个模式并添加到上下文
     for (size_t i = 0; i < count; i++) {
-        if (handle_match_expr(var_type, strdup(items[i]), OP_EQUALS, flags, false) != 0) {
+        if (handle_match_expr(var_type, strdup(items[i]), OP_EQUALS, flags) != 0) {
             return -1;
         }
     }
@@ -576,12 +551,14 @@ match_expr:
             default:             op_str = "unknown"; break;
         }
         printf("Matched HTTP variable type %d %s: %s with flags: 0x%x\n", $1, op_str, $3, $4);
-        if (handle_match_expr($1, $3, $2, $4, true) != 0) {
+        set_new_andbit();
+        if (handle_match_expr($1, $3, $2, $4) != 0) {
             YYERROR;
         }
     }
     | HTTP_VAR IN string_list pattern_flags {
         printf("Matched HTTP variable type %d in string list with flags: 0x%x\n", $1, $4);
+        set_new_andbit();
         if (handle_string_list_expr($1, $3->items, $3->count, $4) != 0) {
             YYERROR;
         }
@@ -596,6 +573,7 @@ match_expr:
             case OP_EQUALS:       op_str = "equals"; break;
             default:             op_str = "unknown"; break;
         }
+        set_new_andbit();
         printf("Matched HTTP GET arg %s %s: %s with flags: 0x%x\n", $3, op_str, $6, $7);
         if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, $5, $7) != 0) {
             YYERROR;
@@ -603,6 +581,7 @@ match_expr:
     }
     | HTTP_HEADERS_ARGS '[' STRING ']' CONTAINS STRING pattern_flags {
         printf("Matched HTTP headers arg %s contains: %s with flags: 0x%x\n", $3, $6, $7);
+        set_new_andbit();
         if (handle_kvmatch_expr(&current_rule_mg->headers_match_context, $3, $6, OP_CONTAINS, $7) != 0) {
             YYERROR;
         }
