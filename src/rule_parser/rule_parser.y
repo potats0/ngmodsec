@@ -462,6 +462,30 @@ static int handle_string_list_expr(http_var_type_t var_type, char** items, size_
     return 0;
 }
 
+static void free_string_list(string_list_t* list) {
+    if (!list) return;
+    
+    // 释放所有字符串
+    for (size_t i = 0; i < list->count; i++) {
+        if (list->items[i]) {
+            g_waf_rule_free(list->items[i]);
+        }
+    }
+    
+    // 释放items数组
+    if (list->items) {
+        g_waf_rule_free(list->items);
+    }
+    
+    // 释放list结构体本身
+    g_waf_rule_free(list);
+}
+
+static int handle_kv_string_list_with_context(hash_pattern_item_t **context, char *param, string_list_t *list, uint32_t flags) {
+    int ret = handle_kv_string_list_expr(context, param, list->items, list->count, flags);
+    free_string_list(list);
+    return ret;
+}
 %}
 
 %union {
@@ -616,11 +640,10 @@ match_expr:
     }    
     | HTTP_GET_ARGS '[' STRING ']' IN string_list pattern_flags {
         set_new_andbit();
-        if (handle_kv_string_list_expr(&current_rule_mg->get_match_context, $3, $6->items, $6->count, $7) != 0) {
+        if (handle_kv_string_list_with_context(&current_rule_mg->get_match_context, $3, $6, $7) != 0) {
             YYERROR;
         }
     }
-
     | HTTP_HEADERS_ARGS '[' STRING ']' op_type STRING pattern_flags {
         set_new_andbit();
         if (handle_kvmatch_expr(&current_rule_mg->headers_match_context, $3, $6, $5, $7) != 0) {
@@ -629,7 +652,7 @@ match_expr:
     }
     | HTTP_HEADERS_ARGS '[' STRING ']' IN string_list pattern_flags {
         set_new_andbit();
-        if (handle_kv_string_list_expr(&current_rule_mg->headers_match_context, $3, $6->items, $6->count, $7) != 0) {
+        if (handle_kv_string_list_with_context(&current_rule_mg->headers_match_context, $3, $6, $7) != 0) {
             YYERROR;
         }
     }
