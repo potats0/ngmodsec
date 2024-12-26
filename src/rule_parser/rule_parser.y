@@ -573,7 +573,6 @@ match_expr:
             case OP_STARTS_WITH:  op_str = "starts with"; break;
             case OP_ENDS_WITH:    op_str = "ends with"; break;
             case OP_EQUALS:       op_str = "equals"; break;
-            case OP_IN:          op_str = "in"; break;
             default:             op_str = "unknown"; break;
         }
         printf("Matched HTTP variable type %d %s: %s with flags: 0x%x\n", $1, op_str, $3, $4);
@@ -595,7 +594,6 @@ match_expr:
             case OP_STARTS_WITH:  op_str = "starts with"; break;
             case OP_ENDS_WITH:    op_str = "ends with"; break;
             case OP_EQUALS:       op_str = "equals"; break;
-            case OP_IN:          op_str = "in"; break;
             default:             op_str = "unknown"; break;
         }
         printf("Matched HTTP GET arg %s %s: %s with flags: 0x%x\n", $3, op_str, $6, $7);
