@@ -4,7 +4,14 @@
 #include <hs/hs.h>
 
 // 操作符类型枚举
-typedef enum { OP_CONTAINS = 1, OP_MATCHES, OP_STARTS_WITH, OP_ENDS_WITH, OP_EQUALS } operator_type_t;
+typedef enum { OP_CONTAINS = 1, OP_MATCHES, OP_STARTS_WITH, OP_ENDS_WITH, OP_EQUALS, OP_IN } operator_type_t;
+
+// 字符串列表结构定义
+typedef struct {
+    char **items;
+    size_t count;
+    size_t capacity;
+} string_list_t;
 
 /**
  * @brief 将模式字符串转换为Hyperscan兼容的正则表达式

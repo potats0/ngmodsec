@@ -23,6 +23,45 @@ int parse_rule_input(const char* rule_str, const char* filename, sign_rule_mg_t*
 int parse_rule_string(const char* rule_str, sign_rule_mg_t* rule_mg);
 int parse_rule_file(const char* filename, sign_rule_mg_t* rule_mg);
 
+// 字符串列表相关函数声明和实现
+static string_list_t* create_string_list(char* first_str);
+static string_list_t* append_to_string_list(string_list_t* list, char* str);
+
+static string_list_t* create_string_list(char* first_str) {
+    string_list_t* list = g_waf_rule_malloc(sizeof(string_list_t));
+    if (!list) return NULL;
+    
+    list->capacity = 4;  // 初始容量
+    list->items = g_waf_rule_malloc(list->capacity * sizeof(char*));
+    if (!list->items) {
+        g_waf_rule_free(list);
+        return NULL;
+    }
+    
+    list->items[0] = first_str;
+    list->count = 1;
+    return list;
+}
+
+static string_list_t* append_to_string_list(string_list_t* list, char* str) {
+    if (!list) return NULL;
+    
+    if (list->count >= list->capacity) {
+        size_t new_capacity = list->capacity * 2;
+        char** new_items = g_waf_rule_malloc(new_capacity * sizeof(char*));
+        if (!new_items) return NULL;
+        
+        memcpy(new_items, list->items, list->count * sizeof(char*));
+        g_waf_rule_free(list->items);
+        list->items = new_items;
+        list->capacity = new_capacity;
+    }
+    
+    list->items[list->count++] = str;
+    return list;
+}
+
+// 函数声明
 void yyerror(const char* s);
 static sign_rule_mg_t* current_rule_mg = NULL;
 static uint32_t current_rule_id = 0;    // 当前规则ID
@@ -193,23 +232,25 @@ static int add_rule_relation(string_pattern_t* pattern_entry, uint32_t rule_id, 
 }
 
 // 主函数：添加模式到上下文
-static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uint32_t flags) {
+static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uint32_t flags, bool need_newbit) {
     
     if (!current_rule_mg) {
         fprintf(stderr, "Failed to allocate rule_mg\n");
         return;
     }
 
-    // 检查并调整and_bit
-    if (current_rule_id < current_rule_mg->max_rules) {
-        uint16_t current_mask = current_rule_mg->rule_masks[current_rule_id].and_masks[current_sub_id];
-        if (current_mask != 0) {  // 如果已经有模式，生成新的 and_bit
-            uint16_t new_bit = generate_new_and_bit(current_mask);
-            if (!new_bit) {
-                fprintf(stderr, "Error: No available and_bit for rule %u sub_rule %u\n", current_rule_id, current_sub_id);
-                return;
+    if (need_newbit){
+        // 检查并调整and_bit
+        if (current_rule_id < current_rule_mg->max_rules) {
+            uint16_t current_mask = current_rule_mg->rule_masks[current_rule_id].and_masks[current_sub_id];
+            if (current_mask != 0) {  // 如果已经有模式，生成新的 and_bit
+                uint16_t new_bit = generate_new_and_bit(current_mask);
+                if (!new_bit) {
+                    fprintf(stderr, "Error: No available and_bit for rule %u sub_rule %u\n", current_rule_id, current_sub_id);
+                    return;
+                }
+                current_and_bit = new_bit;
             }
-            current_and_bit = new_bit;
         }
     }
     
@@ -250,9 +291,9 @@ static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uin
     }
 }
 
-// 辅助函数：处理模式匹配表达式
+// 辅助函数：处理模式匹配表达式, need_newbit 代表是否需要生成新的 and_bit， 主要处理括号表达式
 static int handle_match_expr(http_var_type_t var_type, char* pattern_str, 
-                           operator_type_t op_type, uint32_t flags) {
+                           operator_type_t op_type, uint32_t flags, bool need_newbit) {
     
     char* converted_pattern = convert_to_hyperscan_pattern(pattern_str, op_type);
     if (!converted_pattern) {
@@ -260,7 +301,7 @@ static int handle_match_expr(http_var_type_t var_type, char* pattern_str,
         return -1;
     }
     
-    add_pattern_to_context(var_type, converted_pattern, flags);
+    add_pattern_to_context(var_type, converted_pattern, flags, need_newbit);
     free(pattern_str);
     return 0;
 }
@@ -360,6 +401,36 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
         
         return 0;
 }
+
+static int handle_string_list_expr(http_var_type_t var_type, char** items, size_t count, uint32_t flags) {
+    if (!items || count == 0) {
+        fprintf(stderr, "Invalid string list\n");
+        return -1;
+    }
+
+    // 检查并调整and_bit in 中所有的子式共用一个掩码
+    if (current_rule_id < current_rule_mg->max_rules) {
+        uint16_t current_mask = current_rule_mg->rule_masks[current_rule_id].and_masks[current_sub_id];
+        if (current_mask != 0) {  // 如果已经有模式，生成新的 and_bit
+            uint16_t new_bit = generate_new_and_bit(current_mask);
+            if (!new_bit) {
+                fprintf(stderr, "Error: No available and_bit for rule %u sub_rule %u\n", current_rule_id, current_sub_id);
+                return -1;
+            }
+            current_and_bit = new_bit;
+        }
+    }
+
+    // 为每个字符串创建一个模式并添加到上下文
+    for (size_t i = 0; i < count; i++) {
+        if (handle_match_expr(var_type, strdup(items[i]), OP_EQUALS, flags, false) != 0) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 %}
 
 %union {
@@ -369,6 +440,7 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
     http_var_type_t var_type;
     uint32_t method;
     int op_type;
+    string_list_t* string_list;
 }
 
 %token <string> STRING
@@ -379,7 +451,7 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
 %token <var_type> HTTP_HEADERS_ARGS
 %token <string> IDENTIFIER
 
-%token CONTAINS MATCHES STARTS_WITH ENDS_WITH EQUALS
+%token CONTAINS MATCHES STARTS_WITH ENDS_WITH EQUALS IN
 %token AND OR NOT
 %token RULE SEMICOLON
 %token NOCASE MULTILINE DOTALL SINGLEMATCH
@@ -392,6 +464,9 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
 %type <flags> pattern_flags
 %type <flags> pattern_flag
 %type <number> op_type
+
+%type <string_list> string_list
+%type <string_list> string_items
 
 // 定义运算符优先级和结合性
 %left OR
@@ -411,6 +486,7 @@ op_type
     | STARTS_WITH  { $$ = OP_STARTS_WITH; }
     | ENDS_WITH    { $$ = OP_ENDS_WITH; }
     | EQUALS       { $$ = OP_EQUALS; }
+    | IN          { $$ = OP_IN; }
     ;
 
 rule:
@@ -490,24 +566,27 @@ rule_expr:
 
 match_expr:
     HTTP_VAR op_type STRING pattern_flags {
-
         const char* op_str;
-
         switch($2) {
             case OP_CONTAINS:     op_str = "contains"; break;
             case OP_MATCHES:      op_str = "matches"; break;
             case OP_STARTS_WITH:  op_str = "starts with"; break;
             case OP_ENDS_WITH:    op_str = "ends with"; break;
             case OP_EQUALS:       op_str = "equals"; break;
+            case OP_IN:          op_str = "in"; break;
             default:             op_str = "unknown"; break;
         }
-
         printf("Matched HTTP variable type %d %s: %s with flags: 0x%x\n", $1, op_str, $3, $4);
-        if (handle_match_expr($1, $3, $2, $4) != 0) {
+        if (handle_match_expr($1, $3, $2, $4, true) != 0) {
             YYERROR;
         }
     }
-
+    | HTTP_VAR IN string_list pattern_flags {
+        printf("Matched HTTP variable type %d in string list with flags: 0x%x\n", $1, $4);
+        if (handle_string_list_expr($1, $3->items, $3->count, $4) != 0) {
+            YYERROR;
+        }
+    }
     | HTTP_GET_ARGS '[' STRING ']' op_type STRING pattern_flags {
         const char* op_str;
         switch($5) {
@@ -516,6 +595,7 @@ match_expr:
             case OP_STARTS_WITH:  op_str = "starts with"; break;
             case OP_ENDS_WITH:    op_str = "ends with"; break;
             case OP_EQUALS:       op_str = "equals"; break;
+            case OP_IN:          op_str = "in"; break;
             default:             op_str = "unknown"; break;
         }
         printf("Matched HTTP GET arg %s %s: %s with flags: 0x%x\n", $3, op_str, $6, $7);
@@ -542,6 +622,19 @@ pattern_flag:
     | MULTILINE { $$ = HS_FLAG_MULTILINE; }
     | DOTALL { $$ = HS_FLAG_DOTALL; }
     | SINGLEMATCH { $$ = HS_FLAG_SINGLEMATCH; }
+    ;
+
+string_list:
+    '{' string_items '}' { $$ = $2; }
+    ;
+
+string_items:
+    STRING { 
+        $$ = create_string_list($1);
+    }
+    | string_items ',' STRING {
+        $$ = append_to_string_list($1, $3);
+    }
     ;
 
 %%

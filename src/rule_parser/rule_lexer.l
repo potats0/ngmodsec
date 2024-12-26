@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "ruleset_types.h"
+#include "pattern_converter.h"
 #include "rule_parser.tab.h"
 
 extern int yylineno;
@@ -51,11 +52,15 @@ extern YYSTYPE yylval;
 "CONNECT"         { yylval.method = 0x00010000; return METHOD; }
 "="             { return EQ; }
 "|"             { return '|'; }
+","             { return ','; }
+"{"             { return '{'; }
+"}"             { return '}'; }
 "contains"      { return CONTAINS; }
 "matches"       { return MATCHES; }
 "starts_with"   { return STARTS_WITH; }
 "ends_with"     { return ENDS_WITH; }
 "equals"        { return EQUALS; }
+"in"            { return IN; }
 "and"           { return AND; }
 "or"            { return OR; }
 "not"           { return NOT; }
