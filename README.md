@@ -1,4 +1,4 @@
-
+# 规则语法说明
 ## 目前新引擎支持的协议变量
 
 | 协议变量 | Nginx变量 | 说明 |
@@ -11,10 +11,11 @@
 | http.headers["cmd"] | - | 把header的cmd送检 |
 | http.host | ngx.host | 送检请求的host（可能产生双写bug，建议使用http.headers["host"]） |
 | http.raw_req_body | - | 送检请求的body，未解码 |
-| http.query_string | ngx.args | 送检参数部分，从url中第一次出现?后面的部分 |
-| http.all_get_value | - | 把get参数中每一个解析后的value都送检 |
-| http.all_get_name | - | 把get参数中每一个解析后的key都送检 |
-| http.all_header_value | - | 每一个header的value都送检| 
+| http.query_string | ngx.args | 检查 URL 中的查询字符串部分（即URL中第一次出现? 后的所有内容）。适用于需要对原始查询字符串进行完整性检查的场景，如检测编码绕过或异常字符 |
+| http.all_get_value | - | 检查所有 GET 参数的值。这包括：1) URL 中的所有参数值；2) 通过 http.get_args["参数名"] 方式指定的具体参数值。适用于需要对所有参数值进行统一检查的场景 |
+| http.all_get_name | - | 检查所有 GET 参数的名称。用于检测可疑或恶意的参数名，例如SQL注入或命令注入攻击中常见的参数名模式 |
+| http.all_header_value | - | 检查所有 HTTP 头部字段的值。用于检测在任意头部中的恶意内容，包括自定义头部。适用于需要全面检查请求头部的安全策略 |
+
 
 其中在get的参数解析中，有可能会出现以下几种情况
 1. 正常参数 ?b=c
@@ -29,133 +30,6 @@
    * 每一个name对应的value都会送检对应的参数的正则匹配中
 6. a=x&a=y?a&b=z 
    * ?会正确的出现在value中
-
-# Nginx WAF Rule Match Engine Module
-
-这是一个基于 Nginx 的 WAF 规则匹配引擎模块，支持复杂的规则解析和匹配功能。
-
-## 功能特性
-
-- 支持复杂的逻辑表达式（AND、OR）
-- 支持多个子规则组合
-- 支持正则表达式匹配
-- 支持 HTTP 协议变量匹配
-
-## 依赖项
-
-### 系统要求
-- Ubuntu 22.04 LTS
-- 足够的磁盘空间（至少 1GB 用于依赖安装）
-
-### 核心依赖
-- Nginx 源码
-- C 编译器（gcc/clang）
-- GNU Make
-- Flex（用于词法分析）
-- Bison（用于语法分析）
-- Hyperscan（用于高性能正则匹配）
-- Clang-format (用于代码格式化)
-
-### 开发工具
-- Git（版本控制）
-- Bear（生成编译数据库）
-- Clangd（代码补全和导航）
-- GDB（调试器）
-- Valgrind（内存检查）
-
-### 测试依赖
-- Perl
-- Test::Nginx::Socket（Nginx 模块测试框架）
-
-## 快速开始
-
-### 1. 安装依赖
-
-我们提供了自动安装脚本，它会自动安装所有必需的依赖：
-
-```bash
-# 克隆仓库
-git clone https://github.com/your-username/ngx_http_new_sign_module.git
-cd ngx_http_new_sign_module
-
-# 运行依赖安装脚本
-sudo ./dependencies.sh
-```
-
-如果你想手动安装依赖，可以参考 `dependencies.sh` 脚本中的内容。
-
-### 2. 获取 Nginx 源码
-
-```bash
-git clone https://github.com/nginx/nginx.git
-export NGINX_PATH=/path/to/nginx  # 替换为你的 Nginx 源码路径
-```
-
-### 3. 构建模块
-
-在项目根目录下执行：
-```bash
-make
-```
-
-## 构建系统
-
-项目使用 GNU Make 作为构建系统，支持以下主要目标：
-
-### 编译目标
-
-- `make all`：构建完整的 Nginx 模块（默认目标）
-- `make rule_parser`：只构建规则解析器
-- `make test_parser`：构建规则解析器的测试程序
-
-### 测试目标
-
-- `make test`：运行所有测试（包括解析器测试和 Nginx 模块测试）
-- `make test-parser`：只运行规则解析器测试
-- `make test-nginx`：只运行 Nginx 模块测试
-
-### 清理目标
-
-- `make clean`：清理所有生成的文件
-- `make clean-parser`：只清理规则解析器相关的文件
-- `make clean-module`：只清理 Nginx 模块相关的文件
-
-### 其他目标
-
-- `make run`：运行规则解析器（用于测试规则文件）
-- `make clangd`：生成 clangd 配置文件（用于代码补全和导航）
-
-## 开发工具支持
-
-推荐使用 VS Code + clangd 进行开发：
-
-1. 首先生成 clangd 配置：
-   ```bash
-   make clangd
-   ```
-
-2. 安装 VS Code clangd 扩展
-
-3. 现在你可以享受代码补全和跳转功能了
-
-## 测试
-
-项目包含两种类型的测试：
-
-1. 规则解析器测试：
-   - 位于 `tests/test_parser.c`
-   - 使用自定义的基于宏的测试框架
-   - 通过 `make test-parser` 运行
-
-2. Nginx 模块测试：
-   - 位于 `t/` 目录
-   - 使用 Test::Nginx::Socket 框架
-   - 通过 `make test-nginx` 运行
-
-要运行所有测试：
-```bash
-make test
-```
 
 ## 规则语法说明
 
@@ -198,6 +72,29 @@ http.uri starts_with "前缀"
 ```
 http.uri ends_with "后缀"
 ```
+
+6. In 表达式
+使用 `in` 操作符可以检查一个值是否在给定的集合中。这对于需要匹配多个固定值的场景特别有用。
+
+语法格式：
+```
+http.get_args["参数名"] in {"值1", "值2", "值3", ...}
+```
+
+示例：
+```
+# 检查 GET 参数 "user" 是否为 "TestAgent" 或 "aaa"
+http.get_args["user"] in {"TestAgent", "aaa"};
+
+# 检查 URI 是否在指定的路径列表中
+http.uri in {"/admin", "/manage", "/config"};
+```
+
+说明：
+- 集合中的值使用大括号 `{}` 包围，多个值之间用逗号分隔
+- 每个值都会被视为精确匹配（相当于 equals 操作符）
+- 支持所有可用的 HTTP 变量类型
+- 可以与其他规则组合使用（如 AND、OR 操作符）
 
 ### Hyperscan 标志位
 
@@ -351,6 +248,134 @@ rule 30002: http.uri starts_with "/api" and
   - 10000-19999：基本功能性规则
   - 20000-29999：安全防护规则
   - 30000-39999：访问控制规则
+
+
+# Nginx WAF Rule Match Engine Module
+
+这是一个基于 Nginx 的 WAF 规则匹配引擎模块，支持复杂的规则解析和匹配功能。
+
+## 功能特性
+
+- 支持复杂的逻辑表达式（AND、OR）
+- 支持多个子规则组合
+- 支持正则表达式匹配
+- 支持 HTTP 协议变量匹配
+
+## 依赖项
+
+### 系统要求
+- Ubuntu 22.04 LTS
+- 足够的磁盘空间（至少 1GB 用于依赖安装）
+
+### 核心依赖
+- Nginx 源码
+- C 编译器（gcc/clang）
+- GNU Make
+- Flex（用于词法分析）
+- Bison（用于语法分析）
+- Hyperscan（用于高性能正则匹配）
+- Clang-format (用于代码格式化)
+
+### 开发工具
+- Git（版本控制）
+- Bear（生成编译数据库）
+- Clangd（代码补全和导航）
+- GDB（调试器）
+- Valgrind（内存检查）
+
+### 测试依赖
+- Perl
+- Test::Nginx::Socket（Nginx 模块测试框架）
+
+## 快速开始
+
+### 1. 安装依赖
+
+我们提供了自动安装脚本，它会自动安装所有必需的依赖：
+
+```bash
+# 克隆仓库
+git clone https://github.com/your-username/ngx_http_new_sign_module.git
+cd ngx_http_new_sign_module
+
+# 运行依赖安装脚本
+sudo ./dependencies.sh
+```
+
+如果你想手动安装依赖，可以参考 `dependencies.sh` 脚本中的内容。
+
+### 2. 获取 Nginx 源码
+
+```bash
+git clone https://github.com/nginx/nginx.git
+export NGINX_PATH=/path/to/nginx  # 替换为你的 Nginx 源码路径
+```
+
+### 3. 构建模块
+
+在项目根目录下执行：
+```bash
+make
+```
+
+## 构建系统
+
+项目使用 GNU Make 作为构建系统，支持以下主要目标：
+
+### 编译目标
+
+- `make all`：构建完整的 Nginx 模块（默认目标）
+- `make rule_parser`：只构建规则解析器
+- `make test_parser`：构建规则解析器的测试程序
+
+### 测试目标
+
+- `make test`：运行所有测试（包括解析器测试和 Nginx 模块测试）
+- `make test-parser`：只运行规则解析器测试
+- `make test-nginx`：只运行 Nginx 模块测试
+
+### 清理目标
+
+- `make clean`：清理所有生成的文件
+- `make clean-parser`：只清理规则解析器相关的文件
+- `make clean-module`：只清理 Nginx 模块相关的文件
+
+### 其他目标
+
+- `make run`：运行规则解析器（用于测试规则文件）
+- `make clangd`：生成 clangd 配置文件（用于代码补全和导航）
+
+## 开发工具支持
+
+推荐使用 VS Code + clangd 进行开发：
+
+1. 首先生成 clangd 配置：
+   ```bash
+   make clangd
+   ```
+
+2. 安装 VS Code clangd 扩展
+
+3. 现在你可以享受代码补全和跳转功能了
+
+## 测试
+
+项目包含两种类型的测试：
+
+1. 规则解析器测试：
+   - 位于 `tests/test_parser.c`
+   - 使用自定义的基于宏的测试框架
+   - 通过 `make test-parser` 运行
+
+2. Nginx 模块测试：
+   - 位于 `t/` 目录
+   - 使用 Test::Nginx::Socket 框架
+   - 通过 `make test-nginx` 运行
+
+要运行所有测试：
+```bash
+make test
+```
 
 ## 常见问题
 
