@@ -126,6 +126,18 @@ sign_rule_mg_t *dup_rule_mg(const sign_rule_mg_t *src);
 void sign_rule_set_alloc(waf_rule_malloc_fn f_malloc, waf_rule_free_fn f_free);
 
 /**
+ * @brief 创建字符串的副本，使用规则引擎的内存分配器
+ * @param str 要复制的源字符串
+ * @return 成功返回新分配的字符串副本，失败返回NULL
+ * @note 返回的字符串需要使用g_waf_rule_free释放
+ *
+ * 该函数类似于标准库的strdup，但使用规则引擎的内存分配器（g_waf_rule_malloc）
+ * 来分配内存。它会为源字符串分配新的内存并复制内容，包括结尾的null终止符。
+ * 如果内存分配失败或输入为NULL，将返回NULL。
+ */
+char *my_strdup(const char *str);
+
+/**
  * @brief 初始化规则管理器
  * @param rule_mg 要初始化的规则管理器
  * @return 成功返回0，失败返回-1

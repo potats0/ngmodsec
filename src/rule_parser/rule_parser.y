@@ -96,21 +96,6 @@ static string_list_t* append_to_string_list(string_list_t* list, char* str) {
     return list;
 }
 
-char *my_strdup(const char *str) {
-    if (!str) {
-        return NULL;
-    }
-    
-    size_t len = strlen(str) + 1;
-    char *new_str = g_waf_rule_malloc(len);
-    
-    if (new_str) {
-        memcpy(new_str, str, len);
-    }
-    
-    return new_str;
-}
-
 // 生成新的未使用的and_bit
 static uint16_t generate_new_and_bit(uint16_t current_mask) {
     uint16_t new_bit = 1;

@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "ruleset_types.h"
+
 // 需要转义的正则表达式特殊字符
 static const char *SPECIAL_CHARS = "[](){}.*+?^$|\\";
 
@@ -11,7 +13,7 @@ char *escape_regex_special_chars(const char *str) {
 
     size_t len = strlen(str);
     // 预分配足够的空间（每个字符可能都需要转义）
-    char *escaped = (char *)malloc(len * 2 + 1);
+    char *escaped = (char *)g_waf_rule_malloc(len * 2 + 1);
     if (!escaped) return NULL;
 
     size_t j = 0;
@@ -60,7 +62,7 @@ char *convert_to_hyperscan_pattern(const char *pattern, operator_type_t op_type)
 
     size_t escaped_len = strlen(escaped_pattern);
     size_t result_len = escaped_len + 10; // 预留一些额外空间给锚点和修饰符
-    char *result = (char *)malloc(result_len);
+    char *result = (char *)g_waf_rule_malloc(result_len);
 
     if (!result) {
         free(escaped_pattern);
@@ -75,9 +77,9 @@ char *convert_to_hyperscan_pattern(const char *pattern, operator_type_t op_type)
 
         case OP_MATCHES:
             // 已经是正则表达式，直接使用
-            free(escaped_pattern); // 释放不需要的escaped_pattern
-            free(result);          // 释放不需要的result
-            return strdup(pattern);
+            g_waf_rule_free(escaped_pattern); // 释放不需要的escaped_pattern
+            g_waf_rule_free(result);          // 释放不需要的result
+            return my_strdup(pattern);
 
         case OP_STARTS_WITH:
             // 添加开始锚点 ^
@@ -95,11 +97,11 @@ char *convert_to_hyperscan_pattern(const char *pattern, operator_type_t op_type)
             break;
 
         default:
-            free(escaped_pattern);
-            free(result);
+            g_waf_rule_free(escaped_pattern);
+            g_waf_rule_free(result);
             return NULL;
     }
 
-    free(escaped_pattern);
+    g_waf_rule_free(escaped_pattern);
     return result;
 }

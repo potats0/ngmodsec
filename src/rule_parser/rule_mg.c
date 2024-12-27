@@ -17,6 +17,21 @@ void sign_rule_set_alloc(waf_rule_malloc_fn f_malloc, waf_rule_free_fn f_free) {
     }
 }
 
+char *my_strdup(const char *str) {
+    if (!str) {
+        return NULL;
+    }
+
+    size_t len = strlen(str) + 1;
+    char *new_str = g_waf_rule_malloc(len);
+
+    if (new_str) {
+        memcpy(new_str, str, len);
+    }
+
+    return new_str;
+}
+
 // 声明解析函数
 int parse_rule_input(const char *rule_str, const char *filename, sign_rule_mg_t *rule_mg);
 
