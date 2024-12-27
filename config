@@ -23,8 +23,8 @@ ngx_module_srcs="$ngx_addon_dir/src/rule_parser/rule_mg.c \
                  $ngx_addon_dir/src/rule_parser/rule_parser.tab.c \
                  $ngx_addon_dir/src/rule_parser/lex.yy.c \
                  $ngx_addon_dir/src/rule_parser/pattern_converter.c \
-                 $ngx_addon_dir/src/rule_parser/hyperscan_utils.c \
                  $ngx_addon_dir/src/auxiliary.c \
+                 $ngx_addon_dir/src/ruleset_types.c \
                  $ngx_addon_dir/src/ngx_vs_modsec_module.c \
                  $ngx_addon_dir/src/ngx_vs_modsec_precontent.c \
                  $ngx_addon_dir/src/ngx_vs_modsec_header_filter.c\
