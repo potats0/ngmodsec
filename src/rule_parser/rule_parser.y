@@ -23,19 +23,32 @@ int parse_rule_input(const char* rule_str, const char* filename, sign_rule_mg_t*
 int parse_rule_string(const char* rule_str, sign_rule_mg_t* rule_mg);
 int parse_rule_file(const char* filename, sign_rule_mg_t* rule_mg);
 
+static sign_rule_mg_t* current_rule_mg = NULL;
+static uint32_t current_rule_id = 0;    // 当前规则ID
+static uint8_t current_sub_id = 0;      // 当前子规则ID
+static uint16_t current_and_bit = 1;    // 当前and_bit，每个子式左移一位
+static uint16_t current_not_mask = 0;   // 当前NOT掩码
+
 // 字符串列表相关函数声明和实现
 static string_list_t* create_string_list(char* first_str);
 static string_list_t* append_to_string_list(string_list_t* list, char* str);
+
+static void clenaup_ptr(char** ptr) {
+    if (!ptr || !*ptr) return;
+    printf("cleanup_ptr: %s\n", *ptr);
+    g_waf_rule_free(*ptr);
+    *ptr = NULL;
+}
 
 // cleanup 
 static void cleanup_string_list(string_list_t **list_ptr) {
     if (!list_ptr || !*list_ptr) return;
     
     string_list_t *list = *list_ptr;
-    
     // 释放所有字符串
     for (size_t i = 0; i < list->count; i++) {
         if (list->items[i]) {
+            printf("ss %s\n", list->items[i]);
             g_waf_rule_free(list->items[i]);
         }
     }
@@ -85,13 +98,20 @@ static string_list_t* append_to_string_list(string_list_t* list, char* str) {
     return list;
 }
 
-// 函数声明
-void yyerror(const char* s);
-static sign_rule_mg_t* current_rule_mg = NULL;
-static uint32_t current_rule_id = 0;    // 当前规则ID
-static uint8_t current_sub_id = 0;      // 当前子规则ID
-static uint16_t current_and_bit = 1;    // 当前and_bit，每个子式左移一位
-static uint16_t current_not_mask = 0;   // 当前NOT掩码
+char *my_strdup(const char *str) {
+    if (!str) {
+        return NULL;
+    }
+    
+    size_t len = strlen(str) + 1;
+    char *new_str = g_waf_rule_malloc(len);
+    
+    if (new_str) {
+        memcpy(new_str, str, len);
+    }
+    
+    return new_str;
+}
 
 // 生成新的未使用的and_bit
 static uint16_t generate_new_and_bit(uint16_t current_mask) {
@@ -335,8 +355,6 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
                             operator_type_t op_type, uint32_t flags ){
     if (!hash_item || !param || !pattern_str) {
         fprintf(stderr, "Invalid arguments to handle_kvmatch_expr\n");
-        if (param) g_waf_rule_free(param);
-        if (pattern_str) g_waf_rule_free(pattern_str);
         return -1;
     }
 
@@ -346,7 +364,6 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
 
     char* converted_pattern = convert_to_hyperscan_pattern(pattern_str, op_type);
     if (!converted_pattern) {
-        g_waf_rule_free(param);
         g_waf_rule_free(pattern_str);
         return -1;
     }
@@ -355,15 +372,12 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
         // Create new item if it doesn't exist
         item = g_waf_rule_malloc(sizeof(hash_pattern_item_t));
         if (!item) {
-            g_waf_rule_free(param);
-            g_waf_rule_free(pattern_str);
-            g_waf_rule_free(converted_pattern);
             yyerror("Failed to allocate hash pattern item");
             return -1;
         }
         memset(item, 0, sizeof(hash_pattern_item_t));
         
-        item->key = param; // 转移所有权
+        item->key = my_strdup(param); // 复制param
         
         // 初始化context
         string_match_context_t *ctx = &item->context;
@@ -385,14 +399,10 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
         
         // Add to hash table
         HASH_ADD_KEYPTR(hh, *hash_item, item->key, strlen(item->key), item);
-    } else {
-        g_waf_rule_free(param); // key已存在，释放新的
-    }
+    } 
 
     // 确保规则掩码数组容量足够
     if (ensure_rule_mask_capacity(current_rule_mg, current_rule_id) != 0) {
-        g_waf_rule_free(pattern_str);
-        g_waf_rule_free(converted_pattern);
         return -1;
     }
 
@@ -407,22 +417,16 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
     // 获取或创建模式
     string_pattern_t* pattern_entry = get_or_create_pattern(&item->context, converted_pattern, flags);
     if (!pattern_entry) {
-        g_waf_rule_free(pattern_str);
-        g_waf_rule_free(converted_pattern);
         yyerror("Failed to get or create pattern");
         return -1;
     }
 
     // 添加规则关系
     if (add_rule_relation(pattern_entry, current_rule_id, current_sub_id, current_and_bit) != 0) {
-        g_waf_rule_free(pattern_str);
-        g_waf_rule_free(converted_pattern);
         yyerror("Failed to add rule relation");
         return -1;
     }
 
-    g_waf_rule_free(pattern_str);  // 释放原始模式字符串
-    g_waf_rule_free(converted_pattern);  // 释放转换后的模式字符串，因为 get_or_create_pattern 已经创建了副本
     return 0;
 }
 
@@ -434,7 +438,6 @@ static int handle_kv_string_list_expr(hash_pattern_item_t **hash_item, char *par
 
     int ret = 0;
     char *item_copy = NULL;
-    char *param_copy = NULL;
 
     // 为每个字符串创建一个模式并添加到上下文
     for (size_t i = 0; i < count; i++) {
@@ -444,24 +447,9 @@ static int handle_kv_string_list_expr(hash_pattern_item_t **hash_item, char *par
             break;
         }
 
-        item_copy = strdup(items[i]);
-        if (!item_copy) {
-            fprintf(stderr, "Failed to duplicate string at index %zu\n", i);
-            ret = -1;
-            break;
-        }
+        item_copy = items[i];
 
-        param_copy = strdup(param);
-        if (!param_copy) {
-            fprintf(stderr, "Failed to duplicate param\n");
-            g_waf_rule_free(item_copy);
-            ret = -1;
-            break;
-        }
-
-        if (handle_kvmatch_expr(hash_item, param_copy, item_copy, OP_EQUALS, flags) != 0) {
-            g_waf_rule_free(item_copy);
-            g_waf_rule_free(param_copy);
+        if (handle_kvmatch_expr(hash_item, param, item_copy, OP_EQUALS, flags) != 0) {
             ret = -1;
             break;
         }
@@ -641,27 +629,33 @@ match_expr:
     }
     | HTTP_GET_ARGS '[' STRING ']' op_type STRING pattern_flags {
         set_new_andbit();
-        if (handle_kvmatch_expr(&current_rule_mg->get_match_context, $3, $6, $5, $7) != 0) {
+        char *param __attribute__((cleanup(clenaup_ptr))) = $3;
+        char *pattern __attribute__((cleanup(clenaup_ptr))) = $6;
+        if (handle_kvmatch_expr(&current_rule_mg->get_match_context, param, pattern, $5, $7) != 0) {
             YYERROR;
         }
     }    
     | HTTP_GET_ARGS '[' STRING ']' IN string_list pattern_flags {
         set_new_andbit();
         string_list_t *list __attribute__((cleanup(cleanup_string_list))) = $6;
-        if (handle_kv_string_list_with_context(&current_rule_mg->get_match_context, $3, list, $7) != 0) {
+        char *param __attribute__((cleanup(clenaup_ptr))) = $3;
+        if (handle_kv_string_list_with_context(&current_rule_mg->get_match_context, param, list, $7) != 0) {
             YYERROR;
         }
     }
     | HTTP_HEADERS_ARGS '[' STRING ']' op_type STRING pattern_flags {
         set_new_andbit();
-        if (handle_kvmatch_expr(&current_rule_mg->headers_match_context, $3, $6, $5, $7) != 0) {
+        char *param __attribute__((cleanup(clenaup_ptr))) = $3;
+        char *pattern __attribute__((cleanup(clenaup_ptr))) = $6;
+        if (handle_kvmatch_expr(&current_rule_mg->headers_match_context, param, pattern, $5, $7) != 0) {
             YYERROR;
         }
     }
     | HTTP_HEADERS_ARGS '[' STRING ']' IN string_list pattern_flags {
         set_new_andbit();
         string_list_t *list __attribute__((cleanup(cleanup_string_list))) = $6;
-        if (handle_kv_string_list_with_context(&current_rule_mg->headers_match_context, $3, list, $7) != 0) {
+        char *param __attribute__((cleanup(clenaup_ptr))) = $3;
+        if (handle_kv_string_list_with_context(&current_rule_mg->headers_match_context, param, list, $7) != 0) {
             YYERROR;
         }
     }
