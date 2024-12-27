@@ -27,6 +27,30 @@ int parse_rule_file(const char* filename, sign_rule_mg_t* rule_mg);
 static string_list_t* create_string_list(char* first_str);
 static string_list_t* append_to_string_list(string_list_t* list, char* str);
 
+// cleanup 
+static void cleanup_string_list(string_list_t **list_ptr) {
+    if (!list_ptr || !*list_ptr) return;
+    
+    string_list_t *list = *list_ptr;
+    
+    // 释放所有字符串
+    for (size_t i = 0; i < list->count; i++) {
+        if (list->items[i]) {
+            g_waf_rule_free(list->items[i]);
+        }
+    }
+    
+    // 释放items数组
+    if (list->items) {
+        g_waf_rule_free(list->items);
+    }
+    
+    // 释放list结构体本身
+    g_waf_rule_free(list);
+    *list_ptr = NULL;  // 清空指针
+}
+
+
 static string_list_t* create_string_list(char* first_str) {
     string_list_t* list = g_waf_rule_malloc(sizeof(string_list_t));
     if (!list) return NULL;
@@ -462,30 +486,12 @@ static int handle_string_list_expr(http_var_type_t var_type, char** items, size_
     return 0;
 }
 
-static void free_string_list(string_list_t* list) {
-    if (!list) return;
-    
-    // 释放所有字符串
-    for (size_t i = 0; i < list->count; i++) {
-        if (list->items[i]) {
-            g_waf_rule_free(list->items[i]);
-        }
-    }
-    
-    // 释放items数组
-    if (list->items) {
-        g_waf_rule_free(list->items);
-    }
-    
-    // 释放list结构体本身
-    g_waf_rule_free(list);
+// 辅助函数：处理模式匹配表达式
+static int handle_kv_string_list_with_context(hash_pattern_item_t **context, char *param, 
+                                            string_list_t *list, uint32_t flags) {
+    return handle_kv_string_list_expr(context, param, list->items, list->count, flags);
 }
 
-static int handle_kv_string_list_with_context(hash_pattern_item_t **context, char *param, string_list_t *list, uint32_t flags) {
-    int ret = handle_kv_string_list_expr(context, param, list->items, list->count, flags);
-    free_string_list(list);
-    return ret;
-}
 %}
 
 %union {
@@ -628,7 +634,8 @@ match_expr:
     }
     | HTTP_VAR IN string_list pattern_flags {
         set_new_andbit();
-        if (handle_string_list_expr($1, $3->items, $3->count, $4) != 0) {
+        string_list_t *list __attribute__((cleanup(cleanup_string_list))) = $3;
+        if (handle_string_list_expr($1, list->items, list->count, $4) != 0) {
             YYERROR;
         }
     }
@@ -640,7 +647,8 @@ match_expr:
     }    
     | HTTP_GET_ARGS '[' STRING ']' IN string_list pattern_flags {
         set_new_andbit();
-        if (handle_kv_string_list_with_context(&current_rule_mg->get_match_context, $3, $6, $7) != 0) {
+        string_list_t *list __attribute__((cleanup(cleanup_string_list))) = $6;
+        if (handle_kv_string_list_with_context(&current_rule_mg->get_match_context, $3, list, $7) != 0) {
             YYERROR;
         }
     }
@@ -652,7 +660,8 @@ match_expr:
     }
     | HTTP_HEADERS_ARGS '[' STRING ']' IN string_list pattern_flags {
         set_new_andbit();
-        if (handle_kv_string_list_with_context(&current_rule_mg->headers_match_context, $3, $6, $7) != 0) {
+        string_list_t *list __attribute__((cleanup(cleanup_string_list))) = $6;
+        if (handle_kv_string_list_with_context(&current_rule_mg->headers_match_context, $3, list, $7) != 0) {
             YYERROR;
         }
     }
