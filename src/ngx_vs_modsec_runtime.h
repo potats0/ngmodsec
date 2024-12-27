@@ -12,12 +12,9 @@
 
 typedef struct {
     ngx_rbtree_node_t node;
-    uint32_t matched_rule_id;         // 命中规则ID ruleid <<8 | subid
-    uint32_t rule_hit_bitmask;        // 保存记录规则命中的bit位
-    uint32_t alert_trigger_bitmask;   // 告警触发所需的总命中bit位
-    uint32_t alert_exclusion_bitmask; // 告警所需的非关系bit位
-    uint32_t matched_rule_methods;    // 该规则匹配的http请求方法
-    uint32_t current_request_method;  // 当前HTTP请求方法
+    uint32_t matched_rule_id;        // 命中规则ID ruleid <<8 | subid
+    uint32_t rule_hit_bitmask;       // 保存记录规则命中的bit位
+    uint32_t current_request_method; // 当前HTTP请求方法
 } rule_hit_record_t;
 
 typedef struct ngx_vs_modsec_ctx_s {
@@ -212,7 +209,6 @@ ngx_int_t ngx_http_modsecurity_body_filter_init();
 void traverse_rule_hits(ngx_rbtree_t *tree);
 // 创建并插入新节点的辅助函数
 ngx_int_t insert_rule_hit_node(ngx_rbtree_t *tree, ngx_pool_t *pool, u_int32_t threat_id, uint32_t rule_bit_mask,
-                               uint32_t combined_rule_mask, uint32_t not_rule_mask, uint32_t rule_method,
                                uint32_t method);
 // 红黑树节点插入函数
 void rule_hit_insert_value(ngx_rbtree_node_t *temp, ngx_rbtree_node_t *node, ngx_rbtree_node_t *sentinel);

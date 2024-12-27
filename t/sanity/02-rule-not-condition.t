@@ -31,7 +31,7 @@ Matched rule ID: 0 (from: 7lu, to: 8lu)
 Matched pattern: a
 Matched relation count : 1
 Matched threat_id: 1000 sub_id: 0 and_bit: 1
-recoed isn't exist, rule ID: 1000, Sub ID: 0 combined BitMask: 0x3, not_mask: 0x2 method: -1, created new record
+recoed isn't exist, rule ID: 1000, Sub ID: 0  created new record
 Traversing rule hits:
 tree Rule ID: 1000, Sub ID: 0, BitMask: 0x1, CombinedMask: 0x3
 Matched Rule ID: 1000
@@ -60,7 +60,7 @@ Matched rule ID: 0 (from: 7lu, to: 8lu)
 Matched pattern: a
 Matched relation count : 1
 Matched threat_id: 1000 sub_id: 0 and_bit: 1
-recoed isn't exist, rule ID: 1000, Sub ID: 0 combined BitMask: 0x3, not_mask: 0x2 method: -1, created new record
+recoed isn't exist, rule ID: 1000, Sub ID: 0  created new record
 Traversing rule hits:
 tree Rule ID: 1000, Sub ID: 0, BitMask: 0x3, CombinedMask: 0x3
 Exiting precontent phase handler
