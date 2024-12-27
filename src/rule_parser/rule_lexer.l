@@ -72,7 +72,7 @@ extern YYSTYPE yylval;
 "/s"            { return DOTALL; }      /* 点号匹配换行 */
 "/f"            { return SINGLEMATCH; } /* 单次匹配 */
 [0-9]+              { yylval.number = atoi(yytext); return NUMBER; }
-\"[^\"]*\"          { yylval.string = strdup(yytext + 1);
+\"([^"\\]|\\.)*\"          { yylval.string = strdup(yytext + 1);
                       yylval.string[strlen(yylval.string) - 1] = '\0';
                       return STRING; }
 [a-zA-Z0-9_\-.]+       { yylval.string = strdup(yytext); return IDENTIFIER; }
