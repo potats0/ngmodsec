@@ -72,9 +72,32 @@ extern YYSTYPE yylval;
 "/s"            { return DOTALL; }      /* 点号匹配换行 */
 "/f"            { return SINGLEMATCH; } /* 单次匹配 */
 [0-9]+              { yylval.number = atoi(yytext); return NUMBER; }
-\"([^"\\]|\\.)*\"          { yylval.string = strdup(yytext + 1);
-                      yylval.string[strlen(yylval.string) - 1] = '\0';
-                      return STRING; }
+\"([^"\\]|\\.)*\"          {
+    char *str = strdup(yytext + 1);
+    str[strlen(str) - 1] = '\0';
+    
+    // 处理转义字符
+    char *src = str, *dst = str;
+    while (*src) {
+        if (*src == '\\' && *(src + 1)) {
+            switch (*(src + 1)) {
+                case '"':  *dst++ = '"';  break;
+                case '\\': *dst++ = '\\'; break;
+                case 'n':  *dst++ = '\n'; break;
+                case 't':  *dst++ = '\t'; break;
+                case 'r':  *dst++ = '\r'; break;
+                default:   *dst++ = *(src + 1);
+            }
+            src += 2;
+        } else {
+            *dst++ = *src++;
+        }
+    }
+    *dst = '\0';
+    
+    yylval.string = str;
+    return STRING;
+}
 [a-zA-Z0-9_\-.]+       { yylval.string = strdup(yytext); return IDENTIFIER; }
 .               { 
                     fprintf(stderr, "Error: Unexpected character '%s' at line %d\n", yytext, yylineno);
