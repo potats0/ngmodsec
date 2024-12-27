@@ -33,9 +33,8 @@ static uint16_t current_not_mask = 0;   // 当前NOT掩码
 static string_list_t* create_string_list(char* first_str);
 static string_list_t* append_to_string_list(string_list_t* list, char* str);
 
-static void clenaup_ptr(char** ptr) {
+static void clenaup_ptr(void** ptr) {
     if (!ptr || !*ptr) return;
-    printf("cleanup_ptr: %s\n", *ptr);
     g_waf_rule_free(*ptr);
     *ptr = NULL;
 }
@@ -48,7 +47,6 @@ static void cleanup_string_list(string_list_t **list_ptr) {
     // 释放所有字符串
     for (size_t i = 0; i < list->count; i++) {
         if (list->items[i]) {
-            printf("ss %s\n", list->items[i]);
             g_waf_rule_free(list->items[i]);
         }
     }
@@ -347,7 +345,6 @@ static int handle_match_expr(http_var_type_t var_type, char* pattern_str,
     }
     
     add_pattern_to_context(var_type, converted_pattern, flags);
-    free(pattern_str);
     return 0;
 }
 
@@ -364,7 +361,6 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
 
     char* converted_pattern = convert_to_hyperscan_pattern(pattern_str, op_type);
     if (!converted_pattern) {
-        g_waf_rule_free(pattern_str);
         return -1;
     }
     
@@ -390,7 +386,6 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
         if (!ctx->string_patterns_list) {
             g_waf_rule_free(item->key);
             g_waf_rule_free(item);
-            g_waf_rule_free(pattern_str);
             g_waf_rule_free(converted_pattern);
             yyerror("Failed to allocate patterns list");
             return -1;
@@ -466,7 +461,7 @@ static int handle_string_list_expr(http_var_type_t var_type, char** items, size_
 
     // 为每个字符串创建一个模式并添加到上下文
     for (size_t i = 0; i < count; i++) {
-        if (handle_match_expr(var_type, strdup(items[i]), OP_EQUALS, flags) != 0) {
+        if (handle_match_expr(var_type, items[i], OP_EQUALS, flags) != 0) {
             return -1;
         }
     }
@@ -616,7 +611,8 @@ rule_expr:
 match_expr:
     HTTP_VAR op_type STRING pattern_flags {
         set_new_andbit();
-        if (handle_match_expr($1, $3, $2, $4) != 0) {
+        char *pattern __attribute__((cleanup(clenaup_ptr))) = $3;
+        if (handle_match_expr($1, pattern, $2, $4) != 0) {
             YYERROR;
         }
     }
