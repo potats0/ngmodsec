@@ -33,7 +33,7 @@ static uint16_t current_not_mask = 0;   // 当前NOT掩码
 static string_list_t* create_string_list(char* first_str);
 static string_list_t* append_to_string_list(string_list_t* list, char* str);
 
-static void clenaup_ptr(void** ptr) {
+static void clenaup_ptr(char** ptr) {
     if (!ptr || !*ptr) return;
     g_waf_rule_free(*ptr);
     *ptr = NULL;
