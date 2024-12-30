@@ -81,6 +81,20 @@ typedef struct ngx_vs_modsec_ctx_s {
         }                                                                                                     \
     } while (0)
 
+#define PROCESS_ARGS(str, ctx, match_context)                                             \
+    do {                                                                                  \
+        ngx_array_t *_args = parse_get_args(&str, r->pool);                               \
+        if (_args != NULL) {                                                              \
+            ngx_http_arg_t *elts = _args->elts;                                           \
+            for (size_t i = 0; i < _args->nelts; i++) {                                   \
+                MLOGD("param key:%V, value:%V", &elts[i].key, &elts[i].decoded);          \
+                CHECK_HTTP_PARAM_MATCH(elts[i].key, elts[i].decoded, match_context, ctx); \
+                DO_CHECK_VARS(elts[i].decoded, HTTP_VAR_ALL_GET_VALUE);                   \
+                DO_CHECK_VARS(elts[i].key, HTTP_VAR_ALL_GET_NAME);                        \
+            }                                                                             \
+        }                                                                                 \
+    } while (0)
+
 // 在 ngx_vs_modsec_runtime.h 中定义宏
 #define ITERATE_NGX_LIST(part, item, item_type, code_block) \
     do {                                                    \

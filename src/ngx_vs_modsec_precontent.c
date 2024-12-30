@@ -60,21 +60,9 @@ static void ngx_http_modsecurity_body_handler(ngx_http_request_t *r) {
                 ngx_strncasecmp(content_type->value.data, form_urlencoded.data, form_urlencoded.len) == 0) {
                 // 是 application/x-www-form-urlencoded
                 MLOGD("Found application/x-www-form-urlencoded content type");
-                ngx_array_t *args = parse_get_args(&body_content, r->pool);
-                if (args != NULL) {
-                    ngx_http_arg_t *elts = args->elts;
-                    for (size_t i = 0; i < args->nelts; i++) {
-                        MLOGD("POST key:%V, value:%V", &elts[i].key, &elts[i].decoded);
-                        // 对于 POST 参数
-                        CHECK_HTTP_PARAM_MATCH(elts[i].key, elts[i].decoded, sign_rule_mg->get_match_context, ctx);
 
-                        // 对于不定参数，全都送检
-                        DO_CHECK_VARS(elts[i].decoded, HTTP_VAR_ALL_GET_VALUE);
+                PROCESS_ARGS(body_content, ctx, sign_rule_mg->get_match_context);
 
-                        // 对于name部分也送检
-                        DO_CHECK_VARS(elts[i].key, HTTP_VAR_ALL_GET_NAME);
-                    }
-                }
             } else {
                 MLOGD("Not found application/x-www-form-urlencoded content type in post body");
             }
@@ -104,20 +92,7 @@ ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r) {
 
     DO_CHECK_HEADER_VARS(host, HTTP_VAR_HOST);
 
-    ngx_array_t *args = parse_get_args(&r->args, r->pool);
-    if (args != NULL) {
-        ngx_http_arg_t *elts = args->elts;
-        for (size_t i = 0; i < args->nelts; i++) {
-            // 对于 GET 参数
-            CHECK_HTTP_PARAM_MATCH(elts[i].key, elts[i].decoded, sign_rule_mg->get_match_context, ctx);
-
-            // 对于不定参数，全都送检
-            DO_CHECK_VARS(elts[i].decoded, HTTP_VAR_ALL_GET_VALUE);
-
-            // 对于name部分也送检
-            DO_CHECK_VARS(elts[i].key, HTTP_VAR_ALL_GET_NAME);
-        }
-    }
+    PROCESS_ARGS(r->args, ctx, sign_rule_mg->get_match_context);
 
     MLOGD("Starting to process headers");
 
