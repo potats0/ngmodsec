@@ -12,8 +12,8 @@
 | http.host | ngx.host | 送检请求的host（可能产生双写bug，建议使用http.headers["host"]） |
 | http.raw_req_body | - | 送检请求的body，未解码 |
 | http.query_string | ngx.args | 检查 URL 中的查询字符串部分（即URL中第一次出现? 后的所有内容）。适用于需要对原始查询字符串进行完整性检查的场景，如检测编码绕过或异常字符 |
-| http.all_get_value | - | 检查所有 GET 参数的值。按照RFC规范，会进行一次url解码 这包括：1) URL 中的所有参数值；2) 通过 http.get_args["参数名"] 方式指定的具体参数值。适用于需要对所有参数值进行统一检查的场景 |
-| http.all_get_name | - | 检查所有 GET 参数的名称。用于检测可疑或恶意的参数名，例如SQL注入或命令注入攻击中常见的参数名模式 |
+| http.all_get_value | - | 检查所有 GET,POST 参数的值。按照RFC规范，会进行一次url解码 这包括：1) URL 中的所有参数值；2) 通过 http.get_args["参数名"] 方式指定的具体参数值。适用于需要对所有参数值进行统一检查的场景 |
+| http.all_get_name | - | 检查所有 GET,POST 参数的名称。用于检测可疑或恶意的参数名，例如SQL注入或命令注入攻击中常见的参数名模式 |
 | http.all_header_value | - | 检查所有 HTTP 头部字段的值。用于检测在任意头部中的恶意内容，包括自定义头部。适用于需要全面检查请求头部的安全策略 |
 
 

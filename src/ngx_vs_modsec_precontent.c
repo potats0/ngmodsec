@@ -65,14 +65,14 @@ static void ngx_http_modsecurity_body_handler(ngx_http_request_t *r) {
                     ngx_http_arg_t *elts = args->elts;
                     for (size_t i = 0; i < args->nelts; i++) {
                         MLOGD("POST key:%V, value:%V", &elts[i].key, &elts[i].decoded);
-                        // // 对于 GET 参数
-                        // CHECK_HTTP_PARAM_MATCH(elts[i].key, elts[i].decoded, sign_rule_mg->get_match_context, ctx);
+                        // 对于 POST 参数
+                        CHECK_HTTP_PARAM_MATCH(elts[i].key, elts[i].decoded, sign_rule_mg->get_match_context, ctx);
 
-                        // // 对于不定参数，全都送检
-                        // DO_CHECK_VARS(elts[i].decoded, HTTP_VAR_ALL_GET_VALUE);
+                        // 对于不定参数，全都送检
+                        DO_CHECK_VARS(elts[i].decoded, HTTP_VAR_ALL_GET_VALUE);
 
-                        // // 对于name部分也送检
-                        // DO_CHECK_VARS(elts[i].key, HTTP_VAR_ALL_GET_NAME);
+                        // 对于name部分也送检
+                        DO_CHECK_VARS(elts[i].key, HTTP_VAR_ALL_GET_NAME);
                     }
                 }
             } else {
