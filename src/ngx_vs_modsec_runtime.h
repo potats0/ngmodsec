@@ -11,6 +11,12 @@
 #include "ruleset_types.h"
 
 typedef struct {
+    ngx_str_t key;
+    ngx_str_t value;
+    ngx_str_t decoded;
+} ngx_http_arg_t;
+
+typedef struct {
     ngx_rbtree_node_t node;
     uint32_t matched_rule_id;        // 命中规则ID ruleid <<8 | subid
     uint32_t rule_hit_bitmask;       // 保存记录规则命中的bit位
@@ -217,6 +223,6 @@ void rule_hit_insert_value(ngx_rbtree_node_t *temp, ngx_rbtree_node_t *node, ngx
 int on_match(unsigned int id, unsigned long long from, unsigned long long to, unsigned int flags, void *context);
 
 // 获取请求中的参数
-void parse_get_args(ngx_http_request_t *r);
+ngx_array_t *parse_get_args(ngx_str_t *queryString, ngx_pool_t *pool);
 
 #endif

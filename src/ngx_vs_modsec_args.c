@@ -4,73 +4,72 @@
 
 #include "ngx_vs_modsec_runtime.h"
 
-void parse_get_args(ngx_http_request_t *r) {
-    if (r->args.len == 0) {
-        MLOGD("No GET parameters found");
-        return;
+ngx_array_t *parse_get_args(ngx_str_t *queryString, ngx_pool_t *pool) {
+    if (queryString == NULL || queryString->len == 0) {
+        MLOGD("No queruy string found");
+        return NULL;
     }
-    MLOGD("GET parameters found Starting to process uri args");
+    MLOGD("parameters found Starting to process args");
 
-    u_char *start = r->args.data;
-    u_char *end = r->args.data + r->args.len;
+    // 创建数组
+    ngx_array_t *args = ngx_array_create(pool, 4, sizeof(ngx_http_arg_t));
+    if (args == NULL) {
+        return NULL;
+    }
+
+    u_char *start = queryString->data;
+    u_char *end = queryString->data + queryString->len;
     u_char *p = start;
     u_char *key_start, *key_end, *value_start, *value_end;
-    ngx_vs_modsec_ctx_t *ctx = ngx_http_modsecurity_get_ctx(r);
 
     while (p < end) {
-        // Find key start and end
         key_start = p;
         while (p < end && *p != '=' && *p != '&') p++;
         key_end = p;
 
-        // Find value start and end
         if (p < end && *p == '=') {
-            p++; // Skip '='
+            p++;
             value_start = p;
             while (p < end && *p != '&') p++;
             value_end = p;
         } else {
-            // Handle cases like "?param&" or "?param"
             value_start = value_end = p;
         }
 
         if (p < end && *p == '&') {
-            p++; // Skip '&'
+            p++;
         } else if (p == end) {
-            // Last parameter
             p = end;
         }
 
         if (key_end > key_start) {
-            ngx_str_t key = {.data = key_start, .len = key_end - key_start};
-            ngx_str_t value = {.data = value_start, .len = value_end - value_start};
+            ngx_http_arg_t *arg = ngx_array_push(args);
+            if (arg == NULL) {
+                return args; // 返回已解析的参数
+            }
 
-            u_char *dst, *src;
-            ngx_str_t decoded;
-            decoded.data = ngx_pnalloc(r->pool, value.len);
-            if (decoded.data == NULL) {
-                MLOGD("Failed to decode GET param: [%V]=[%V]", &key, &value);
+            arg->key.data = key_start;
+            arg->key.len = key_end - key_start;
+            arg->value.data = value_start;
+            arg->value.len = value_end - value_start;
+
+            // URL decode value
+            arg->decoded.data = ngx_pnalloc(pool, arg->value.len);
+            if (arg->decoded.data == NULL) {
+                MLOGD("Failed to decode param: [%V]=[%V]", &arg->key, &arg->value);
                 continue;
             }
 
-            dst = decoded.data;
-            src = value.data;
-            ngx_memcpy(dst, src, value.len);
-            ngx_unescape_uri(&dst, &src, value.len, 0);
-            decoded.len = dst - decoded.data;
+            u_char *dst = arg->decoded.data;
+            u_char *src = arg->value.data;
+            ngx_memcpy(dst, src, arg->value.len);
+            ngx_unescape_uri(&dst, &src, arg->value.len, 0);
+            arg->decoded.len = dst - arg->decoded.data;
 
-            MLOGD("GET param: %V = %V decoded: %V", &key, &value, &decoded);
-
-            // 对于 GET 参数
-            CHECK_HTTP_PARAM_MATCH(key, decoded, sign_rule_mg->get_match_context, ctx);
-
-            // 对于不定参数，全都送检
-            DO_CHECK_VARS(decoded, HTTP_VAR_ALL_GET_VALUE);
-
-            // 对于name部分也送检
-            DO_CHECK_VARS(key, HTTP_VAR_ALL_GET_NAME);
+            MLOGD("GET param: %V = %V decoded: %V", &arg->key, &arg->value, &arg->decoded);
         }
     }
 
-    MLOGD("Exiting to process uri args");
+    MLOGD("Exiting to process args");
+    return args;
 }
