@@ -4,66 +4,6 @@
 
 #include "ngx_vs_modsec_runtime.h"
 
-static ngx_str_t url_decode(ngx_pool_t *pool, const ngx_str_t *src) {
-    ngx_str_t dst = ngx_null_string;
-
-    if (src->len == 0) {
-        return dst;
-    }
-
-    u_char *decoded = ngx_pnalloc(pool, src->len);
-    if (decoded == NULL) {
-        return dst;
-    }
-
-    u_char *d = decoded;
-    u_char *s = src->data;
-    u_char *end = s + src->len;
-    u_char ch, c;
-
-    while (s < end) {
-        ch = *s++;
-        if (ch == '%' && s + 2 <= end) {
-            c = *s++;
-            if (c >= '0' && c <= '9') {
-                ch = c - '0';
-            } else if (c >= 'a' && c <= 'f') {
-                ch = c - 'a' + 10;
-            } else if (c >= 'A' && c <= 'F') {
-                ch = c - 'A' + 10;
-            } else {
-                *d++ = '%';
-                *d++ = *(s - 1);
-                continue;
-            }
-            ch = (ch << 4);
-
-            c = *s++;
-            if (c >= '0' && c <= '9') {
-                ch |= c - '0';
-            } else if (c >= 'a' && c <= 'f') {
-                ch |= c - 'a' + 10;
-            } else if (c >= 'A' && c <= 'F') {
-                ch |= c - 'A' + 10;
-            } else {
-                *d++ = '%';
-                *d++ = *(s - 2);
-                *d++ = *(s - 1);
-                continue;
-            }
-            *d++ = ch;  // 直接保持 NULL 字符
-        } else if (ch == '+') {
-            *d++ = ' ';
-        } else {
-            *d++ = ch;
-        }
-    }
-
-    dst.data = decoded;
-    dst.len = d - decoded;
-    return dst;
-}
-
 void parse_get_args(ngx_http_request_t *r) {
     if (r->args.len == 0) {
         MLOGD("No GET parameters found");
@@ -102,16 +42,22 @@ void parse_get_args(ngx_http_request_t *r) {
         }
 
         if (key_end > key_start) {
-            // Create temporary ngx_str_t for key and value
             ngx_str_t key = {.data = key_start, .len = key_end - key_start};
             ngx_str_t value = {.data = value_start, .len = value_end - value_start};
 
-            // URL decode value
-            ngx_str_t decoded = url_decode(r->pool, &value);
-            if (!decoded.data) {
-                MLOGD("Failed to decode GET param: [%V] = [%V]", &key, &value);
+            u_char *dst, *src;
+            ngx_str_t decoded;
+            decoded.data = ngx_pnalloc(r->pool, value.len);
+            if (decoded.data == NULL) {
+                MLOGD("Failed to decode GET param: [%V]=[%V]", &key, &value);
                 continue;
             }
+
+            dst = decoded.data;
+            src = value.data;
+            ngx_memcpy(dst, src, value.len);
+            ngx_unescape_uri(&dst, &src, value.len, 0);
+            decoded.len = dst - decoded.data;
 
             MLOGD("GET param: %V = %V decoded: %V", &key, &value, &decoded);
 
