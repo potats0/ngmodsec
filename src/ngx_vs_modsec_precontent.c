@@ -4,6 +4,7 @@
 
 static void ngx_http_modsecurity_body_handler(ngx_http_request_t *r) {
     do {
+        MLOGD("Starting body filter phase handler");
         ngx_chain_t *cl;
         // 获取上下文
         ngx_vs_modsec_ctx_t *ctx = ngx_http_modsecurity_get_ctx(r);
@@ -45,6 +46,41 @@ static void ngx_http_modsecurity_body_handler(ngx_http_request_t *r) {
         ngx_str_t body_content = {.data = buf->pos, .len = buf->last - buf->pos};
         DO_CHECK_VARS(body_content, HTTP_VAR_RAW_REQ_BODY);
 
+        ngx_table_elt_t *content_type;
+
+        /* 获取 Content-Type */
+        content_type = r->headers_in.content_type;
+
+        if (content_type) {
+            /* 打印 Content-Type 值 */
+            MLOGD("Content-Type: %V", &content_type->value);
+
+            static ngx_str_t form_urlencoded = ngx_string("application/x-www-form-urlencoded");
+            if (content_type->value.len >= form_urlencoded.len &&
+                ngx_strncasecmp(content_type->value.data, form_urlencoded.data, form_urlencoded.len) == 0) {
+                // 是 application/x-www-form-urlencoded
+                MLOGD("Found application/x-www-form-urlencoded content type");
+                ngx_array_t *args = parse_get_args(&body_content, r->pool);
+                if (args != NULL) {
+                    ngx_http_arg_t *elts = args->elts;
+                    for (size_t i = 0; i < args->nelts; i++) {
+                        MLOGD("POST key:%V, value:%V", &elts[i].key, &elts[i].decoded);
+                        // // 对于 GET 参数
+                        // CHECK_HTTP_PARAM_MATCH(elts[i].key, elts[i].decoded, sign_rule_mg->get_match_context, ctx);
+
+                        // // 对于不定参数，全都送检
+                        // DO_CHECK_VARS(elts[i].decoded, HTTP_VAR_ALL_GET_VALUE);
+
+                        // // 对于name部分也送检
+                        // DO_CHECK_VARS(elts[i].key, HTTP_VAR_ALL_GET_NAME);
+                    }
+                }
+            } else {
+                MLOGD("Not found application/x-www-form-urlencoded content type in post body");
+            }
+        } else {
+            MLOGD("Content-Type not found");
+        }
     } while (0);
 
     MLOGD("Exiting body filter phase handler");
