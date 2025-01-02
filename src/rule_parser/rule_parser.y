@@ -321,9 +321,9 @@ static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uin
 
 // 辅助函数：处理模式匹配表达式
 static int handle_match_expr(http_var_type_t var_type, char* pattern_str, 
-                           operator_type_t op_type, uint32_t flags) {
+                           operator_type_t op_type, uint32_t flags, substr_range_t *range) {
     
-    char* converted_pattern = convert_to_hyperscan_pattern(pattern_str, op_type);
+    char* converted_pattern = convert_to_hyperscan_pattern(pattern_str, op_type, range);
     if (!converted_pattern) {
         yyerror("Failed to convert pattern");
         return -1;
@@ -344,7 +344,7 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
     hash_pattern_item_t *item = NULL;
     HASH_FIND_STR(*hash_item, param, item);
 
-    char* converted_pattern = convert_to_hyperscan_pattern(pattern_str, op_type);
+    char* converted_pattern = convert_to_hyperscan_pattern(pattern_str, op_type, NULL);
     if (!converted_pattern) {
         return -1;
     }
@@ -438,7 +438,8 @@ static int handle_kv_string_list_expr(hash_pattern_item_t **hash_item, char *par
     return ret;
 }
 
-static int handle_string_list_expr(http_var_type_t var_type, char** items, size_t count, uint32_t flags) {
+static int handle_string_list_expr(http_var_type_t var_type, char** items, 
+                                    size_t count, uint32_t flags, substr_range_t *range) {
     if (!items || count == 0) {
         fprintf(stderr, "Invalid string list\n");
         return -1;
@@ -446,7 +447,7 @@ static int handle_string_list_expr(http_var_type_t var_type, char** items, size_
 
     // 为每个字符串创建一个模式并添加到上下文
     for (size_t i = 0; i < count; i++) {
-        if (handle_match_expr(var_type, items[i], OP_EQUALS, flags) != 0) {
+        if (handle_match_expr(var_type, items[i], OP_EQUALS, flags, range) != 0) {
             return -1;
         }
     }
@@ -467,6 +468,8 @@ static int handle_kv_string_list_with_context(hash_pattern_item_t **context, cha
     int number;
     unsigned int flags;
     http_var_type_t var_type;
+    http_var_info_t var_info;
+    substr_range_t range;
     uint32_t method;
     int op_type;
     string_list_t* string_list;
@@ -496,6 +499,9 @@ static int handle_kv_string_list_with_context(hash_pattern_item_t **context, cha
 
 %type <string_list> string_list
 %type <string_list> string_items
+
+%type <var_info> http_var_with_substr
+%type <range> substr_range
 
 // 定义运算符优先级和结合性
 %left OR
@@ -594,17 +600,46 @@ rule_expr:
     ;
 
 match_expr:
-    HTTP_VAR op_type STRING pattern_flags {
+    http_var_with_substr op_type STRING pattern_flags {
         set_new_andbit();
         char *pattern __attribute__((cleanup(clenaup_ptr))) = $3;
-        if (handle_match_expr($1, pattern, $2, $4) != 0) {
+
+        if ($1.has_range) {
+            size_t pattern_len = strlen($3);
+            size_t start_pos = $1.range.start;
+            size_t end_pos = $1.range.end;
+            int range_len = end_pos - start_pos;
+            
+            // 检查不支持的操作符
+            if ($2 != OP_CONTAINS) {
+                yyerror("matches, starts_with, ends_with and equals operators do not support substring matching");
+                YYERROR;
+            }
+            
+            // 检查模式长度是否大于范围长度
+            if (range_len <= 0 && pattern_len > range_len) {
+                char error_msg[256];
+                snprintf(error_msg, sizeof(error_msg), 
+                        "Pattern length (%zu) is larger than the specified range length (%d)", 
+                        pattern_len, range_len);
+                yyerror(error_msg);
+                YYERROR;
+            }
+        }
+
+        if (handle_match_expr($1.var, pattern, $2, $4, &$1.range) != 0) {
             YYERROR;
         }
     }
-    | HTTP_VAR IN string_list pattern_flags {
+    | http_var_with_substr IN string_list pattern_flags {
         set_new_andbit();
         string_list_t *list __attribute__((cleanup(cleanup_string_list))) = $3;
-        if (handle_string_list_expr($1, list->items, list->count, $4) != 0) {
+
+        if ($1.has_range) {
+            yyerror("IN operator does not support substring matching");
+            YYERROR;
+        }
+        if (handle_string_list_expr($1.var, list->items, list->count, $4, &$1.range) != 0) {
             YYERROR;
         }
     }
@@ -642,6 +677,36 @@ match_expr:
     }
     ;
 
+http_var_with_substr: 
+    HTTP_VAR {
+        $$.var = $1;
+        $$.has_range = false;
+    }
+    | HTTP_VAR substr_range {
+        $$.var = $1;
+        $$.range = $2;
+        $$.has_range = true;
+    }
+    ;
+
+substr_range:
+    '[' NUMBER ',' NUMBER ']' {
+        if ($2 < 0 || $4 < $2) {
+            yyerror("Invalid substring range");
+            YYERROR;
+        }
+        $$.start = $2;
+        $$.end = $4;
+    }
+    | '[' NUMBER ']' {
+        if ($2 < 0) {
+            yyerror("Invalid position");
+            YYERROR;
+        }
+        $$.start = $2;
+        $$.end = 0;
+    }
+    ;
 
 pattern_flags:
     /* empty */ { $$ = 0; }

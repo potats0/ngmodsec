@@ -96,6 +96,23 @@ http.uri in {"/admin", "/manage", "/config"};
 - 支持所有可用的 HTTP 变量类型
 - 可以与其他规则组合使用（如 AND、OR 操作符）
 
+7. 子字符串匹配
+HTTP协议变量支持子字符串匹配语法：`变量名[start,end]` 或 `变量名[pos]`。
+
+支持的操作符：
+- `contains`：在指定范围内查找子串
+
+注意：
+- 单个位置匹配（如 `[2]`）表示从该位置开始匹配
+- 范围匹配（如 `[2,10]`）表示在指定范围内匹配
+- 不支持在子字符串匹配中使用 `matches`、`equals`、`starts_with`、`ends_with` 操作符
+
+示例：
+```txt
+rule 1001 http.uri[2,10] contains "admin";  # 在uri的2-10位置查找"admin"
+rule 1002 http.uri[2] contains "admin";     # 从uri的第2个位置开始查找"admin"
+```
+
 ### Hyperscan 标志位
 
 所有匹配类型都支持以下 Hyperscan 标志位：

@@ -54,54 +54,78 @@ unsigned int get_hyperscan_flags(operator_type_t op_type) {
     return flags;
 }
 
-char *convert_to_hyperscan_pattern(const char *pattern, operator_type_t op_type) {
+char *convert_to_hyperscan_pattern(const char *pattern, operator_type_t op_type, const substr_range_t *range) {
     if (!pattern) return NULL;
 
     char *escaped_pattern = escape_regex_special_chars(pattern);
     if (!escaped_pattern) return NULL;
 
+    // 第一步：处理操作符逻辑
     size_t escaped_len = strlen(escaped_pattern);
-    size_t result_len = escaped_len + 10; // 预留一些额外空间给锚点和修饰符
-    char *result = (char *)g_waf_rule_malloc(result_len);
+    size_t result_len = escaped_len + 10; // 初始预留空间
+    char *intermediate = (char *)g_waf_rule_malloc(result_len);
 
-    if (!result) {
-        free(escaped_pattern);
+    if (!intermediate) {
+        g_waf_rule_free(escaped_pattern);
         return NULL;
     }
 
+    // 处理原有的操作符逻辑
     switch (op_type) {
         case OP_CONTAINS:
-            // 对于 contains，我们只需要转义的模式，标志位会处理匹配位置
-            snprintf(result, result_len, "%s", escaped_pattern);
+            snprintf(intermediate, result_len, "%s", escaped_pattern);
             break;
 
         case OP_MATCHES:
-            // 已经是正则表达式，直接使用
-            g_waf_rule_free(escaped_pattern); // 释放不需要的escaped_pattern
-            g_waf_rule_free(result);          // 释放不需要的result
+            // 对于matches，使用原始pattern
+            g_waf_rule_free(escaped_pattern);
+            g_waf_rule_free(intermediate);
             return my_strdup(pattern);
 
         case OP_STARTS_WITH:
-            // 添加开始锚点 ^
-            snprintf(result, result_len, "^%s", escaped_pattern);
+            snprintf(intermediate, result_len, "^%s", escaped_pattern);
             break;
 
         case OP_ENDS_WITH:
-            // 添加结束锚点 $
-            snprintf(result, result_len, "%s$", escaped_pattern);
+            snprintf(intermediate, result_len, "%s$", escaped_pattern);
             break;
 
         case OP_EQUALS:
-            // 添加开始和结束锚点 ^ $
-            snprintf(result, result_len, "^%s$", escaped_pattern);
+            snprintf(intermediate, result_len, "^%s$", escaped_pattern);
             break;
 
         default:
             g_waf_rule_free(escaped_pattern);
-            g_waf_rule_free(result);
+            g_waf_rule_free(intermediate);
             return NULL;
     }
 
-    g_waf_rule_free(escaped_pattern);
-    return result;
+    g_waf_rule_free(escaped_pattern); // 释放原始的转义pattern
+
+    // 第二步：如果有substring范围，添加位置约束
+    if (range && range->start != range->end) {
+        // 为前瞻后顾断言预留更多空间
+        size_t final_len = strlen(intermediate) + 50;
+        char *result = (char *)g_waf_rule_malloc(final_len);
+        if (!result) {
+            g_waf_rule_free(intermediate);
+            return NULL;
+        }
+
+        if (range->start > range->end) {
+            // 单个位置开始的任意匹配
+            snprintf(result, final_len, "(?<=^.{%zu}).*?%s", range->start, intermediate);
+        } else {
+            // 范围匹配
+            size_t remaining = range->end - range->start;
+            snprintf(result, final_len, "(?<=^.{%zu})(?:(?!^.{%zu})(?!.{%zu}$))%s", range->start, range->start,
+                     remaining, pattern);
+        }
+
+        g_waf_rule_free(intermediate);
+        return result;
+    }
+
+    // 如果没有substring范围，直接返回intermediate结果
+    return intermediate;
 }
