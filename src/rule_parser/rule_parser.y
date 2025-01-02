@@ -323,13 +323,14 @@ static void add_pattern_to_context(http_var_type_t proto_var, char* pattern, uin
 static int handle_match_expr(http_var_type_t var_type, char* pattern_str, 
                            operator_type_t op_type, uint32_t flags, substr_range_t *range) {
     
-    char* converted_pattern = convert_to_hyperscan_pattern(pattern_str, op_type, range);
+    char* converted_pattern __attribute__((cleanup(clenaup_ptr))) = convert_to_hyperscan_pattern(pattern_str, op_type, range);
     if (!converted_pattern) {
         yyerror("Failed to convert pattern");
         return -1;
     }
     
     add_pattern_to_context(var_type, converted_pattern, flags);
+    
     return 0;
 }
 
@@ -344,7 +345,7 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
     hash_pattern_item_t *item = NULL;
     HASH_FIND_STR(*hash_item, param, item);
 
-    char* converted_pattern = convert_to_hyperscan_pattern(pattern_str, op_type, NULL);
+    char* converted_pattern __attribute__((cleanup(clenaup_ptr))) = convert_to_hyperscan_pattern(pattern_str, op_type, NULL);
     if (!converted_pattern) {
         return -1;
     }
@@ -371,7 +372,6 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
         if (!ctx->string_patterns_list) {
             g_waf_rule_free(item->key);
             g_waf_rule_free(item);
-            g_waf_rule_free(converted_pattern);
             yyerror("Failed to allocate patterns list");
             return -1;
         }
