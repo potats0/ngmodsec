@@ -55,7 +55,7 @@ User-Agent: TestAgent/2.0
 User-Agent: TestAgent/1.0
 --- error_log
 compile_all_hyperscan_databases successfully
-GET param: a =
+param key:a, value:
 Exiting precontent phase handler
 --- no_error_log
 [error]
@@ -104,7 +104,7 @@ User-Agent: TestAgent/2.0
 User-Agent: TestAgent/1.0
 --- error_log
 compile_all_hyperscan_databases successfully
-GET param: b = 
+param key:b, value:
 Invalid GET parameter
 Exiting precontent phase handler
 --- no_error_log
@@ -130,7 +130,8 @@ User-Agent: TestAgent/2.0
 User-Agent: TestAgent/1.0
 --- error_log
 compile_all_hyperscan_databases successfully
-GET param: b = 
+param key:a, value:
+Checking parameter b=c
 Exiting precontent phase handler
 --- no_error_log
 [error]
