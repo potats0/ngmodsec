@@ -617,7 +617,7 @@ match_expr:
             }
             
             // 检查模式长度是否大于范围长度
-            if (range_len <= 0 && pattern_len > range_len) {
+            if (range_len >= 0 && (int)pattern_len > range_len) {
                 char error_msg[256];
                 snprintf(error_msg, sizeof(error_msg), 
                         "Pattern length (%zu) is larger than the specified range length (%d)", 

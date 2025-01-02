@@ -114,12 +114,13 @@ char *convert_to_hyperscan_pattern(const char *pattern, operator_type_t op_type,
 
         if (range->start > range->end) {
             // 单个位置开始的任意匹配
-            snprintf(result, final_len, "(?<=^.{%zu}).*?%s", range->start, intermediate);
+            snprintf(result, final_len, "^.{%zu}(%s)", range->start, intermediate);
         } else {
             // 范围匹配
-            size_t remaining = range->end - range->start;
-            snprintf(result, final_len, "(?<=^.{%zu})(?:(?!^.{%zu})(?!.{%zu}$))%s", range->start, range->start,
-                     remaining, pattern);
+            snprintf(result, final_len, "^.{%zu}(.{0,%zu}%s)",
+                     range->start,                  // 跳过起始位置前的字符
+                     range->end - range->start - 1, // 允许的最大范围
+                     intermediate);                 // 要匹配的模式
         }
 
         g_waf_rule_free(intermediate);

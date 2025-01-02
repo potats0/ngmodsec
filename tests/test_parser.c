@@ -873,8 +873,7 @@ TEST_CASE(substring_in_rule) {
     ASSERT_NOT_NULL(ctx, "URI context is NULL");
 
     // 检查模式是否正
-    ASSERT_STR_EQ("(?<=^.{2})(?:(?!^.{2})(?!.{8}$))abc", ctx->string_patterns_list[0].string_pattern,
-                  "Pattern mismatch");
+    ASSERT_STR_EQ("^.{2}(.{0,7}abc)", ctx->string_patterns_list[0].string_pattern, "Pattern mismatch");
 
     destroy_rule_mg(rule_mg);
     passed_tests++;
@@ -897,7 +896,7 @@ TEST_CASE(substring_range_in_rule) {
     ASSERT_NOT_NULL(ctx, "URI context is NULL");
 
     // 检查模式是否正
-    ASSERT_STR_EQ("(?<=^.{2}).*?abc", ctx->string_patterns_list[0].string_pattern, "Pattern mismatch");
+    ASSERT_STR_EQ("^.{2}(abc)", ctx->string_patterns_list[0].string_pattern, "Pattern mismatch");
 
     destroy_rule_mg(rule_mg);
     passed_tests++;
