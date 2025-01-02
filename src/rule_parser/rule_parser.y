@@ -335,7 +335,7 @@ static int handle_match_expr(http_var_type_t var_type, char* pattern_str,
 }
 
 static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, char* pattern_str,
-                            operator_type_t op_type, uint32_t flags ){
+                            operator_type_t op_type, uint32_t flags, substr_range_t *range){
     if (!hash_item || !param || !pattern_str) {
         fprintf(stderr, "Invalid arguments to handle_kvmatch_expr\n");
         return -1;
@@ -345,7 +345,7 @@ static int handle_kvmatch_expr(hash_pattern_item_t **hash_item, char *param, cha
     hash_pattern_item_t *item = NULL;
     HASH_FIND_STR(*hash_item, param, item);
 
-    char* converted_pattern __attribute__((cleanup(clenaup_ptr))) = convert_to_hyperscan_pattern(pattern_str, op_type, NULL);
+    char* converted_pattern __attribute__((cleanup(clenaup_ptr))) = convert_to_hyperscan_pattern(pattern_str, op_type, range);
     if (!converted_pattern) {
         return -1;
     }
@@ -429,7 +429,7 @@ static int handle_kv_string_list_expr(hash_pattern_item_t **hash_item, char *par
 
         item_copy = items[i];
 
-        if (handle_kvmatch_expr(hash_item, param, item_copy, OP_EQUALS, flags) != 0) {
+        if (handle_kvmatch_expr(hash_item, param, item_copy, OP_EQUALS, flags, NULL) != 0) {
             ret = -1;
             break;
         }
@@ -479,8 +479,6 @@ static int handle_kv_string_list_with_context(hash_pattern_item_t **context, cha
 %token <number> NUMBER
 %token <flags> FLAGS
 %token <var_type> HTTP_VAR
-%token <var_type> HTTP_GET_ARGS
-%token <var_type> HTTP_HEADERS_ARGS
 %token <string> IDENTIFIER
 
 %token CONTAINS MATCHES STARTS_WITH ENDS_WITH EQUALS IN
@@ -501,6 +499,7 @@ static int handle_kv_string_list_with_context(hash_pattern_item_t **context, cha
 %type <string_list> string_items
 
 %type <var_info> http_var_with_substr
+%type <var_info> http_kv_var_with_substr
 %type <range> substr_range
 
 // 定义运算符优先级和结合性
@@ -643,37 +642,80 @@ match_expr:
             YYERROR;
         }
     }
-    | HTTP_GET_ARGS '[' STRING ']' op_type STRING pattern_flags {
+    | http_kv_var_with_substr op_type STRING pattern_flags {
         set_new_andbit();
-        char *param __attribute__((cleanup(clenaup_ptr))) = $3;
-        char *pattern __attribute__((cleanup(clenaup_ptr))) = $6;
-        if (handle_kvmatch_expr(&current_rule_mg->get_match_context, param, pattern, $5, $7) != 0) {
+        char *param __attribute__((cleanup(clenaup_ptr))) = $1.param;
+        char *pattern __attribute__((cleanup(clenaup_ptr))) = $3;
+
+        if ($1.has_range) {
+            size_t pattern_len = strlen(pattern);
+            size_t start_pos = $1.range.start;
+            size_t end_pos = $1.range.end;
+            int range_len = end_pos - start_pos;
+            
+            // 检查不支持的操作符
+            if ($2 != OP_CONTAINS) {
+                yyerror("matches, starts_with, ends_with and equals operators do not support substring matching");
+                YYERROR;
+            }
+            
+            // 检查模式长度是否大于范围长度
+            if (range_len >= 0 && (int)pattern_len > range_len) {
+                char error_msg[256];
+                snprintf(error_msg, sizeof(error_msg), 
+                        "Pattern length (%zu) is larger than the specified range length (%d)", 
+                        pattern_len, range_len);
+                yyerror(error_msg);
+                YYERROR;
+            }
+        }
+
+        hash_pattern_item_t **target_context = NULL;
+        printf("%d\n", $1.var);
+        switch ($1.var) {
+            case HTTP_VAR_GET_ARGS:
+                target_context = &current_rule_mg->get_match_context;
+                break;
+            case HTTP_VAR_HEADERS_ARGS:
+                target_context = &current_rule_mg->headers_match_context;
+                break;
+            default:
+                yyerror("Invalid variable type");
+                YYERROR;
+        }
+        if (handle_kvmatch_expr(target_context, param, pattern, $2, $4, &$1.range) != 0) {
             YYERROR;
         }
     }    
-    | HTTP_GET_ARGS '[' STRING ']' IN string_list pattern_flags {
+    | http_kv_var_with_substr IN string_list pattern_flags {
         set_new_andbit();
-        string_list_t *list __attribute__((cleanup(cleanup_string_list))) = $6;
-        char *param __attribute__((cleanup(clenaup_ptr))) = $3;
-        if (handle_kv_string_list_with_context(&current_rule_mg->get_match_context, param, list, $7) != 0) {
+
+        string_list_t *list __attribute__((cleanup(cleanup_string_list))) = $3;
+        char *param __attribute__((cleanup(clenaup_ptr))) = $1.param;
+
+        if ($1.has_range) {
+            yyerror("IN operator does not support substring matching");
             YYERROR;
         }
-    }
-    | HTTP_HEADERS_ARGS '[' STRING ']' op_type STRING pattern_flags {
-        set_new_andbit();
-        char *param __attribute__((cleanup(clenaup_ptr))) = $3;
-        char *pattern __attribute__((cleanup(clenaup_ptr))) = $6;
-        if (handle_kvmatch_expr(&current_rule_mg->headers_match_context, param, pattern, $5, $7) != 0) {
+
+        hash_pattern_item_t **target_context = NULL;
+
+        switch ($1.var) {
+            case HTTP_VAR_GET_ARGS:
+                target_context = &current_rule_mg->get_match_context;
+                break;
+            case HTTP_VAR_HEADERS_ARGS:
+                target_context = &current_rule_mg->headers_match_context;
+                break;
+            default:
+                yyerror("Invalid variable type");
+                YYERROR;
+        }
+
+        if (handle_kv_string_list_with_context(target_context, param, list, $4) != 0) {
             YYERROR;
         }
-    }
-    | HTTP_HEADERS_ARGS '[' STRING ']' IN string_list pattern_flags {
-        set_new_andbit();
-        string_list_t *list __attribute__((cleanup(cleanup_string_list))) = $6;
-        char *param __attribute__((cleanup(clenaup_ptr))) = $3;
-        if (handle_kv_string_list_with_context(&current_rule_mg->headers_match_context, param, list, $7) != 0) {
-            YYERROR;
-        }
+
     }
     ;
 
@@ -686,6 +728,20 @@ http_var_with_substr:
         $$.var = $1;
         $$.range = $2;
         $$.has_range = true;
+    }
+    ;
+
+http_kv_var_with_substr: 
+    HTTP_VAR '[' STRING ']' {
+        $$.var = $1;
+        $$.has_range = false;
+        $$.param = $3;
+    }
+    | HTTP_VAR '[' STRING ']' substr_range {
+        $$.var = $1;
+        $$.range = $5;
+        $$.has_range = true;
+        $$.param = $3;
     }
     ;
 

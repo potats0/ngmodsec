@@ -24,6 +24,7 @@ typedef struct {
 // 为了支持substring
 typedef struct {
     http_var_type_t var;  /* 变量名 */
+    char *param;          /* 参数名 */
     substr_range_t range; /* 子串范围 */
     bool has_range;       /* 是否有范围 */
 } http_var_info_t;
