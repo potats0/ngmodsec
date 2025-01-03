@@ -5,9 +5,9 @@ PointerAlignment: Right
 #访问修饰符前的空格
 AccessModifierOffset: -4
 # 缩进宽度
-IndentWidth: 4
+IndentWidth: 8
 # 连续的空行保留几行
-MaxEmptyLinesToKeep: 1
+MaxEmptyLinesToKeep: 2
 # 圆括号的换行方式
 BreakBeforeBraces: Attach
 # 是否允许短方法单行
@@ -23,7 +23,7 @@ ObjCBlockIndentWidth: 4
 # 针对OC，属性名后加空格
 ObjCSpaceAfterProperty: true
 # 每行字符的长度
-ColumnLimit: 120
+ColumnLimit: 80
 # 注释对齐
 AlignTrailingComments: true
 # 括号后加空格
@@ -41,10 +41,19 @@ BreakConstructorInitializersBeforeComma: true
 # 函数参数换行
 AllowAllParametersOfDeclarationOnNextLine: true
 #在续行(#     下一行)时的缩进长度
-ContinuationIndentWidth: 4
+#ContinuationIndentWidth: 4
 # tab键盘的宽度
-TabWidth: 4
+TabWidth: 8
 # 赋值运算符前加空格
 SpaceBeforeAssignmentOperators: true
 # 行尾的注释前加1个空格
 SpacesBeforeTrailingComments: 1
+
+# Taken from git's rules
+PenaltyBreakAssignment: 10
+PenaltyBreakBeforeFirstCallParameter: 30
+PenaltyBreakComment: 10
+PenaltyBreakFirstLessLess: 0
+PenaltyBreakString: 10
+PenaltyExcessCharacter: 100
+PenaltyReturnTypeOnItsOwnLine: 60
