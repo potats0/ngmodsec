@@ -19,7 +19,7 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#include "ngx_vs_modsec_runtime.h"
+#include "ngx_modsec_runtime.h"
 
 static const unsigned char hex_table[256] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, /* 0x00-0x0F */

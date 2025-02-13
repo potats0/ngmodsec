@@ -40,11 +40,11 @@ typedef struct {
         uint32_t current_request_method; // 当前HTTP请求方法
 } rule_hit_record_t;
 
-typedef struct ngx_vs_modsec_ctx_s {
+typedef struct ngx_modsec_ctx_s {
         string_match_context_t *match_context;
         ngx_rbtree_t *rule_hit_rbtree;
         ngx_http_request_t *request; // for hit_ctx alloc & log
-} ngx_vs_modsec_ctx_t;
+} ngx_modsec_ctx_t;
 
 #define DO_CHECK_VARS(VAR, FIELD)                                              \
         do {                                                                   \
@@ -124,7 +124,7 @@ typedef struct ngx_vs_modsec_ctx_s {
                 }                                                             \
         } while (0)
 
-// 在 ngx_vs_modsec_runtime.h 中定义宏
+// 在 ngx_modsec_runtime.h 中定义宏
 #define ITERATE_NGX_LIST(part, item, item_type, code_block)             \
         do {                                                            \
                 ngx_list_part_t *_current_part = (part);                \
@@ -266,7 +266,7 @@ extern ngx_module_t ngx_http_modsecurity_module;
 void log_rule_mg_status(sign_rule_mg_t *rule_mg);
 
 ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r);
-ngx_vs_modsec_ctx_t *ngx_http_modsecurity_get_ctx(ngx_http_request_t *r);
+ngx_modsec_ctx_t *ngx_http_modsecurity_get_ctx(ngx_http_request_t *r);
 
 // 初始化
 ngx_int_t ngx_http_modsecurity_precontent_init(ngx_conf_t *cf);

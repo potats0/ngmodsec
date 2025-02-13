@@ -17,7 +17,7 @@
 
 #include "ngx_config.h"
 #include "ngx_http.h"
-#include "ngx_vs_modsec_runtime.h"
+#include "ngx_modsec_runtime.h"
 
 static ngx_http_output_header_filter_pt ngx_http_next_header_filter;
 

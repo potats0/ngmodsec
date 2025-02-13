@@ -19,7 +19,7 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-#include "ngx_vs_modsec_runtime.h"
+#include "ngx_modsec_runtime.h"
 #include "ruleset_types.h"
 
 void log_rule_mg_status(sign_rule_mg_t *rule_mg) {

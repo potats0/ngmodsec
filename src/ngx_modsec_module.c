@@ -15,7 +15,7 @@
  * along with [ngmodsec]. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ngx_vs_modsec_runtime.h"
+#include "ngx_modsec_runtime.h"
 
 sign_rule_mg_t *sign_rule_mg = NULL;
 
@@ -66,15 +66,15 @@ static ngx_int_t ngx_http_modsecurity_module_init(ngx_cycle_t *cycle) {
  * @param r nginx请求结构体指针
  * @return hs_search_userdata_t* 成功返回用户数据指针，失败返回NULL
  */
-ngx_vs_modsec_ctx_t *ngx_http_modsecurity_get_ctx(ngx_http_request_t *r) {
+ngx_modsec_ctx_t *ngx_http_modsecurity_get_ctx(ngx_http_request_t *r) {
         MLOGD("Attempting to get user data from request context");
 
-        ngx_vs_modsec_ctx_t *ctx =
+        ngx_modsec_ctx_t *ctx =
             ngx_http_get_module_ctx(r, ngx_http_modsecurity_module);
         if (ctx == NULL) {
                 MLOGD("User data not found in context, creating new one");
 
-                ctx = ngx_pcalloc(r->pool, sizeof(ngx_vs_modsec_ctx_t));
+                ctx = ngx_pcalloc(r->pool, sizeof(ngx_modsec_ctx_t));
                 if (ctx == NULL) {
                         MLOGD("Failed to allocate memory for user data");
                         return NULL;

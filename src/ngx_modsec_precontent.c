@@ -17,14 +17,14 @@
 
 #include "ngx_config.h"
 #include "ngx_http.h"
-#include "ngx_vs_modsec_runtime.h"
+#include "ngx_modsec_runtime.h"
 
 static void ngx_http_modsecurity_body_handler(ngx_http_request_t *r) {
         do {
                 MLOGD("Starting body filter phase handler");
                 ngx_chain_t *cl;
                 // 获取上下文
-                ngx_vs_modsec_ctx_t *ctx = ngx_http_modsecurity_get_ctx(r);
+                ngx_modsec_ctx_t *ctx = ngx_http_modsecurity_get_ctx(r);
                 if (ctx == NULL || sign_rule_mg == NULL) {
                         break;
                 }
@@ -106,10 +106,10 @@ static void ngx_http_modsecurity_body_handler(ngx_http_request_t *r) {
 
 ngx_int_t ngx_http_modsecurity_precontent_handler(ngx_http_request_t *r) {
         MLOGD("Entering precontent phase handler");
-        ngx_vs_modsec_ctx_t *ctx = ngx_http_modsecurity_get_ctx(r);
+        ngx_modsec_ctx_t *ctx = ngx_http_modsecurity_get_ctx(r);
         if (ctx == NULL || sign_rule_mg == NULL) {
                 // 内存耗尽，相当于Bypass
-                MLOGE("sign_rule_mg or ngx_vs_modsec_ctx is NULL");
+                MLOGE("sign_rule_mg or ngx_modsec_ctx is NULL");
                 return NGX_DECLINED;
         }
 

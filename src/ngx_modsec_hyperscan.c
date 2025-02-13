@@ -15,11 +15,11 @@
  * along with [ngmodsec]. If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include "ngx_vs_modsec_runtime.h"
+#include "ngx_modsec_runtime.h"
 
 int on_match(unsigned int id, unsigned long long from, unsigned long long to,
              unsigned int flags, void *context) {
-        ngx_vs_modsec_ctx_t *ctx = (ngx_vs_modsec_ctx_t *)context;
+        ngx_modsec_ctx_t *ctx = (ngx_modsec_ctx_t *)context;
         string_match_context_t *match_ctx = ctx->match_context;
         ngx_rbtree_t *tree = ctx->rule_hit_rbtree;
         ngx_http_request_t *r = ctx->request;
