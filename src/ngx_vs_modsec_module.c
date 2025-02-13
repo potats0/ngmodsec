@@ -6,12 +6,6 @@
  */
 
 #include "ngx_vs_modsec_runtime.h"
-#ifdef WAF
-#include "ngx_http_anti_crawler_module.h"
-#include "ngx_http_is_bypass.h"
-#include "ngx_protovar_pub.h"
-#include "vs_sign_conf.h"
-#endif
 
 sign_rule_mg_t *sign_rule_mg = NULL;
 
