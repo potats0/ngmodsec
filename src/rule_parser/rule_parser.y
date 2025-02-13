@@ -594,7 +594,19 @@ op_type
 
 rule:
     RULE NUMBER {
+        printf("Processing rule %d\n", $2);
+        current_rule_id = $2;
+        current_sub_id = 0;
+        current_and_bit = 1;
+        current_not_mask = 0;
 
+        // 检查规则ID是否已存在
+        for (uint32_t i = 0; i < current_rule_mg->rules_count; i++) {
+            if (current_rule_mg->rule_ids[i] == current_rule_id) {
+                yyerror("Duplicate rule ID");
+                YYERROR;
+            }
+        }
     } rule_expr SEMICOLON {
         // 添加规则ID到列表中
         uint32_t* new_ids = g_waf_rule_malloc((current_rule_mg->rules_count + 1) * sizeof(uint32_t));
