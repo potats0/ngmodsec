@@ -110,7 +110,7 @@ test-nginx: check-source
 	@echo "Running Test::Nginx tests..."
 	TEST_NGINX_BINARY=$(NGINX_PATH)/objs/nginx \
 	TEST_NGINX_VERBOSE=1 \
-	prove -r t/sanity/basic3.t
+	prove -r 
 
 # 运行主程序
 run: rule_parser
